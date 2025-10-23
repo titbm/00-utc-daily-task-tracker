@@ -197,6 +197,13 @@ chrome.bookmarks.onRemoved.addListener(async (id, removeInfo) => {
   const result = await chrome.storage.local.get(['bookmarksFolderId']);
   const folderId = result.bookmarksFolderId;
   
+  // Если удалили саму папку Daily Panel - восстанавливаем её
+  if (id === folderId) {
+    console.log('Daily Panel folder was deleted, recreating...');
+    await initializeBookmarksFolder();
+    return;
+  }
+  
   // Проверяем, что закладка удалена из нашей папки
   if (removeInfo.parentId === folderId) {
     await syncBookmarksToPages();
