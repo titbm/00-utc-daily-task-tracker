@@ -278,7 +278,15 @@ async function removePage(bookmarkId) {
 
 // Вспомогательная функция уведомления панели об обновлении
 function notifyPanelUpdate() {
+  // Уведомляем боковую панель
   chrome.runtime.sendMessage({ action: 'pagesUpdated' }).catch(() => {});
+  
+  // Уведомляем все content scripts (для баннеров)
+  chrome.tabs.query({}, (tabs) => {
+    tabs.forEach(tab => {
+      chrome.tabs.sendMessage(tab.id, { action: 'pagesUpdated' }).catch(() => {});
+    });
+  });
 }
 
 // Слушаем создание закладок
@@ -724,6 +732,25 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     (async () => {
       await movePageToCompleted(request.bookmarkId);
       await setPageInterval(request.bookmarkId, request.intervalHours);
+      sendResponse({ success: true });
+    })();
+    return true; // Асинхронный ответ
+  } else if (request.action === 'startDailyTasks') {
+    // Запуск цикла отработки задач из баннера
+    (async () => {
+      const pages = await getActivePages();
+      if (pages.length > 0) {
+        const firstPage = pages[0];
+        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+          if (tabs[0]) {
+            chrome.tabs.create({ url: firstPage.url, windowId: tabs[0].windowId }, (newTab) => {
+              openedTabs.set(newTab.id, firstPage.id);
+              currentWindowId = newTab.windowId;
+              console.log('Started daily tasks from banner');
+            });
+          }
+        });
+      }
       sendResponse({ success: true });
     })();
     return true; // Асинхронный ответ
