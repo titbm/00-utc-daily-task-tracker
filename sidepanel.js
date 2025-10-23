@@ -261,8 +261,8 @@ class DailyPanel {
         completedPages: updatedCompletedPages
       });
       
-      // Переключаемся на раздел активных
-      if (this.currentSection === 'completed') {
+      // Переключаемся на раздел активных только если это была последняя отработанная
+      if (this.currentSection === 'completed' && updatedCompletedPages.length === 0) {
         this.toggleSection();
       }
     });
