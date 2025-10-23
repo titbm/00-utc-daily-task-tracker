@@ -289,6 +289,9 @@ class DailyPanel {
       chrome.storage.local.set({ 
         panelPages: updatedActivePages,
         completedPages: updatedCompletedPages
+      }, () => {
+        // Запрашиваем синхронизацию с закладками
+        chrome.runtime.sendMessage({ action: 'syncBookmarks' }).catch(() => {});
       });
       
       // Переключаемся на раздел активных только если это была последняя отработанная
@@ -325,6 +328,9 @@ class DailyPanel {
       chrome.storage.local.set({ 
         panelPages: updatedActivePages,
         completedPages: []
+      }, () => {
+        // Запрашиваем синхронизацию с закладками
+        chrome.runtime.sendMessage({ action: 'syncBookmarks' }).catch(() => {});
       });
       
       // Переключаемся на раздел активных

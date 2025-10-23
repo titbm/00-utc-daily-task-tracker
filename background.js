@@ -690,9 +690,12 @@ function movePageToCompletedById(pageId, allPages) {
     chrome.storage.local.set({ 
       panelPages: activePagesUpdated,
       completedPages: completedPages
-    }, () => {
+    }, async () => {
       // Уведомляем панель об обновлении
       chrome.runtime.sendMessage({ action: 'pagesUpdated' }).catch(() => {});
+      
+      // Синхронизируем с закладками (перемещаем из Active в Completed)
+      await syncPagesToBookmarks();
       
       // Если тип resetType = 'interval', открываем диалог в новой вкладке
       if (page.resetType === 'interval') {
@@ -732,10 +735,13 @@ function movePageToCompletedWithInterval(pageId, intervalHours) {
     chrome.storage.local.set({ 
       panelPages: activePagesUpdated,
       completedPages: completedPages
+    }, async () => {
+      // Уведомляем панель об обновлении
+      chrome.runtime.sendMessage({ action: 'pagesUpdated' }).catch(() => {});
+      
+      // Синхронизируем с закладками
+      await syncPagesToBookmarks();
     });
-    
-    // Уведомляем панель об обновлении
-    chrome.runtime.sendMessage({ action: 'pagesUpdated' }).catch(() => {});
   });
 }
 
@@ -792,12 +798,18 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       
       if (pageIndex !== -1) {
         pages[pageIndex] = { ...pages[pageIndex], ...request.settings };
-        chrome.storage.local.set({ panelPages: pages });
-        
-        // Уведомляем панель об обновлении
-        chrome.runtime.sendMessage({ action: 'pagesUpdated' }).catch(() => {});
+        chrome.storage.local.set({ panelPages: pages }, async () => {
+          // Уведомляем панель об обновлении
+          chrome.runtime.sendMessage({ action: 'pagesUpdated' }).catch(() => {});
+          
+          // Синхронизируем с закладками
+          await syncPagesToBookmarks();
+        });
       }
     });
+  } else if (request.action === 'syncBookmarks') {
+    // Запрос на синхронизацию с закладками
+    syncPagesToBookmarks();
   } else if (request.action === 'removePage') {
     chrome.storage.local.get(['panelPages'], (result) => {
       const pages = result.panelPages || [];
