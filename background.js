@@ -183,12 +183,15 @@ async function syncBookmarksToPages() {
           title: bookmark.title,
           url: bookmark.url,
           favicon: `chrome://favicon/${bookmark.url}`,
-          addedAt: new Date().toISOString()
+          addedAt: new Date().toISOString(),
+          resetType: 'midnight', // По умолчанию
+          resetInterval: 24
         });
       }
     }
     
     if (newPages.length > 0) {
+      console.log(`Adding ${newPages.length} new pages from bookmarks to panel`);
       const updatedPages = [...currentPages, ...newPages];
       await chrome.storage.local.set({ panelPages: updatedPages });
       
@@ -214,12 +217,25 @@ async function syncBookmarksToPages() {
 
 // Слушаем создание закладок
 chrome.bookmarks.onCreated.addListener(async (id, bookmark) => {
-  const result = await chrome.storage.local.get(['bookmarksFolderId']);
-  const folderId = result.bookmarksFolderId;
-  
-  // Проверяем, что закладка создана в нашей папке
-  if (bookmark.parentId === folderId && bookmark.url) {
-    await syncBookmarksToPages();
+  try {
+    const result = await chrome.storage.local.get(['bookmarksFolderId']);
+    const folderId = result.bookmarksFolderId;
+    
+    // Если закладка это папка (нет url), проверяем не наша ли это папка
+    if (!bookmark.url && bookmark.title === 'Daily Panel') {
+      // Обновляем ID папки
+      await chrome.storage.local.set({ bookmarksFolderId: bookmark.id });
+      await syncPagesToBookmarks();
+      return;
+    }
+    
+    // Проверяем, что закладка создана в нашей папке
+    if (bookmark.parentId === folderId && bookmark.url) {
+      console.log('New bookmark added to Daily Panel folder:', bookmark.title);
+      await syncBookmarksToPages();
+    }
+  } catch (error) {
+    console.error('Error in onCreated listener:', error);
   }
 });
 
