@@ -587,12 +587,8 @@ chrome.tabs.onRemoved.addListener(async (tabId, removeInfo) => {
           `&interval=24`;
         
         chrome.tabs.create({ url: dialogUrl });
-      } else {
-        // Для midnight сразу открываем следующую
-        setTimeout(() => {
-          openNextPageFromPanel();
-        }, 100);
       }
+      // НЕ открываем следующую страницу автоматически - только при явном запуске цикла
     } catch (error) {
       console.error('Error handling tab close:', error);
     }
