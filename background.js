@@ -70,8 +70,16 @@ async function syncPagesToBookmarks() {
     
     if (!folderId) return;
     
-    // Получаем текущие закладки в папке
-    const folderBookmarks = await chrome.bookmarks.getChildren(folderId);
+    // Проверяем, существует ли папка
+    let folderBookmarks;
+    try {
+      folderBookmarks = await chrome.bookmarks.getChildren(folderId);
+    } catch (e) {
+      // Папка не существует - пересоздаём
+      console.log('Bookmarks folder not found, reinitializing...');
+      await initializeBookmarksFolder();
+      return;
+    }
     
     // Удаляем все существующие закладки
     for (const bookmark of folderBookmarks) {
@@ -99,11 +107,17 @@ async function addBookmark(page) {
     
     if (!folderId) return;
     
-    await chrome.bookmarks.create({
-      parentId: folderId,
-      title: page.title,
-      url: page.url
-    });
+    try {
+      await chrome.bookmarks.create({
+        parentId: folderId,
+        title: page.title,
+        url: page.url
+      });
+    } catch (e) {
+      // Папка не существует - пересоздаём
+      console.log('Bookmarks folder not found, reinitializing...');
+      await initializeBookmarksFolder();
+    }
   } catch (error) {
     console.error('Error adding bookmark:', error);
   }
@@ -117,7 +131,16 @@ async function removeBookmarkByUrl(url) {
     
     if (!folderId) return;
     
-    const folderBookmarks = await chrome.bookmarks.getChildren(folderId);
+    let folderBookmarks;
+    try {
+      folderBookmarks = await chrome.bookmarks.getChildren(folderId);
+    } catch (e) {
+      // Папка не существует - пересоздаём
+      console.log('Bookmarks folder not found, reinitializing...');
+      await initializeBookmarksFolder();
+      return;
+    }
+    
     const bookmark = folderBookmarks.find(b => b.url === url);
     
     if (bookmark) {
@@ -138,7 +161,15 @@ async function syncBookmarksToPages() {
     if (!folderId) return;
     
     // Получаем все закладки из папки
-    const folderBookmarks = await chrome.bookmarks.getChildren(folderId);
+    let folderBookmarks;
+    try {
+      folderBookmarks = await chrome.bookmarks.getChildren(folderId);
+    } catch (e) {
+      // Папка не существует - пересоздаём
+      console.log('Bookmarks folder not found, reinitializing...');
+      await initializeBookmarksFolder();
+      return;
+    }
     
     // Создаём Set URL текущих страниц для быстрой проверки
     const currentUrls = new Set(currentPages.map(p => p.url));
