@@ -1,6 +1,6 @@
 // Получаем параметры из URL
 const urlParams = new URLSearchParams(window.location.search);
-const pageId = parseInt(urlParams.get('pageId'));
+const bookmarkId = urlParams.get('bookmarkId');
 const pageTitle = decodeURIComponent(urlParams.get('title') || 'Страница');
 const pageUrl = decodeURIComponent(urlParams.get('url') || '');
 const defaultInterval = parseInt(urlParams.get('interval') || '24');
@@ -31,7 +31,7 @@ function handleBeforeUnload() {
   // Отправляем сообщение в background script
   chrome.runtime.sendMessage({
     action: 'moveToCompletedWithInterval',
-    pageId: pageId,
+    bookmarkId: bookmarkId,
     intervalHours: intervalHours
   });
   

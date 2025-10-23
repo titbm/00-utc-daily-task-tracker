@@ -43,13 +43,6 @@ class DailyPanel {
         this.loadPages();
       }
     });
-    
-    // Обновляем список при изменении хранилища
-    chrome.storage.onChanged.addListener((changes, namespace) => {
-      if (namespace === 'local' && (changes.panelPages || changes.completedPages)) {
-        this.loadPages();
-      }
-    });
   }
   
   setupEventListeners() {
@@ -80,15 +73,21 @@ class DailyPanel {
     }
   }
   
-  loadPages() {
-    chrome.storage.local.get(['panelPages', 'completedPages'], (result) => {
-      const activePages = result.panelPages || [];
-      const completedPages = result.completedPages || [];
+  async loadPages() {
+    try {
+      // Запрашиваем данные у background
+      const activeResponse = await chrome.runtime.sendMessage({ action: 'getActivePages' });
+      const completedResponse = await chrome.runtime.sendMessage({ action: 'getCompletedPages' });
+      
+      const activePages = activeResponse.pages || [];
+      const completedPages = completedResponse.pages || [];
       
       this.renderPages(activePages, this.activePagesList, this.emptyStateActive);
       this.renderPages(completedPages, this.completedPagesList, this.emptyStateCompleted, true);
       this.updateCounters(activePages.length, completedPages.length);
-    });
+    } catch (error) {
+      console.error('Error loading pages:', error);
+    }
   }
   
   updateCounters(activeCount, completedCount) {
@@ -181,11 +180,11 @@ class DailyPanel {
     });
   }    // Обработчик клика по странице
     div.addEventListener('click', (e) => {
-      if (!e.target.classList.contains('remove-btn')) {
+      if (!e.target.classList.contains('remove-btn') && !e.target.classList.contains('page-reset-type-btn')) {
         if (isCompleted) {
           this.restoreCompletedPage(page.id);
         } else {
-          this.openPage(page.url, index);
+          this.openPage(page.url, page.id);
         }
       }
     });
@@ -257,90 +256,76 @@ class DailyPanel {
     }
   }
   
-  openPage(url, index) {
-    chrome.storage.local.get(['panelPages'], (result) => {
-      const pages = result.panelPages || [];
-      const page = pages[index];
-      
-      chrome.runtime.sendMessage({
+  async openPage(url, bookmarkId) {
+    try {
+      await chrome.runtime.sendMessage({
         action: 'openPage',
         url: url,
-        index: index,
-        pageId: page ? page.id : null
+        bookmarkId: bookmarkId
       });
-    });
+    } catch (error) {
+      console.error('Error opening page:', error);
+    }
   }
   
-  restoreCompletedPage(pageId) {
-    chrome.storage.local.get(['panelPages', 'completedPages'], (result) => {
-      const activePages = result.panelPages || [];
-      const completedPages = result.completedPages || [];
-      
-      const pageToRestore = completedPages.find(p => p.id === pageId);
-      if (!pageToRestore) return;
-      
-      // Удаляем дату завершения
-      const { completedAt, ...restoredPage } = pageToRestore;
-      
-      // Обновляем списки
-      const updatedActivePages = [...activePages, restoredPage];
-      const updatedCompletedPages = completedPages.filter(p => p.id !== pageId);
-      
-      chrome.storage.local.set({ 
-        panelPages: updatedActivePages,
-        completedPages: updatedCompletedPages
-      }, () => {
-        // Запрашиваем синхронизацию с закладками
-        chrome.runtime.sendMessage({ action: 'syncBookmarks' }).catch(() => {});
+  async restoreCompletedPage(bookmarkId) {
+    try {
+      await chrome.runtime.sendMessage({
+        action: 'restorePage',
+        bookmarkId: bookmarkId
       });
+      
+      // Проверяем, осталось ли что-то в отработанных
+      const completedResponse = await chrome.runtime.sendMessage({ action: 'getCompletedPages' });
+      const completedPages = completedResponse.pages || [];
       
       // Переключаемся на раздел активных только если это была последняя отработанная
-      if (this.currentSection === 'completed' && updatedCompletedPages.length === 0) {
+      if (this.currentSection === 'completed' && completedPages.length === 0) {
         this.toggleSection();
       }
-    });
+    } catch (error) {
+      console.error('Error restoring page:', error);
+    }
   }
   
-  removePage(pageId) {
-    chrome.runtime.sendMessage({
-      action: 'removePage',
-      pageId: pageId
-    });
+  async removePage(bookmarkId) {
+    try {
+      await chrome.runtime.sendMessage({
+        action: 'removePage',
+        bookmarkId: bookmarkId
+      });
+    } catch (error) {
+      console.error('Error removing page:', error);
+    }
   }
   
-  restoreAllCompleted() {
-    chrome.storage.local.get(['panelPages', 'completedPages'], (result) => {
-      const activePages = result.panelPages || [];
-      const completedPages = result.completedPages || [];
+  async restoreAllCompleted() {
+    try {
+      const completedResponse = await chrome.runtime.sendMessage({ action: 'getCompletedPages' });
+      const completedPages = completedResponse.pages || [];
       
       if (completedPages.length === 0) {
         return;
       }
       
-      // Удаляем дату завершения и добавляем обратно в активные
-      const restoredPages = completedPages.map(page => {
-        const { completedAt, ...pageWithoutDate } = page;
-        return pageWithoutDate;
-      });
-      
-      const updatedActivePages = [...activePages, ...restoredPages];
-      
-      chrome.storage.local.set({ 
-        panelPages: updatedActivePages,
-        completedPages: []
-      }, () => {
-        // Запрашиваем синхронизацию с закладками
-        chrome.runtime.sendMessage({ action: 'syncBookmarks' }).catch(() => {});
-      });
+      // Восстанавливаем все страницы
+      for (const page of completedPages) {
+        await chrome.runtime.sendMessage({
+          action: 'restorePage',
+          bookmarkId: page.id
+        });
+      }
       
       // Переключаемся на раздел активных
       if (this.currentSection === 'completed') {
         this.toggleSection();
       }
-    });
+    } catch (error) {
+      console.error('Error restoring all completed:', error);
+    }
   }
   
-  toggleResetType(page, button) {
+  async toggleResetType(page, button) {
     const currentType = page.resetType || 'midnight';
     const newType = currentType === 'midnight' ? 'interval' : 'midnight';
     
@@ -350,15 +335,20 @@ class DailyPanel {
     button.textContent = newType === 'midnight' ? '🌙' : '⏰';
     button.title = newType === 'midnight' ? 'В полночь (клик для смены)' : 'Через время (клик для смены)';
     
-    // Сохраняем изменения
-    chrome.runtime.sendMessage({
-      action: 'updatePageSettings',
-      pageId: page.id,
-      settings: {
+    // Обновляем локально в объекте
+    page.resetType = newType;
+    
+    // Отправляем в background для сохранения
+    try {
+      await chrome.runtime.sendMessage({
+        action: 'setResetType',
+        bookmarkId: page.id,
         resetType: newType,
         resetInterval: page.resetInterval || 24
-      }
-    });
+      });
+    } catch (error) {
+      console.error('Error setting reset type:', error);
+    }
   }
 }
 
