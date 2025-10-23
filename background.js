@@ -315,55 +315,6 @@ function notifyPanelUpdate() {
   });
 }
 
-// Слушаем создание закладок
-// Слушаем изменения закладок для уведомления панели
-// Слушаем изменения закладок для уведомления панели (избыточно, но оставлено для совместимости)
-chrome.bookmarks.onCreated.addListener(async (id, bookmark) => {
-  try {
-    const ids = await getFolderIds();
-    if (bookmark.parentId === ids.active || bookmark.parentId === ids.completed) {
-      notifyPanelUpdate();
-    }
-  } catch (error) {
-    console.error('Error in onCreated listener:', error);
-  }
-});
-
-chrome.bookmarks.onRemoved.addListener(async (id, removeInfo) => {
-  try {
-    const ids = await getFolderIds();
-    if (removeInfo.parentId === ids.active || removeInfo.parentId === ids.completed) {
-      notifyPanelUpdate();
-    }
-  } catch (error) {
-    console.error('Error in onRemoved listener:', error);
-  }
-});
-
-chrome.bookmarks.onMoved.addListener(async (id, moveInfo) => {
-  try {
-    const ids = await getFolderIds();
-    if (moveInfo.oldParentId === ids.active || moveInfo.oldParentId === ids.completed ||
-        moveInfo.parentId === ids.active || moveInfo.parentId === ids.completed) {
-      notifyPanelUpdate();
-    }
-  } catch (error) {
-    console.error('Error in onMoved listener:', error);
-  }
-});
-
-chrome.bookmarks.onChanged.addListener(async (id, changeInfo) => {
-  try {
-    const bookmark = await chrome.bookmarks.get(id);
-    const ids = await getFolderIds();
-    if (bookmark[0].parentId === ids.active || bookmark[0].parentId === ids.completed) {
-      notifyPanelUpdate();
-    }
-  } catch (error) {
-    console.error('Error in onChanged listener:', error);
-  }
-});
-
 // Функция запуска периодической проверки
 let fastCheckInterval = null;
 let sidePanelConnections = 0;
