@@ -6,8 +6,8 @@ chrome.runtime.onInstalled.addListener(async () => {
     contexts: ["page"]
   });
   
-  // Включаем боковую панель для всех вкладок
-  chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch((error) => console.error(error));
+  // Отключаем автоматическое открытие панели по клику (обрабатываем вручную)
+  chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: false }).catch((error) => console.error(error));
   
   // Создаём или находим папки в закладках
   await initializeBookmarksFolder();
