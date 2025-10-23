@@ -24,10 +24,6 @@ class DailyPanel {
     // Текущая активная секция
     this.currentSection = 'active'; // 'active' или 'completed'
     
-    // Диалоги
-    this.settingsDialog = document.getElementById('settingsDialog');
-    this.currentEditingPage = null;
-    
     this.init();
   }
   
@@ -57,20 +53,6 @@ class DailyPanel {
     
     this.restoreCompletedBtn.addEventListener('click', () => {
       this.restoreAllCompleted();
-    });
-    
-    // Диалог настроек
-    document.getElementById('resetTypeSelect').addEventListener('change', (e) => {
-      const intervalGroup = document.getElementById('intervalGroup');
-      intervalGroup.style.display = e.target.value === 'interval' ? 'block' : 'none';
-    });
-    
-    document.getElementById('cancelSettings').addEventListener('click', () => {
-      this.closeSettingsDialog();
-    });
-    
-    document.getElementById('saveSettings').addEventListener('click', () => {
-      this.savePageSettings();
     });
   }
   
@@ -164,18 +146,20 @@ class DailyPanel {
     removeBtn.textContent = '×';
     removeBtn.title = 'Удалить';
     
-    const settingsBtn = document.createElement('button');
-    settingsBtn.className = 'page-settings-btn';
-    settingsBtn.textContent = '⚙';
-    settingsBtn.title = 'Настройки';
+    const resetTypeBtn = document.createElement('button');
+    resetTypeBtn.className = 'page-reset-type-btn';
+    const resetType = page.resetType || 'midnight';
+    resetTypeBtn.classList.add(`type-${resetType}`);
+    resetTypeBtn.textContent = resetType === 'midnight' ? '🌙' : '⏰';
+    resetTypeBtn.title = resetType === 'midnight' ? 'В полночь (клик для смены)' : 'Через время (клик для смены)';
     
-    div.appendChild(settingsBtn);
+    div.appendChild(resetTypeBtn);
     div.appendChild(removeBtn);
     
-    // Обработчик настроек страницы
-    settingsBtn.addEventListener('click', (e) => {
+    // Обработчик переключения типа
+    resetTypeBtn.addEventListener('click', (e) => {
       e.stopPropagation();
-      this.openSettingsDialog(page);
+      this.toggleResetType(page, resetTypeBtn);
     });
     
     // Обработчик удаления страницы
@@ -290,40 +274,25 @@ class DailyPanel {
     });
   }
   
-  openSettingsDialog(page) {
-    this.currentEditingPage = page;
+  toggleResetType(page, button) {
+    const currentType = page.resetType || 'midnight';
+    const newType = currentType === 'midnight' ? 'interval' : 'midnight';
     
-    document.getElementById('dialogPageTitle').textContent = page.title;
-    document.getElementById('resetTypeSelect').value = page.resetType || 'midnight';
-    document.getElementById('resetIntervalInput').value = page.resetInterval || 24;
+    // Обновляем иконку
+    button.className = 'page-reset-type-btn';
+    button.classList.add(`type-${newType}`);
+    button.textContent = newType === 'midnight' ? '🌙' : '⏰';
+    button.title = newType === 'midnight' ? 'В полночь (клик для смены)' : 'Через время (клик для смены)';
     
-    const intervalGroup = document.getElementById('intervalGroup');
-    intervalGroup.style.display = (page.resetType === 'interval') ? 'block' : 'none';
-    
-    this.settingsDialog.classList.add('show');
-  }
-  
-  closeSettingsDialog() {
-    this.settingsDialog.classList.remove('show');
-    this.currentEditingPage = null;
-  }
-  
-  savePageSettings() {
-    if (!this.currentEditingPage) return;
-    
-    const resetType = document.getElementById('resetTypeSelect').value;
-    const resetInterval = parseInt(document.getElementById('resetIntervalInput').value) || 24;
-    
+    // Сохраняем изменения
     chrome.runtime.sendMessage({
       action: 'updatePageSettings',
-      pageId: this.currentEditingPage.id,
+      pageId: page.id,
       settings: {
-        resetType: resetType,
-        resetInterval: resetInterval
+        resetType: newType,
+        resetInterval: page.resetInterval || 24
       }
     });
-    
-    this.closeSettingsDialog();
   }
 }
 

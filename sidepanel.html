@@ -45,36 +45,6 @@
     </div>
   </div>
   
-  <!-- Диалог настроек страницы -->
-  <div id="settingsDialog" class="dialog-overlay">
-    <div class="dialog">
-      <h3>⚙️ Настройки страницы</h3>
-      <div class="dialog-content">
-        <div class="page-info-dialog">
-          <div class="page-title-dialog" id="dialogPageTitle"></div>
-        </div>
-        
-        <div class="setting-group">
-          <label class="setting-label">Тип обновления:</label>
-          <select id="resetTypeSelect" class="setting-select">
-            <option value="midnight">В полночь (00:00 UTC)</option>
-            <option value="interval">Через заданное время</option>
-          </select>
-        </div>
-        
-        <div class="setting-group" id="intervalGroup" style="display: none;">
-          <label class="setting-label">Интервал (часы):</label>
-          <input type="number" id="resetIntervalInput" class="setting-input" min="1" value="24">
-        </div>
-      </div>
-      
-      <div class="dialog-buttons">
-        <button id="cancelSettings" class="dialog-btn cancel-btn">Отмена</button>
-        <button id="saveSettings" class="dialog-btn save-btn">Сохранить</button>
-      </div>
-    </div>
-  </div>
-  
   <script src="sidepanel.js"></script>
 </body>
 </html>

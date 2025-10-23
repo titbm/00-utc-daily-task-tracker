@@ -416,25 +416,36 @@ body {
   transform: scale(0.98);
 }
 
-/* Иконка настроек на элементе */
-.page-settings-btn {
+/* Иконка типа обновления на элементе */
+.page-reset-type-btn {
   background: transparent;
   border: none;
-  color: #6c757d;
   cursor: pointer;
   font-size: 16px;
-  padding: 4px;
+  padding: 4px 6px;
   margin-left: 4px;
   opacity: 0;
   transition: all 0.2s;
   border-radius: 4px;
+  min-width: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.page-item:hover .page-settings-btn {
+.page-item:hover .page-reset-type-btn {
   opacity: 1;
 }
 
-.page-settings-btn:hover {
+.page-reset-type-btn:hover {
   background: #f8f9fa;
+  transform: scale(1.1);
+}
+
+.page-reset-type-btn.type-midnight {
   color: #667eea;
+}
+
+.page-reset-type-btn.type-interval {
+  color: #28a745;
 }
