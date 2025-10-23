@@ -226,6 +226,41 @@ body {
   transform: scale(0.9);
 }
 
+/* Индикатор у отработанных элементов (иконка или таймер) */
+.completed-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  margin-left: 8px;
+  font-size: 13px;
+  color: #6c757d;
+}
+
+.completed-indicator .moon-indicator {
+  color: #667eea;
+  font-size: 16px;
+}
+
+.completed-indicator .countdown-badge {
+  background: #fff;
+  border: 1px solid #e9ecef;
+  padding: 6px 8px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-family: monospace;
+  min-width: 72px;
+  text-align: center;
+  color: #28a745;
+}
+
+/* Для компактного расположения индикатора справа */
+#completedPagesList .page-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
 .footer {
   background: white;
   border-top: 1px solid #e9ecef;

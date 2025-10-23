@@ -10,6 +10,37 @@ document.getElementById('pageTitle').textContent = pageTitle;
 document.getElementById('pageUrl').textContent = pageUrl;
 document.getElementById('hoursInput').value = defaultInterval;
 
+// Функция для сохранения интервала
+function saveInterval() {
+  const hours = parseInt(document.getElementById('hoursInput').value) || 0;
+  const minutes = parseInt(document.getElementById('minutesInput').value) || 0;
+  
+  // Проверка: хотя бы 1 минута
+  if (hours === 0 && minutes === 0) {
+    // Если ничего не указано, используем значение по умолчанию
+    return defaultInterval;
+  }
+  
+  return hours + (minutes / 60);
+}
+
+// Обработчик закрытия вкладки (beforeunload) - сохраняем интервал из формы
+function handleBeforeUnload() {
+  const intervalHours = saveInterval();
+  
+  // Отправляем сообщение в background script
+  chrome.runtime.sendMessage({
+    action: 'moveToCompletedWithInterval',
+    pageId: pageId,
+    intervalHours: intervalHours
+  });
+  
+  // Открываем следующую страницу
+  chrome.runtime.sendMessage({ action: 'openNextPage' });
+}
+
+window.addEventListener('beforeunload', handleBeforeUnload);
+
 // Быстрые кнопки
 document.querySelectorAll('.quick-btn').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -31,11 +62,16 @@ document.getElementById('confirmBtn').addEventListener('click', () => {
     return;
   }
   
+  const intervalHours = hours + (minutes / 60);
+  
+  // Отменяем обработчик beforeunload, чтобы не было дублирования
+  window.removeEventListener('beforeunload', handleBeforeUnload);
+  
   // Отправляем сообщение в background script
   chrome.runtime.sendMessage({
     action: 'moveToCompletedWithInterval',
     pageId: pageId,
-    intervalHours: hours + (minutes / 60)
+    intervalHours: intervalHours
   }, () => {
     // Открываем следующую страницу
     chrome.runtime.sendMessage({ action: 'openNextPage' });

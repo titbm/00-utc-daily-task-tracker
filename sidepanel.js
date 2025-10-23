@@ -24,6 +24,9 @@ class DailyPanel {
     // Текущая активная секция
     this.currentSection = 'active'; // 'active' или 'completed'
     
+    // Словарь таймеров для отработанных элементов (по id)
+    this._completedTimers = {};
+
     this.init();
   }
   
@@ -91,6 +94,12 @@ class DailyPanel {
   }
   
   renderPages(pages, listElement, emptyStateElement, isCompleted = false) {
+    // Очищаем любые таймеры перед перерендером списка
+    if (isCompleted) {
+      Object.values(this._completedTimers).forEach(t => clearInterval(t));
+      this._completedTimers = {};
+    }
+
     listElement.innerHTML = '';
     
     if (pages.length === 0) {
@@ -139,8 +148,8 @@ class DailyPanel {
     div.appendChild(favicon);
     div.appendChild(info);
     
-    // Только для активных вкладок добавляем кнопку удаления
-    if (!isCompleted) {
+  // Только для активных вкладок добавляем кнопку удаления
+  if (!isCompleted) {
     const removeBtn = document.createElement('button');
     removeBtn.className = 'remove-btn';
     removeBtn.textContent = '×';
@@ -177,6 +186,54 @@ class DailyPanel {
         }
       }
     });
+    
+    // Если элемент отработанный — добавляем индикатор справа: 🌙 или таймер
+    if (isCompleted) {
+      const indicator = document.createElement('div');
+      indicator.className = 'completed-indicator';
+
+      const resetType = page.resetType || 'midnight';
+      if (resetType === 'midnight') {
+        const moon = document.createElement('div');
+        moon.className = 'moon-indicator';
+        moon.textContent = '🌙';
+        moon.title = 'Вернётся в полночь (00:00 UTC)';
+        indicator.appendChild(moon);
+      } else {
+        const badge = document.createElement('div');
+        badge.className = 'countdown-badge';
+        badge.textContent = '--:--:--';
+        badge.title = 'Осталось до восстановления';
+        indicator.appendChild(badge);
+
+        // Вычисляем время следующего восстановления
+        // Если задано поле restoreAt используем его, иначе вычисляем от completedAt + resetInterval часов
+        let restoreAtMs = null;
+        if (page.restoreAt) {
+          restoreAtMs = Date.parse(page.restoreAt);
+        } else if (page.completedAt && page.resetInterval) {
+          const completedMs = Date.parse(page.completedAt);
+          if (!isNaN(completedMs)) {
+            restoreAtMs = completedMs + Math.round((page.resetInterval || 0) * 3600 * 1000);
+          }
+        }
+
+        const updateBadge = () => {
+          const nowMs = Date.now();
+          const t = restoreAtMs ? Math.max(0, restoreAtMs - nowMs) : 0;
+          const hours = Math.floor(t / 3600000);
+          const minutes = Math.floor((t % 3600000) / 60000);
+          const seconds = Math.floor((t % 60000) / 1000);
+          badge.textContent = `${String(hours).padStart(2,'0')}:${String(minutes).padStart(2,'0')}:${String(seconds).padStart(2,'0')}`;
+        };
+
+        updateBadge();
+        // Запускаем интервал и сохраняем его, чтобы очистить при следующем рендере
+        this._completedTimers[page.id] = setInterval(updateBadge, 1000);
+      }
+
+      div.appendChild(indicator);
+    }
     
     return div;
   }
