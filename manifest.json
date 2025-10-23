@@ -28,7 +28,7 @@
   
   "web_accessible_resources": [
     {
-      "resources": ["interval-dialog.html"],
+      "resources": ["interval-dialog.html", "completed.html"],
       "matches": ["<all_urls>"]
     }
   ],

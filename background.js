@@ -587,22 +587,15 @@ async function openNextPageFromPanel() {
         console.log('Opened next page:', nextPage.title, 'tabId:', tab.id, 'windowId:', tab.windowId);
       });
     } else {
-      // Все страницы отработаны - открываем панель на вкладке "Отработанные"
-      console.log('All pages completed! Opening side panel...');
+      // Все страницы отработаны - открываем страницу завершения
+      console.log('All pages completed! Opening completion page...');
       if (currentWindowId) {
-        console.log('Opening side panel for window:', currentWindowId);
-        chrome.sidePanel.open({ windowId: currentWindowId }).then(() => {
-          console.log('Side panel opened successfully');
-          // Отправляем сообщение панели переключиться на completed
-          setTimeout(() => {
-            chrome.runtime.sendMessage({ action: 'showCompleted' }).catch(() => {});
-          }, 500);
-          currentWindowId = null; // Сбрасываем
-        }).catch(err => {
-          console.error('Failed to open side panel:', err);
-        });
+        const completedUrl = chrome.runtime.getURL('completed.html');
+        chrome.tabs.create({ url: completedUrl, windowId: currentWindowId });
+        currentWindowId = null; // Сбрасываем
       } else {
-        console.error('No windowId saved, cannot open panel');
+        console.error('No windowId saved, opening in current window');
+        chrome.tabs.create({ url: chrome.runtime.getURL('completed.html') });
       }
     }
   } catch (error) {
