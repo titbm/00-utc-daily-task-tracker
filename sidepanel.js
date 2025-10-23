@@ -74,7 +74,7 @@ class DailyPanel {
       this.currentSection = 'completed';
       this.activeSection.classList.remove('active');
       this.completedSection.classList.add('active');
-      titleText.textContent = 'Отработанные';
+      titleText.textContent = 'Completed';
       // Показываем кнопку восстановления, скрываем кнопку запуска
       this.startTasksBtn.style.display = 'none';
       this.restoreCompletedBtn.style.display = 'flex';
@@ -82,7 +82,7 @@ class DailyPanel {
       this.currentSection = 'active';
       this.completedSection.classList.remove('active');
       this.activeSection.classList.add('active');
-      titleText.textContent = 'Активные';
+      titleText.textContent = 'Active';
       // Показываем кнопку запуска, скрываем кнопку восстановления
       this.startTasksBtn.style.display = 'flex';
       this.restoreCompletedBtn.style.display = 'none';
