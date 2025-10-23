@@ -176,7 +176,7 @@ class DailyPanel {
   if (!isCompleted) {
     const removeBtn = document.createElement('button');
     removeBtn.className = 'remove-btn';
-    removeBtn.textContent = '×';
+    removeBtn.textContent = '🗑️';
     removeBtn.title = 'Удалить';
     
     const resetTypeBtn = document.createElement('button');
