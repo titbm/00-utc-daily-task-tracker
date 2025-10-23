@@ -457,7 +457,8 @@ chrome.runtime.onConnect.addListener((port) => {
 });
 
 // Функция проверки и восстановления старых страниц
-async function checkAndRestoreOldPages() {
+async function 
+checkAndRestoreOldPages() {
   try {
     console.log('Checking and restoring old pages...');
     const ids = await getFolderIds();
@@ -718,10 +719,12 @@ async function openNextPageFromPanel() {
 // Обработчик сообщений от popup, боковой панели и content scripts
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'openPage') {
+    console.log('Opening single page:', request.url, 'bookmarkId:', request.bookmarkId);
     chrome.tabs.create({ url: request.url }, (tab) => {
       // Сохраняем связь вкладки с закладкой
       if (request.bookmarkId) {
         openedTabs.set(tab.id, request.bookmarkId);
+        console.log('Tab', tab.id, 'linked to bookmark', request.bookmarkId);
       }
       sendResponse({ success: true });
     });
