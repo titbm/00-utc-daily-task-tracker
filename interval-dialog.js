@@ -70,7 +70,7 @@ document.getElementById('confirmBtn').addEventListener('click', () => {
   // Отправляем сообщение в background script
   chrome.runtime.sendMessage({
     action: 'moveToCompletedWithInterval',
-    pageId: pageId,
+    bookmarkId: bookmarkId,
     intervalHours: intervalHours
   }, () => {
     // Открываем следующую страницу
