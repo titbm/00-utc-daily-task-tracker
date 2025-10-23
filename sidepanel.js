@@ -13,7 +13,6 @@ class DailyPanel {
     this.emptyStateCompleted = document.getElementById('emptyStateCompleted');
     
     // Кнопки и элементы управления
-    this.toggleSectionBtn = document.getElementById('toggleSection');
     this.restoreCompletedBtn = document.getElementById('restoreCompleted');
     this.startTasksBtn = document.getElementById('startTasks');
     this.sectionTitle = document.getElementById('sectionTitle');
@@ -55,7 +54,7 @@ class DailyPanel {
   }
   
   setupEventListeners() {
-    this.toggleSectionBtn.addEventListener('click', () => {
+    this.sectionTitle.addEventListener('click', () => {
       this.toggleSection();
     });
     
@@ -74,8 +73,6 @@ class DailyPanel {
       this.activeSection.classList.remove('active');
       this.completedSection.classList.add('active');
       this.sectionTitle.textContent = '✓ Отработанные';
-      this.toggleSectionBtn.textContent = '📋';
-      this.toggleSectionBtn.title = 'Активные';
       // Показываем кнопку восстановления, скрываем кнопку запуска
       this.startTasksBtn.style.display = 'none';
       this.restoreCompletedBtn.style.display = 'flex';
@@ -84,8 +81,6 @@ class DailyPanel {
       this.completedSection.classList.remove('active');
       this.activeSection.classList.add('active');
       this.sectionTitle.textContent = '📋 Активные';
-      this.toggleSectionBtn.textContent = '✓';
-      this.toggleSectionBtn.title = 'Отработанные сегодня';
       // Показываем кнопку запуска, скрываем кнопку восстановления
       this.startTasksBtn.style.display = 'flex';
       this.restoreCompletedBtn.style.display = 'none';
