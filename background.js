@@ -754,6 +754,55 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       sendResponse({ success: true });
     })();
     return true; // Асинхронный ответ
+  } else if (request.action === 'restoreAllAndStart') {
+    // Восстановить все из Completed в Active и запустить
+    (async () => {
+      const completedPages = await getCompletedPages();
+      
+      if (completedPages.length === 0) {
+        sendResponse({ success: false, message: 'No completed pages' });
+        return;
+      }
+      
+      // Переносим все страницы из Completed в Active используя существующий функционал
+      for (const page of completedPages) {
+        const ids = await getFolderIds();
+        await chrome.bookmarks.move(page.id, { parentId: ids.active });
+        const parsed = parseCompletedBookmarkTitle(page.title);
+        const newTitle = `${parsed.title} [${parsed.resetType}]`;
+        await chrome.bookmarks.update(page.id, { title: newTitle });
+      }
+      
+      notifyPanelUpdate();
+      
+      // Получаем обновленный список активных и запускаем первую
+      const activePages = await getActivePages();
+      if (activePages.length > 0) {
+        const firstPage = activePages[0];
+        chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
+          if (tabs[0]) {
+            let taskUrl = firstPage.url;
+            try {
+              const url = new URL(firstPage.url);
+              url.searchParams.set('daily_panel_task', '1');
+              taskUrl = url.toString();
+              await chrome.bookmarks.update(firstPage.id, { url: taskUrl });
+            } catch (e) {
+              console.log('Cannot add parameter to URL:', firstPage.url);
+            }
+            
+            chrome.tabs.create({ url: taskUrl, windowId: tabs[0].windowId }, (newTab) => {
+              openedTabs.set(newTab.id, firstPage.id);
+              currentWindowId = newTab.windowId;
+              console.log('Started repeat all, tabId:', newTab.id);
+            });
+          }
+        });
+      }
+      
+      sendResponse({ success: true });
+    })();
+    return true; // Асинхронный ответ
   } else if (request.action === 'startStealthMode') {
     // Запуск стелс-режима с закрытием боковой панели
     (async () => {

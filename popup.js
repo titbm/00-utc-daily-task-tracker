@@ -6,24 +6,15 @@
   const stealthBtn = document.getElementById('stealthMode');
   
   if (activePages.length === 0) {
-    // Нет активных задач - заменяем кнопку на надпись
-    const completedText = document.createElement('div');
-    completedText.style.cssText = `
-      width: 100%;
-      padding: 12px;
-      margin-bottom: 8px;
-      border-radius: 8px;
-      font-size: 14px;
-      font-weight: 600;
-      background: white;
-      color: #28a745;
-      text-align: center;
-      box-sizing: border-box;
-    `;
-    completedText.textContent = '✓ All completed';
-    stealthBtn.replaceWith(completedText);
+    // Нет активных задач - показываем кнопку REPEAT ALL
+    stealthBtn.textContent = '🔄 REPEAT ALL';
+    stealthBtn.addEventListener('click', async () => {
+      // Переносим все из Completed в Active и запускаем
+      await chrome.runtime.sendMessage({ action: 'restoreAllAndStart' });
+      window.close();
+    });
   } else {
-    // Есть активные задачи - кнопка работает
+    // Есть активные задачи - кнопка START работает
     stealthBtn.addEventListener('click', async () => {
       // Отправляем команду на закрытие панели и запуск задач
       chrome.runtime.sendMessage({ action: 'startStealthMode' });
