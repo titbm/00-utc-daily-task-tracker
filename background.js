@@ -450,12 +450,28 @@ chrome.tabs.onRemoved.addListener(async (tabId, removeInfo) => {
     openedTabs.delete(tabId);
     
     try {
-      // Получаем закладку и читаем resetType из метаданных
+      // Проверяем, что закладка всё ещё в Active (может быть уже перемещена другой вкладкой)
       const bookmark = await chrome.bookmarks.get(bookmarkId);
-      if (!bookmark || !bookmark[0]) return;
+      if (!bookmark || !bookmark[0]) {
+        console.log('Bookmark already processed by another tab');
+        return;
+      }
+      
+      const ids = await getFolderIds();
+      if (bookmark[0].parentId !== ids.active) {
+        console.log('Bookmark already moved to Completed');
+        return;
+      }
       
       const page = bookmark[0];
       const parsed = parseActiveBookmarkTitle(page.title);
+      
+      // Удаляем все вкладки с этим bookmarkId из openedTabs (на случай дубликатов)
+      for (const [tId, bId] of openedTabs.entries()) {
+        if (bId === bookmarkId) {
+          openedTabs.delete(tId);
+        }
+      }
       
       // Перемещаем в Completed
       await movePageToCompleted(bookmarkId);
