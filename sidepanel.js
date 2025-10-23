@@ -70,7 +70,7 @@ class DailyPanel {
       }
     });
     
-    // Ссылка "Перейти в раздел Выполненные"
+    // Ссылка "Перейти в раздел Завершенные"
     const goToCompletedLink = document.getElementById('goToCompleted');
     if (goToCompletedLink) {
       goToCompletedLink.addEventListener('click', (e) => {
@@ -80,6 +80,19 @@ class DailyPanel {
         }
       });
     }
+    
+    // Клики по счётчикам для переключения разделов
+    this.activeCount.addEventListener('click', () => {
+      if (this.currentSection !== 'active') {
+        this.toggleSection();
+      }
+    });
+    
+    this.completedCount.addEventListener('click', () => {
+      if (this.currentSection !== 'completed') {
+        this.toggleSection();
+      }
+    });
   }
   
   toggleSection() {

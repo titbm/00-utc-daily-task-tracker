@@ -338,6 +338,15 @@ body {
   color: #dee2e6;
 }
 
+.counter-link {
+  cursor: pointer;
+  transition: text-decoration 0.2s;
+}
+
+.counter-link:hover {
+  text-decoration: underline;
+}
+
 /* Скроллбар */
 .content::-webkit-scrollbar {
   width: 8px;
