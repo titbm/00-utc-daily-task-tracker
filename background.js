@@ -18,7 +18,71 @@ chrome.runtime.onInstalled.addListener(() => {
   
   // Включаем боковую панель для всех вкладок
   chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch((error) => console.error(error));
+  
+  // Запускаем периодическую проверку времени
+  startTimeChecker();
 });
+
+// Запускаем проверку времени при старте service worker
+chrome.runtime.onStartup.addListener(() => {
+  startTimeChecker();
+});
+
+// Функция запуска периодической проверки
+function startTimeChecker() {
+  // Проверяем сразу при запуске
+  checkAndRestoreOldPages();
+  
+  // Устанавливаем интервал проверки каждые 5 секунд
+  setInterval(() => {
+    checkAndRestoreOldPages();
+  }, 5000);
+}
+
+// Функция проверки и восстановления старых страниц
+function checkAndRestoreOldPages() {
+  chrome.storage.local.get(['panelPages', 'completedPages', 'lastCheckDate'], (result) => {
+    const activePages = result.panelPages || [];
+    const completedPages = result.completedPages || [];
+    
+    if (completedPages.length === 0) return;
+    
+    const now = new Date();
+    const todayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0));
+    
+    // Разделяем на старые и сегодняшние
+    const oldPages = [];
+    const todayPages = [];
+    
+    completedPages.forEach(page => {
+      const completedDate = new Date(page.completedAt);
+      if (completedDate < todayStart) {
+        oldPages.push(page);
+      } else {
+        todayPages.push(page);
+      }
+    });
+    
+    // Если есть старые страницы, восстанавливаем их
+    if (oldPages.length > 0) {
+      const restoredPages = oldPages.map(page => {
+        const { completedAt, ...pageWithoutDate } = page;
+        return pageWithoutDate;
+      });
+      
+      const updatedActivePages = [...activePages, ...restoredPages];
+      
+      chrome.storage.local.set({ 
+        panelPages: updatedActivePages,
+        completedPages: todayPages,
+        lastCheckDate: now.toISOString()
+      });
+      
+      // Уведомляем панель об обновлении
+      chrome.runtime.sendMessage({ action: 'pagesUpdated' }).catch(() => {});
+    }
+  });
+}
 
 // Обработчик клика по контекстному меню
 chrome.contextMenus.onClicked.addListener((info, tab) => {

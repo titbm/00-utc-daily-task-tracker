@@ -77,60 +77,11 @@ class DailyPanel {
   loadPages() {
     chrome.storage.local.get(['panelPages', 'completedPages'], (result) => {
       const activePages = result.panelPages || [];
-      const allCompletedPages = result.completedPages || [];
-      
-      // Разделяем отработанные на сегодняшние и вчерашние
-      const { todayPages, oldPages } = this.filterPagesByDate(allCompletedPages);
-      
-      // Если есть старые страницы, возвращаем их в активные
-      if (oldPages.length > 0) {
-        this.restoreOldPagesToActive(oldPages, activePages);
-        return; // loadPages будет вызван снова после обновления storage
-      }
+      const completedPages = result.completedPages || [];
       
       this.renderPages(activePages, this.activePagesList, this.emptyStateActive);
-      this.renderPages(todayPages, this.completedPagesList, this.emptyStateCompleted, true);
-      this.updateCounters(activePages.length, todayPages.length);
-    });
-  }
-  
-  filterPagesByDate(pages) {
-    const now = new Date();
-    const todayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0));
-    
-    const todayPages = [];
-    const oldPages = [];
-    
-    pages.forEach(page => {
-      const completedDate = new Date(page.completedAt);
-      if (completedDate >= todayStart) {
-        todayPages.push(page);
-      } else {
-        oldPages.push(page);
-      }
-    });
-    
-    return { todayPages, oldPages };
-  }
-  
-  restoreOldPagesToActive(oldPages, currentActivePages) {
-    // Удаляем дату завершения и добавляем обратно в активные
-    const restoredPages = oldPages.map(page => {
-      const { completedAt, ...pageWithoutDate } = page;
-      return pageWithoutDate;
-    });
-    
-    const updatedActivePages = [...currentActivePages, ...restoredPages];
-    
-    chrome.storage.local.get(['completedPages'], (result) => {
-      const allCompleted = result.completedPages || [];
-      const oldPageIds = new Set(oldPages.map(p => p.id));
-      const remainingCompleted = allCompleted.filter(p => !oldPageIds.has(p.id));
-      
-      chrome.storage.local.set({ 
-        panelPages: updatedActivePages,
-        completedPages: remainingCompleted
-      });
+      this.renderPages(completedPages, this.completedPagesList, this.emptyStateCompleted, true);
+      this.updateCounters(activePages.length, completedPages.length);
     });
   }
   
