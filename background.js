@@ -24,7 +24,6 @@ chrome.runtime.onStartup.addListener(async () => {
 
 // Глобальные переменные для хранения ID папок (только ID, не данные)
 let FOLDER_IDS = {
-  main: null,
   active: null,
   completed: null
 };
@@ -75,7 +74,6 @@ async function initializeBookmarksFolder() {
     
     // Сохраняем ID папок в глобальную переменную
     FOLDER_IDS = {
-      main: dailyPanelFolder.id,
       active: activeFolder.id,
       completed: completedFolder.id
     };
@@ -319,13 +317,11 @@ function notifyPanelUpdate() {
 
 // Слушаем создание закладок
 // Слушаем изменения закладок для уведомления панели
+// Слушаем изменения закладок для уведомления панели (избыточно, но оставлено для совместимости)
 chrome.bookmarks.onCreated.addListener(async (id, bookmark) => {
   try {
     const ids = await getFolderIds();
-    
-    // Если создана в Active или Completed - уведомляем панель
     if (bookmark.parentId === ids.active || bookmark.parentId === ids.completed) {
-      console.log('Bookmark created:', bookmark.title);
       notifyPanelUpdate();
     }
   } catch (error) {
@@ -336,10 +332,7 @@ chrome.bookmarks.onCreated.addListener(async (id, bookmark) => {
 chrome.bookmarks.onRemoved.addListener(async (id, removeInfo) => {
   try {
     const ids = await getFolderIds();
-    
-    // Если удалили из Active или Completed - уведомляем панель
     if (removeInfo.parentId === ids.active || removeInfo.parentId === ids.completed) {
-      console.log('Bookmark removed');
       notifyPanelUpdate();
     }
   } catch (error) {
@@ -350,11 +343,8 @@ chrome.bookmarks.onRemoved.addListener(async (id, removeInfo) => {
 chrome.bookmarks.onMoved.addListener(async (id, moveInfo) => {
   try {
     const ids = await getFolderIds();
-    
-    // Если переместили в/из Active или Completed - уведомляем панель
     if (moveInfo.oldParentId === ids.active || moveInfo.oldParentId === ids.completed ||
         moveInfo.parentId === ids.active || moveInfo.parentId === ids.completed) {
-      console.log('Bookmark moved');
       notifyPanelUpdate();
     }
   } catch (error) {
@@ -366,10 +356,7 @@ chrome.bookmarks.onChanged.addListener(async (id, changeInfo) => {
   try {
     const bookmark = await chrome.bookmarks.get(id);
     const ids = await getFolderIds();
-    
-    // Если изменили закладку в Active или Completed - уведомляем панель
     if (bookmark[0].parentId === ids.active || bookmark[0].parentId === ids.completed) {
-      console.log('Bookmark changed');
       notifyPanelUpdate();
     }
   } catch (error) {
@@ -856,9 +843,3 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     sendResponse({ success: true });
   }
 });
-
-// Инициализация при загрузке service worker
-(async () => {
-  await initializeBookmarksFolder();
-  await startTimeChecker();
-})();
