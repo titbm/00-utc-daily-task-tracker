@@ -141,12 +141,28 @@ body {
   opacity: 0.85;
   border-color: #d4edda;
   background: #f8fff9;
+  cursor: pointer;
 }
 
 #completedPagesList .page-item:hover {
   opacity: 1;
   border-color: #28a745;
   box-shadow: 0 4px 12px rgba(40, 167, 69, 0.2);
+}
+
+#completedPagesList .page-item:hover::after {
+  content: '↺ Вернуть';
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: #28a745;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  pointer-events: none;
 }
 
 .page-favicon {

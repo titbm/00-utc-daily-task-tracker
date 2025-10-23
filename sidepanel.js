@@ -185,14 +185,23 @@ class DailyPanel {
     info.appendChild(title);
     info.appendChild(url);
     
-    const removeBtn = document.createElement('button');
-    removeBtn.className = 'remove-btn';
-    removeBtn.textContent = '×';
-    removeBtn.title = 'Удалить';
-    
     div.appendChild(favicon);
     div.appendChild(info);
-    div.appendChild(removeBtn);
+    
+    // Только для активных вкладок добавляем кнопку удаления
+    if (!isCompleted) {
+      const removeBtn = document.createElement('button');
+      removeBtn.className = 'remove-btn';
+      removeBtn.textContent = '×';
+      removeBtn.title = 'Удалить';
+      div.appendChild(removeBtn);
+      
+      // Обработчик удаления страницы
+      removeBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.removePage(page.id);
+      });
+    }
     
     // Обработчик клика по странице
     div.addEventListener('click', (e) => {
@@ -202,16 +211,6 @@ class DailyPanel {
         } else {
           this.openPage(page.url, index);
         }
-      }
-    });
-    
-    // Обработчик удаления страницы
-    removeBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      if (isCompleted) {
-        this.removeCompletedPage(page.id);
-      } else {
-        this.removePage(page.id);
       }
     });
     
@@ -273,14 +272,6 @@ class DailyPanel {
     chrome.runtime.sendMessage({
       action: 'removePage',
       pageId: pageId
-    });
-  }
-  
-  removeCompletedPage(pageId) {
-    chrome.storage.local.get(['completedPages'], (result) => {
-      const pages = result.completedPages || [];
-      const updatedPages = pages.filter(page => page.id !== pageId);
-      chrome.storage.local.set({ completedPages: updatedPages });
     });
   }
   
