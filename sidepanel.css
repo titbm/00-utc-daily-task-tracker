@@ -88,6 +88,12 @@ body {
   transform: scale(0.95);
 }
 
+.icon-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
 .content {
   flex: 1;
   padding: 16px;

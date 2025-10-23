@@ -63,7 +63,9 @@ class DailyPanel {
     });
     
     this.startTasksBtn.addEventListener('click', () => {
-      this.startAllTasks();
+      if (!this.startTasksBtn.disabled) {
+        this.startAllTasks();
+      }
     });
     
     // Ссылка "Перейти в раздел Выполненные"
@@ -115,6 +117,17 @@ class DailyPanel {
       this.renderPages(activePages, this.activePagesList, this.emptyStateActive);
       this.renderPages(completedPages, this.completedPagesList, this.emptyStateCompleted, true);
       this.updateCounters(activePages.length, completedPages.length);
+      
+      // Управляем состоянием кнопки запуска
+      if (activePages.length === 0) {
+        this.startTasksBtn.disabled = true;
+        this.startTasksBtn.style.opacity = '0.5';
+        this.startTasksBtn.style.cursor = 'not-allowed';
+      } else {
+        this.startTasksBtn.disabled = false;
+        this.startTasksBtn.style.opacity = '1';
+        this.startTasksBtn.style.cursor = 'pointer';
+      }
     } catch (error) {
       console.error('Error loading pages:', error);
     }
