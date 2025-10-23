@@ -599,15 +599,23 @@ async function openNextPageFromPanel() {
     // Открываем первую страницу из оставшихся
     if (pages.length > 0) {
       const nextPage = pages[0];
-      // Добавляем параметр в URL для пометки вкладки как задачи
-      const taskUrl = new URL(nextPage.url);
-      taskUrl.searchParams.set('daily_panel_task', '1');
       
-      chrome.tabs.create({ url: taskUrl.toString() }, (tab) => {
-        // Регистрируем вкладку для отслеживания закрытия
+      // Добавляем параметр в URL закладки
+      let taskUrl = nextPage.url;
+      try {
+        const url = new URL(nextPage.url);
+        url.searchParams.set('daily_panel_task', '1');
+        taskUrl = url.toString();
+        // Временно обновляем URL закладки
+        await chrome.bookmarks.update(nextPage.id, { url: taskUrl });
+      } catch (e) {
+        console.log('Cannot add parameter to URL:', nextPage.url);
+      }
+      
+      chrome.tabs.create({ url: taskUrl }, (tab) => {
         openedTabs.set(tab.id, nextPage.id);
-        currentWindowId = tab.windowId; // Сохраняем windowId
-        console.log('Opened next page:', nextPage.title, 'tabId:', tab.id, 'windowId:', tab.windowId);
+        currentWindowId = tab.windowId;
+        console.log('Opened next page:', nextPage.title, 'tabId:', tab.id);
       });
     } else {
       // Все страницы отработаны - открываем страницу завершения
@@ -745,16 +753,24 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       const pages = await getActivePages();
       if (pages.length > 0) {
         const firstPage = pages[0];
-        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
           if (tabs[0]) {
-            // Добавляем параметр в URL для пометки вкладки как задачи
-            const taskUrl = new URL(firstPage.url);
-            taskUrl.searchParams.set('daily_panel_task', '1');
+            // Добавляем параметр в URL закладки
+            let taskUrl = firstPage.url;
+            try {
+              const url = new URL(firstPage.url);
+              url.searchParams.set('daily_panel_task', '1');
+              taskUrl = url.toString();
+              // Временно обновляем URL закладки
+              await chrome.bookmarks.update(firstPage.id, { url: taskUrl });
+            } catch (e) {
+              console.log('Cannot add parameter to URL:', firstPage.url);
+            }
             
-            chrome.tabs.create({ url: taskUrl.toString(), windowId: tabs[0].windowId }, (newTab) => {
+            chrome.tabs.create({ url: taskUrl, windowId: tabs[0].windowId }, (newTab) => {
               openedTabs.set(newTab.id, firstPage.id);
               currentWindowId = newTab.windowId;
-              console.log('Started daily tasks from banner');
+              console.log('Started daily tasks from banner, tabId:', newTab.id);
             });
           }
         });
