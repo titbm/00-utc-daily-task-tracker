@@ -103,8 +103,10 @@ async function initializeBookmarksFolder() {
 // Функция синхронизации страниц из панели в закладки (панель -> закладки)
 async function syncPagesToBookmarks() {
   try {
-    const result = await chrome.storage.local.get(['panelPages', 'bookmarksFolderId']);
-    const pages = result.panelPages || [];
+    const result = await chrome.storage.local.get(['panelPages', 'completedPages', 'bookmarksFolderId']);
+    const activePages = result.panelPages || [];
+    const completedPages = result.completedPages || [];
+    const allPages = [...activePages, ...completedPages];
     const folderId = result.bookmarksFolderId;
     
     if (!folderId) {
@@ -132,10 +134,10 @@ async function syncPagesToBookmarks() {
       }
     }
     
-    // Создаём карту страниц панели по URL
-    const pageUrls = new Set(pages.map(p => p.url));
+    // Создаём карту ВСЕХ страниц панели (активные + отработанные) по URL
+    const pageUrls = new Set(allPages.map(p => p.url));
     
-    // Удаляем закладки, которых нет в панели
+    // Удаляем закладки, которых нет ни в активных, ни в отработанных
     for (const [url, bookmarkId] of bookmarkMap) {
       if (!pageUrls.has(url)) {
         console.log('Removing bookmark not in panel:', url);
@@ -144,7 +146,7 @@ async function syncPagesToBookmarks() {
     }
     
     // Добавляем закладки, которых нет в папке
-    for (const page of pages) {
+    for (const page of allPages) {
       if (!bookmarkMap.has(page.url)) {
         console.log('Adding bookmark from panel:', page.title);
         await chrome.bookmarks.create({
@@ -154,6 +156,8 @@ async function syncPagesToBookmarks() {
         });
       }
     }
+    
+    console.log(`Synced ${allPages.length} pages (${activePages.length} active + ${completedPages.length} completed) to bookmarks`);
   } catch (error) {
     console.error('Error syncing pages to bookmarks:', error);
   }
