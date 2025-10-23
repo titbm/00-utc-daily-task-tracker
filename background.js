@@ -376,7 +376,7 @@ chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
         const page = result.panelPages ? result.panelPages.find(p => p.id === result.openedPageId) : null;
         
         // Перемещаем страницу в отработанные по ID
-        movePageToCompletedById(result.openedPageId, result.panelPages);
+        movePageToCompletedById(result.openedPageId);
         
         // Если тип НЕ 'interval', открываем следующую страницу
         // Для 'interval' следующая откроется после закрытия диалога
@@ -392,47 +392,47 @@ chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
 
 // Функция перемещения страницы в отработанные по ID
 function movePageToCompletedById(pageId, allPages) {
-  if (!pageId || !allPages) {
+  if (!pageId) {
     return;
   }
   
-  const page = allPages.find(p => p.id === pageId);
-  if (!page) {
-    return;
-  }
-  
-  // Если тип resetType = 'interval', открываем диалог в новой вкладке
-  if (page.resetType === 'interval') {
-    const dialogUrl = chrome.runtime.getURL('interval-dialog.html') + 
-      `?pageId=${page.id}` +
-      `&title=${encodeURIComponent(page.title)}` +
-      `&url=${encodeURIComponent(page.url)}` +
-      `&interval=${page.resetInterval || 24}`;
-    
-    chrome.tabs.create({ url: dialogUrl });
-    // НЕ открываем следующую страницу - она откроется после закрытия диалога
-    return;
-  }
-  
-  const completedPage = {
-    ...page,
-    completedAt: new Date().toISOString()
-  };
-  
+  // Читаем свежие данные из storage
   chrome.storage.local.get(['panelPages', 'completedPages'], (result) => {
-    const activePagesUpdated = (result.panelPages || []).filter(p => p.id !== pageId);
+    const pages = result.panelPages || [];
+    const page = pages.find(p => p.id === pageId);
+    
+    if (!page) {
+      return;
+    }
+    
+    const completedPage = {
+      ...page,
+      completedAt: new Date().toISOString()
+    };
+    
+    // Удаляем из активных
+    const activePagesUpdated = pages.filter(p => p.id !== pageId);
     const completedPages = result.completedPages || [];
     completedPages.push(completedPage);
     
     chrome.storage.local.set({ 
       panelPages: activePagesUpdated,
       completedPages: completedPages
+    }, () => {
+      // Уведомляем панель об обновлении
+      chrome.runtime.sendMessage({ action: 'pagesUpdated' }).catch(() => {});
+      
+      // Если тип resetType = 'interval', открываем диалог в новой вкладке
+      if (page.resetType === 'interval') {
+        const dialogUrl = chrome.runtime.getURL('interval-dialog.html') + 
+          `?pageId=${page.id}` +
+          `&title=${encodeURIComponent(page.title)}` +
+          `&url=${encodeURIComponent(page.url)}` +
+          `&interval=${page.resetInterval || 24}`;
+        
+        chrome.tabs.create({ url: dialogUrl });
+      }
     });
-    
-    // НЕ удаляем из закладок - закладка остаётся в избранном
-    
-    // Уведомляем панель об обновлении
-    chrome.runtime.sendMessage({ action: 'pagesUpdated' }).catch(() => {});
   });
 }
 
