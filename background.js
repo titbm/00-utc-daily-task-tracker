@@ -443,6 +443,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
 // Слушаем закрытие вкладок для автоматического открытия следующей
 // Хранилище для отслеживания открытых вкладок из панели
 const openedTabs = new Map(); // tabId -> bookmarkId
+let currentWindowId = null; // Сохраняем windowId для открытия панели в конце
 
 chrome.tabs.onRemoved.addListener(async (tabId, removeInfo) => {
   if (!removeInfo.isWindowClosing && openedTabs.has(tabId)) {
@@ -582,25 +583,27 @@ async function openNextPageFromPanel() {
       chrome.tabs.create({ url: nextPage.url }, (tab) => {
         // Регистрируем вкладку для отслеживания закрытия
         openedTabs.set(tab.id, nextPage.id);
-        console.log('Opened next page:', nextPage.title, 'tabId:', tab.id);
+        currentWindowId = tab.windowId; // Сохраняем windowId
+        console.log('Opened next page:', nextPage.title, 'tabId:', tab.id, 'windowId:', tab.windowId);
       });
     } else {
       // Все страницы отработаны - открываем панель на вкладке "Отработанные"
       console.log('All pages completed! Opening side panel...');
-      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-        if (tabs[0]) {
-          console.log('Opening side panel for window:', tabs[0].windowId);
-          chrome.sidePanel.open({ windowId: tabs[0].windowId }).then(() => {
-            console.log('Side panel opened successfully');
-            // Отправляем сообщение панели переключиться на completed
-            setTimeout(() => {
-              chrome.runtime.sendMessage({ action: 'showCompleted' }).catch(() => {});
-            }, 500);
-          }).catch(err => {
-            console.error('Failed to open side panel:', err);
-          });
-        }
-      });
+      if (currentWindowId) {
+        console.log('Opening side panel for window:', currentWindowId);
+        chrome.sidePanel.open({ windowId: currentWindowId }).then(() => {
+          console.log('Side panel opened successfully');
+          // Отправляем сообщение панели переключиться на completed
+          setTimeout(() => {
+            chrome.runtime.sendMessage({ action: 'showCompleted' }).catch(() => {});
+          }, 500);
+          currentWindowId = null; // Сбрасываем
+        }).catch(err => {
+          console.error('Failed to open side panel:', err);
+        });
+      } else {
+        console.error('No windowId saved, cannot open panel');
+      }
     }
   } catch (error) {
     console.error('Error opening next page:', error);
@@ -617,7 +620,8 @@ chrome.action.onClicked.addListener(async (tab) => {
       const firstPage = pages[0];
       chrome.tabs.create({ url: firstPage.url }, (newTab) => {
         openedTabs.set(newTab.id, firstPage.id);
-        console.log('Started auto-open cycle from icon click');
+        currentWindowId = newTab.windowId; // Сохраняем windowId
+        console.log('Started auto-open cycle from icon click, windowId:', newTab.windowId);
       });
     } else {
       // Если активных нет - открываем панель на вкладке "Отработанные"
