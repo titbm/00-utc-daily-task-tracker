@@ -2,6 +2,7 @@
 
 let banner = null;
 let isTaskTab = false; // Флаг для вкладок, открытых из Daily Panel
+let hasCheckedTaskStatus = false; // Флаг проверки статуса
 
 // Создание баннера
 function createBanner() {
@@ -76,6 +77,18 @@ function removeBanner() {
 
 // Проверка наличия активных страниц
 async function checkActiveTasks() {
+  // Ждем немного, чтобы успело прийти сообщение markAsTaskTab
+  if (!hasCheckedTaskStatus) {
+    await new Promise(resolve => setTimeout(resolve, 200));
+    hasCheckedTaskStatus = true;
+  }
+  
+  // Если это вкладка с задачей - не показываем баннер
+  if (isTaskTab) {
+    removeBanner();
+    return;
+  }
+  
   try {
     const response = await chrome.runtime.sendMessage({ action: 'getActivePages' });
     const activePages = response.pages || [];
