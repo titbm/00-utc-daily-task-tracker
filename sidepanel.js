@@ -68,11 +68,13 @@ class DailyPanel {
   }
   
   toggleSection() {
+    const titleText = this.sectionTitle.querySelector('.title-text');
+    
     if (this.currentSection === 'active') {
       this.currentSection = 'completed';
       this.activeSection.classList.remove('active');
       this.completedSection.classList.add('active');
-      this.sectionTitle.textContent = '✓ Отработанные';
+      titleText.textContent = 'Отработанные';
       // Показываем кнопку восстановления, скрываем кнопку запуска
       this.startTasksBtn.style.display = 'none';
       this.restoreCompletedBtn.style.display = 'flex';
@@ -80,7 +82,7 @@ class DailyPanel {
       this.currentSection = 'active';
       this.completedSection.classList.remove('active');
       this.activeSection.classList.add('active');
-      this.sectionTitle.textContent = '📋 Активные';
+      titleText.textContent = 'Активные';
       // Показываем кнопку запуска, скрываем кнопку восстановления
       this.startTasksBtn.style.display = 'flex';
       this.restoreCompletedBtn.style.display = 'none';
