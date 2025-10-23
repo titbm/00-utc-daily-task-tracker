@@ -754,8 +754,44 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       sendResponse({ success: true });
     })();
     return true; // Асинхронный ответ
+  } else if (request.action === 'startStealthMode') {
+    // Запуск стелс-режима с закрытием боковой панели
+    (async () => {
+      // Отправляем сообщение боковой панели закрыться
+      chrome.runtime.sendMessage({ action: 'closeSidePanel' }).catch(() => {});
+      
+      // Небольшая задержка для закрытия панели
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // Запускаем задачи
+      const pages = await getActivePages();
+      if (pages.length > 0) {
+        const firstPage = pages[0];
+        chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
+          if (tabs[0]) {
+            let taskUrl = firstPage.url;
+            try {
+              const url = new URL(firstPage.url);
+              url.searchParams.set('daily_panel_task', '1');
+              taskUrl = url.toString();
+              await chrome.bookmarks.update(firstPage.id, { url: taskUrl });
+            } catch (e) {
+              console.log('Cannot add parameter to URL:', firstPage.url);
+            }
+            
+            chrome.tabs.create({ url: taskUrl, windowId: tabs[0].windowId }, (newTab) => {
+              openedTabs.set(newTab.id, firstPage.id);
+              currentWindowId = newTab.windowId;
+              console.log('Started stealth mode, tabId:', newTab.id);
+            });
+          }
+        });
+      }
+      sendResponse({ success: true });
+    })();
+    return true; // Асинхронный ответ
   } else if (request.action === 'startDailyTasks') {
-    // Запуск цикла отработки задач из баннера
+    // Запуск цикла отработки задач из баннера (без закрытия панели)
     (async () => {
       const pages = await getActivePages();
       if (pages.length > 0) {

@@ -46,6 +46,9 @@ class DailyPanel {
         if (this.currentSection === 'active') {
           this.toggleSection();
         }
+      } else if (message.action === 'closeSidePanel') {
+        // Закрываем боковую панель
+        window.close();
       }
     });
   }
