@@ -59,7 +59,9 @@ class DailyPanel {
     });
     
     this.restoreCompletedBtn.addEventListener('click', () => {
-      this.restoreAllCompleted();
+      if (!this.restoreCompletedBtn.disabled) {
+        this.restoreAllCompleted();
+      }
     });
     
     this.startTasksBtn.addEventListener('click', () => {
@@ -128,14 +130,25 @@ class DailyPanel {
         this.startTasksBtn.style.opacity = '1';
         this.startTasksBtn.style.cursor = 'pointer';
       }
+      
+      // Управляем состоянием кнопки восстановления
+      if (completedPages.length === 0) {
+        this.restoreCompletedBtn.disabled = true;
+        this.restoreCompletedBtn.style.opacity = '0.5';
+        this.restoreCompletedBtn.style.cursor = 'not-allowed';
+      } else {
+        this.restoreCompletedBtn.disabled = false;
+        this.restoreCompletedBtn.style.opacity = '1';
+        this.restoreCompletedBtn.style.cursor = 'pointer';
+      }
     } catch (error) {
       console.error('Error loading pages:', error);
     }
   }
   
   updateCounters(activeCount, completedCount) {
-    this.activeCount.textContent = `Активных: ${activeCount}`;
-    this.completedCount.textContent = `Отработанных: ${completedCount}`;
+    this.activeCount.textContent = `Активные: ${activeCount}`;
+    this.completedCount.textContent = `Выполненные: ${completedCount}`;
   }
   
   renderPages(pages, listElement, emptyStateElement, isCompleted = false) {
