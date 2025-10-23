@@ -31,16 +31,6 @@ class DailyPanel {
   }
   
   init() {
-    // Проверяем URL параметры для открытия нужной секции
-    const urlParams = new URLSearchParams(window.location.search);
-    const section = urlParams.get('section');
-    if (section === 'completed') {
-      this.currentSection = 'completed';
-      this.activeSection.classList.remove('active');
-      this.completedSection.classList.add('active');
-      this.sectionTitle.textContent = 'Отработанные';
-    }
-    
     this.loadPages();
     this.setupEventListeners();
     

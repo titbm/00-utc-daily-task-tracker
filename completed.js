@@ -1,13 +1,13 @@
 document.getElementById('openPanelBtn').addEventListener('click', async () => {
   const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
   if (tabs[0]) {
-    // Сначала отправляем сообщение (панель может быть уже открыта)
-    chrome.runtime.sendMessage({ action: 'showCompleted' }).catch(() => {});
+    // Set flag to open on completed section
+    await chrome.storage.session.set({ openOnCompleted: true });
     
-    // Открываем панель
+    // Open panel
     await chrome.sidePanel.open({ windowId: tabs[0].windowId });
     
-    // Закрываем эту вкладку
+    // Close tab
     chrome.tabs.remove(tabs[0].id);
   }
 });
