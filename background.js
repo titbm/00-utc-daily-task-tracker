@@ -574,6 +574,8 @@ async function openNextPageFromPanel() {
   try {
     const pages = await getActivePages();
     
+    console.log('openNextPageFromPanel: remaining pages:', pages.length);
+    
     // Открываем первую страницу из оставшихся
     if (pages.length > 0) {
       const nextPage = pages[0];
@@ -584,13 +586,19 @@ async function openNextPageFromPanel() {
       });
     } else {
       // Все страницы отработаны - открываем панель на вкладке "Отработанные"
+      console.log('All pages completed! Opening side panel...');
       chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
         if (tabs[0]) {
-          chrome.sidePanel.open({ windowId: tabs[0].windowId });
-          // Отправляем сообщение панели переключиться на completed
-          setTimeout(() => {
-            chrome.runtime.sendMessage({ action: 'showCompleted' }).catch(() => {});
-          }, 500);
+          console.log('Opening side panel for window:', tabs[0].windowId);
+          chrome.sidePanel.open({ windowId: tabs[0].windowId }).then(() => {
+            console.log('Side panel opened successfully');
+            // Отправляем сообщение панели переключиться на completed
+            setTimeout(() => {
+              chrome.runtime.sendMessage({ action: 'showCompleted' }).catch(() => {});
+            }, 500);
+          }).catch(err => {
+            console.error('Failed to open side panel:', err);
+          });
         }
       });
     }
