@@ -185,10 +185,16 @@ class DailyPanel {
   }
   
   openPage(url, index) {
-    chrome.runtime.sendMessage({
-      action: 'openPage',
-      url: url,
-      index: index
+    chrome.storage.local.get(['panelPages'], (result) => {
+      const pages = result.panelPages || [];
+      const page = pages[index];
+      
+      chrome.runtime.sendMessage({
+        action: 'openPage',
+        url: url,
+        index: index,
+        pageId: page ? page.id : null
+      });
     });
   }
   

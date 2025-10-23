@@ -122,34 +122,40 @@ function addPageToPanel(tab) {
 chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
   if (!removeInfo.isWindowClosing) {
     // Проверяем, была ли закрыта вкладка из нашего списка
-    chrome.storage.local.get(['panelPages', 'currentTabId', 'autoOpenEnabled', 'currentIndex'], (result) => {
+    chrome.storage.local.get(['panelPages', 'currentTabId', 'autoOpenEnabled', 'openedPageId'], (result) => {
       const autoOpenEnabled = result.autoOpenEnabled !== false;
       
       if (autoOpenEnabled && result.currentTabId === tabId) {
-        // Перемещаем страницу в отработанные
-        movePageToCompleted(result.currentIndex, result.panelPages);
+        // Перемещаем страницу в отработанные по ID
+        movePageToCompletedById(result.openedPageId, result.panelPages);
         
-        // Открываем следующую
-        openNextPageFromPanel();
+        // Небольшая задержка перед открытием следующей
+        setTimeout(() => {
+          openNextPageFromPanel();
+        }, 100);
       }
     });
   }
 });
 
-// Функция перемещения страницы в отработанные
-function movePageToCompleted(pageIndex, allPages) {
-  if (pageIndex === undefined || pageIndex < 0 || !allPages || pageIndex >= allPages.length) {
+// Функция перемещения страницы в отработанные по ID
+function movePageToCompletedById(pageId, allPages) {
+  if (!pageId || !allPages) {
     return;
   }
   
-  const page = allPages[pageIndex];
+  const page = allPages.find(p => p.id === pageId);
+  if (!page) {
+    return;
+  }
+  
   const completedPage = {
     ...page,
     completedAt: new Date().toISOString()
   };
   
   chrome.storage.local.get(['panelPages', 'completedPages'], (result) => {
-    const activePagesUpdated = (result.panelPages || []).filter((_, idx) => idx !== pageIndex);
+    const activePagesUpdated = (result.panelPages || []).filter(p => p.id !== pageId);
     const completedPages = result.completedPages || [];
     completedPages.push(completedPage);
     
@@ -165,18 +171,18 @@ function movePageToCompleted(pageIndex, allPages) {
 
 // Функция открытия следующей страницы из панели
 function openNextPageFromPanel() {
-  chrome.storage.local.get(['panelPages', 'currentIndex'], (result) => {
+  chrome.storage.local.get(['panelPages'], (result) => {
     const pages = result.panelPages || [];
-    let currentIndex = result.currentIndex !== undefined ? result.currentIndex : -1;
     
-    // После перемещения в отработанные индексы сдвигаются, поэтому используем тот же индекс
-    if (pages.length > 0 && currentIndex < pages.length) {
-      const nextPage = pages[currentIndex];
+    // Открываем первую страницу из оставшихся
+    if (pages.length > 0) {
+      const nextPage = pages[0];
       
       chrome.tabs.create({ url: nextPage.url }, (tab) => {
         chrome.storage.local.set({ 
-          currentIndex: currentIndex,
-          currentTabId: tab.id 
+          currentIndex: 0,
+          currentTabId: tab.id,
+          openedPageId: nextPage.id
         });
       });
     } else {
@@ -184,7 +190,8 @@ function openNextPageFromPanel() {
       chrome.storage.local.set({ 
         currentIndex: -1,
         currentTabId: null,
-        autoOpenEnabled: false
+        autoOpenEnabled: false,
+        openedPageId: null
       });
     }
   });
@@ -202,7 +209,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       chrome.storage.local.set({ 
         currentIndex: request.index,
         currentTabId: tab.id,
-        autoOpenEnabled: true
+        autoOpenEnabled: true,
+        openedPageId: request.pageId
       });
     });
   } else if (request.action === 'removePage') {
