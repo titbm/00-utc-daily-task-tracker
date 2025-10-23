@@ -34,10 +34,7 @@ let isInitializing = false;
 
 // Функция инициализации папки закладок (с двумя подпапками)
 async function initializeBookmarksFolder() {
-  if (isInitializing) {
-    console.log('Already initializing, skipping...');
-    return;
-  }
+  if (isInitializing) return;
   
   isInitializing = true;
   try {
@@ -54,7 +51,6 @@ async function initializeBookmarksFolder() {
         parentId: bookmarksBar.id,
         title: 'Daily Panel'
       });
-      console.log('Created Daily Panel folder');
     }
     
     // Получаем подпапки (или создаём их)
@@ -68,7 +64,6 @@ async function initializeBookmarksFolder() {
         parentId: dailyPanelFolder.id,
         title: 'Active'
       });
-      console.log('Created Active subfolder');
     }
     
     if (!completedFolder) {
@@ -76,7 +71,6 @@ async function initializeBookmarksFolder() {
         parentId: dailyPanelFolder.id,
         title: 'Completed'
       });
-      console.log('Created Completed subfolder');
     }
     
     // Сохраняем ID папок в глобальную переменную
@@ -85,8 +79,6 @@ async function initializeBookmarksFolder() {
       active: activeFolder.id,
       completed: completedFolder.id
     };
-    
-    console.log('Folder IDs initialized:', FOLDER_IDS);
   } catch (error) {
     console.error('Error initializing bookmarks folder:', error);
   } finally {
@@ -213,7 +205,6 @@ function parseCompletedBookmarkTitle(fullTitle) {
     addedAt: metadata[4] || new Date().toISOString()
   };
   
-  console.log('Parsed completed bookmark:', parsed);
   return parsed;
 }
 
@@ -227,9 +218,7 @@ function createCompletedBookmarkTitle(page) {
     page.addedAt || new Date().toISOString()
   ].join('|');
   
-  const title = `${page.title} [${metadata}]`;
-  console.log('Created bookmark title:', title, 'from page:', page);
-  return title;
+  return `${page.title} [${metadata}]`;
 }
 
 // Функция добавления параметра daily_panel_task=1 к URL
@@ -274,10 +263,7 @@ async function addPageToActive(tab) {
       } catch (e) {}
       return pageUrl === normalizedUrl;
     });
-    if (existsInActive) {
-      console.log('Page already exists in Active:', normalizedUrl);
-      return;
-    }
+    if (existsInActive) return;
     
     // Проверяем дубликаты в Completed
     const completedPages = await getCompletedPages();
@@ -290,10 +276,7 @@ async function addPageToActive(tab) {
       } catch (e) {}
       return pageUrl === normalizedUrl;
     });
-    if (existsInCompleted) {
-      console.log('Page already exists in Completed:', normalizedUrl);
-      return;
-    }
+    if (existsInCompleted) return;
     
     // Создаём закладку с метаданными [resetType]
     const titleWithMetadata = `${tab.title} [midnight]`;
@@ -305,7 +288,6 @@ async function addPageToActive(tab) {
       url: urlWithParam
     });
     
-    console.log('Added page to Active:', tab.title, 'with URL:', urlWithParam);
     notifyPanelUpdate();
   } catch (error) {
     console.error('Error adding page to Active:', error);
@@ -316,7 +298,6 @@ async function addPageToActive(tab) {
 async function removePage(bookmarkId) {
   try {
     await chrome.bookmarks.remove(bookmarkId);
-    console.log('Removed bookmark:', bookmarkId);
     notifyPanelUpdate();
   } catch (error) {
     console.error('Error removing bookmark:', error);
@@ -401,20 +382,14 @@ let fastCheckInterval = null;
 let sidePanelConnections = 0;
 
 async function startTimeChecker() {
-  console.log('⏰ startTimeChecker called');
-  
   // Проверяем сразу при запуске
-  console.log('⏰ Starting checkAndRestoreOldPages...');
   await checkAndRestoreOldPages();
-  console.log('⏰ checkAndRestoreOldPages completed');
   
   // Очищаем старый alarm если есть
   await chrome.alarms.clear('checkPages');
   
   // Создаём alarm для фоновых проверок (каждую минуту)
   chrome.alarms.create('checkPages', { periodInMinutes: 1 });
-  
-  console.log('⏰ Time checker started, alarm created');
 }
 
 // Слушаем срабатывание alarm
@@ -457,52 +432,34 @@ chrome.runtime.onConnect.addListener((port) => {
 });
 
 // Функция проверки и восстановления старых страниц
-async function 
-checkAndRestoreOldPages() {
+async function checkAndRestoreOldPages() {
   try {
-    console.log('Checking and restoring old pages...');
     const ids = await getFolderIds();
     const completedPages = await getCompletedPages();
-    
-    console.log('Found completed pages:', completedPages.length);
     
     if (completedPages.length === 0) return;
     
     const now = new Date();
     const todayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0));
     
-    console.log('Current time:', now.toISOString());
-    console.log('Today start (UTC):', todayStart.toISOString());
-    
     // Проверяем каждую отработанную страницу
     for (const page of completedPages) {
       let shouldRestore = false;
-      
-      console.log('Checking page:', page.title, {
-        resetType: page.resetType,
-        completedAt: page.completedAt,
-        restoreAt: page.restoreAt
-      });
       
       // Проверяем тип восстановления
       if (page.resetType === 'interval' && page.restoreAt) {
         // Восстановление по времени
         const restoreDate = new Date(page.restoreAt);
         shouldRestore = now >= restoreDate;
-        console.log('  Interval check: now >= restoreDate?', now >= restoreDate, restoreDate.toISOString());
       } else {
         // Восстановление в полночь (по умолчанию)
         const completedDate = new Date(page.completedAt);
         shouldRestore = completedDate < todayStart;
-        console.log('  Midnight check: completedDate < todayStart?', completedDate < todayStart, completedDate.toISOString());
       }
       
       // Если нужно восстановить - перемещаем из Completed в Active
       if (shouldRestore) {
-        console.log('✓ Restoring page:', page.title);
-        console.log('  Moving bookmark', page.id, 'from Completed to Active folder', ids.active);
         await chrome.bookmarks.move(page.id, { parentId: ids.active });
-        console.log('  Bookmark moved successfully');
         
         // Создаём метаданные для Active с сохранением resetType
         const newTitle = `${page.title} [${page.resetType}]`;
@@ -512,13 +469,10 @@ checkAndRestoreOldPages() {
           title: newTitle,
           url: urlWithParam
         });
-        console.log('  Bookmark title updated to:', newTitle);
-        console.log('  Bookmark URL updated to:', urlWithParam);
       }
     }
     
     notifyPanelUpdate();
-    console.log('Check and restore completed');
   } catch (error) {
     console.error('Error checking and restoring old pages:', error);
   }
@@ -551,17 +505,13 @@ let cycleQueue = []; // Очередь страниц для цикла
 let currentCycleIndex = 0; // Текущий индекс в очереди
 
 chrome.tabs.onRemoved.addListener(async (tabId, removeInfo) => {
-  console.log('🔴 Tab removed:', tabId, 'isWindowClosing:', removeInfo.isWindowClosing, 'in openedTabs:', openedTabs.has(tabId));
-  
   // Проверяем, не диалог ли интервала закрылся
   if (intervalDialogTabs.has(tabId)) {
-    console.log('⏰ Interval dialog closed, tabId:', tabId);
     intervalDialogTabs.delete(tabId);
     
     // Продолжаем цикл - переходим к следующей странице
     if (isCycleMode) {
-      console.log('🔄 Cycle mode active, opening next page...');
-      currentCycleIndex++; // Переходим к следующей странице
+      currentCycleIndex++;
       setTimeout(() => openNextInCycle(), 100);
     }
     return;
@@ -569,20 +519,15 @@ chrome.tabs.onRemoved.addListener(async (tabId, removeInfo) => {
   
   if (!removeInfo.isWindowClosing && openedTabs.has(tabId)) {
     const bookmarkId = openedTabs.get(tabId);
-    console.log('📌 Processing tab close for bookmarkId:', bookmarkId);
     openedTabs.delete(tabId);
     
     try {
       // Проверяем, что закладка всё ещё существует
       const bookmark = await chrome.bookmarks.get(bookmarkId);
-      if (!bookmark || !bookmark[0]) {
-        console.log('⚠️ Bookmark not found');
-        return;
-      }
+      if (!bookmark || !bookmark[0]) return;
       
       const page = bookmark[0];
       const parsed = parseActiveBookmarkTitle(page.title);
-      console.log('📄 Page title:', parsed.title, 'resetType:', parsed.resetType);
       
       // Удаляем все вкладки с этим bookmarkId из openedTabs (на случай дубликатов)
       for (const [tId, bId] of openedTabs.entries()) {
@@ -593,12 +538,9 @@ chrome.tabs.onRemoved.addListener(async (tabId, removeInfo) => {
       
       // Если тип = interval, перемещаем в Completed с интервалом по умолчанию и открываем диалог
       if (parsed.resetType === 'interval') {
-        console.log('⏰ Interval type, moving to Completed with default interval...');
-        
         // Сразу перемещаем в Completed с интервалом 24 часа
         await movePageToCompleted(bookmarkId);
         await setPageInterval(bookmarkId, 24);
-        console.log('✅ Page moved to Completed with 24h interval');
         
         // Открываем диалог для изменения интервала
         const dialogUrl = chrome.runtime.getURL('interval-dialog.html') + 
@@ -609,26 +551,21 @@ chrome.tabs.onRemoved.addListener(async (tabId, removeInfo) => {
         
         chrome.tabs.create({ url: dialogUrl }, (dialogTab) => {
           intervalDialogTabs.add(dialogTab.id);
-          console.log('⏰ Dialog opened, tabId:', dialogTab.id, 'waiting for close...');
         });
         // Цикл продолжится когда диалог закроется
         
       } else {
         // Тип midnight - сразу перемещаем в Completed
-        console.log('🌙 Midnight type, moving to Completed...');
         await movePageToCompleted(bookmarkId);
         
         // Продолжаем цикл
         if (isCycleMode) {
-          console.log('🔄 Cycle mode active, opening next page...');
-          currentCycleIndex++; // Переходим к следующей странице
+          currentCycleIndex++;
           setTimeout(() => openNextInCycle(), 100);
-        } else {
-          console.log('❌ Cycle mode OFF, not opening next page');
         }
       }
     } catch (error) {
-      console.error('❗ Error handling tab close:', error);
+      console.error('Error handling tab close:', error);
     }
   }
 });
@@ -699,32 +636,22 @@ async function setPageInterval(bookmarkId, intervalHours) {
     const newTitle = `${parsed.title} [${metadata}]`;
     
     await chrome.bookmarks.update(bookmarkId, { title: newTitle });
-    console.log('Updated interval for:', parsed.title, intervalHours, 'hours');
     notifyPanelUpdate();
   } catch (error) {
     console.error('Error setting interval:', error);
   }
 }
 
-// Функция открытия следующей страницы из панели
 // Универсальная функция запуска цикла задач
 async function startTasksCycle() {
-  console.log('🚀 Starting tasks cycle...');
-  
   // Получаем все активные страницы
   const pages = await getActivePages();
-  if (pages.length === 0) {
-    console.log('❌ No active pages to start');
-    return;
-  }
+  if (pages.length === 0) return;
   
   // Сохраняем очередь страниц и включаем режим цикла
   cycleQueue = pages;
   currentCycleIndex = 0;
   isCycleMode = true;
-  
-  console.log('📋 Cycle queue initialized:', cycleQueue.length, 'pages');
-  console.log('📄 Pages:', cycleQueue.map(p => p.title).join(', '));
   
   // Открываем первую страницу
   openNextInCycle();
@@ -732,14 +659,10 @@ async function startTasksCycle() {
 
 // Функция открытия следующей страницы из очереди
 function openNextInCycle() {
-  if (!isCycleMode) {
-    console.log('❌ Cycle mode OFF, stopping');
-    return;
-  }
+  if (!isCycleMode) return;
   
   if (currentCycleIndex >= cycleQueue.length) {
     // Все страницы завершены
-    console.log('✅ All pages in cycle completed!');
     isCycleMode = false;
     cycleQueue = [];
     currentCycleIndex = 0;
@@ -756,7 +679,6 @@ function openNextInCycle() {
   }
   
   const page = cycleQueue[currentCycleIndex];
-  console.log(`🔵 Opening page ${currentCycleIndex + 1}/${cycleQueue.length}:`, page.title);
   
   // Добавляем параметр в URL
   let taskUrl = page.url;
@@ -766,7 +688,7 @@ function openNextInCycle() {
     taskUrl = url.toString();
     chrome.bookmarks.update(page.id, { url: taskUrl });
   } catch (e) {
-    console.log('Cannot add parameter to URL:', page.url);
+    // Ignore URL parse errors
   }
   
   chrome.tabs.create({ url: taskUrl }, (tab) => {
@@ -774,7 +696,6 @@ function openNextInCycle() {
     if (!currentWindowId) {
       currentWindowId = tab.windowId;
     }
-    console.log('✅ Page opened, tabId:', tab.id);
   });
 }
 
@@ -782,13 +703,10 @@ function openNextInCycle() {
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'openSinglePage') {
     // Открытие ОДНОЙ страницы без запуска цикла
-    isCycleMode = false; // Отключаем режим цикла для одиночного открытия
-    console.log('Opening single page (cycle mode OFF):', request.url, 'bookmarkId:', request.bookmarkId);
+    isCycleMode = false;
     chrome.tabs.create({ url: request.url }, (tab) => {
-      // Сохраняем связь вкладки с закладкой для автоматического перемещения в Completed при закрытии
       if (request.bookmarkId) {
         openedTabs.set(tab.id, request.bookmarkId);
-        console.log('Tab', tab.id, 'linked to bookmark', request.bookmarkId);
       }
       sendResponse({ success: true });
     });
@@ -850,8 +768,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     startTasksCycle();
     sendResponse({ success: true });
   } else if (request.action === 'continueAfterInterval') {
-    // УСТАРЕЛО: больше не используется, цикл продолжается при открытии диалога
-    console.log('⚠️ continueAfterInterval called (deprecated, ignoring)');
+    // УСТАРЕЛО: цикл продолжается автоматически при закрытии диалога
     sendResponse({ success: true });
   } else if (request.action === 'clearAll') {
     // Удаляем все страницы из Active
@@ -882,15 +799,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     })();
     return true; // Асинхронный ответ
   } else if (request.action === 'moveToCompletedWithInterval') {
-    // УСТАРЕЛО: страница уже перемещена при открытии диалога
-    // Оставлено для обратной совместимости, просто обновляем интервал
-    console.log('⚠️ moveToCompletedWithInterval called (deprecated)');
+    // УСТАРЕЛО: обратная совместимость, просто обновляем интервал
     (async () => {
       await setPageInterval(request.bookmarkId, request.intervalHours);
-      console.log('✅ Interval updated via legacy action');
       sendResponse({ success: true });
     })();
-    return true; // Асинхронный ответ
+    return true;
   } else if (request.action === 'restoreAllAndStart') {
     // Восстановить все из Completed в Active и запустить
     (async () => {
@@ -907,14 +821,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         return;
       }
       
-      // Переносим все страницы из Completed в Active используя существующий функционал
+      // Переносим все страницы из Completed в Active
       for (const page of completedPages) {
         const ids = await getFolderIds();
         await chrome.bookmarks.move(page.id, { parentId: ids.active });
-        // page уже содержит распарсенные данные из getCompletedPages()
-        console.log('RESTORE ALL: restoring page:', page.title, 'with resetType:', page.resetType);
+        
         const newTitle = `${page.title} [${page.resetType}]`;
-        console.log('RESTORE ALL: new title for Active:', newTitle);
         const urlWithParam = addTaskParamToUrl(page.url);
         
         await chrome.bookmarks.update(page.id, { 
@@ -925,38 +837,28 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       
       notifyPanelUpdate();
       
-      // Запускаем цикл через универсальную функцию
+      // Запускаем цикл
       await startTasksCycle();
       
       sendResponse({ success: true });
     })();
-    return true; // Асинхронный ответ
+    return true;
   } else if (request.action === 'startStealthMode') {
-    // Запуск стелс-режима с закрытием боковой панели
     (async () => {
-      // Отправляем сообщение боковой панели закрыться
       chrome.runtime.sendMessage({ action: 'closeSidePanel' }).catch(() => {});
-      
-      // Небольшая задержка для закрытия панели
       await new Promise(resolve => setTimeout(resolve, 100));
-      
-      // Запускаем цикл через универсальную функцию
       await startTasksCycle();
-      
       sendResponse({ success: true });
     })();
-    return true; // Асинхронный ответ
+    return true;
   } else if (request.action === 'startDailyTasks') {
-    // Запуск цикла отработки задач из баннера
     startTasksCycle();
     sendResponse({ success: true });
   }
 });
 
-    // Инициализация при загрузке service worker (для случая включения расширения)
-    (async () => {
-      console.log('🔄 Service worker loaded - starting initialization...');
-      await initializeBookmarksFolder();
-      await startTimeChecker();
-      console.log('✅ Service worker initialization complete');
-    })();
+// Инициализация при загрузке service worker
+(async () => {
+  await initializeBookmarksFolder();
+  await startTimeChecker();
+})();

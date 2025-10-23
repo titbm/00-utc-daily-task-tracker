@@ -67,16 +67,12 @@ document.getElementById('confirmBtn').addEventListener('click', () => {
   
   const intervalHours = hours + (minutes / 60);
   
-  console.log('✅ Updating interval to:', intervalHours, 'hours');
-  
   // Страница уже в Completed, просто обновляем интервал
   chrome.runtime.sendMessage({
     action: 'setPageInterval',
     bookmarkId: bookmarkId,
     intervalHours: intervalHours
   }, () => {
-    console.log('✅ Interval updated, closing dialog...');
-    // Закрываем диалог
     window.close();
   });
 });
