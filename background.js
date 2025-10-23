@@ -102,14 +102,15 @@ async function getActivePages() {
     
     for (const bookmark of bookmarks) {
       if (bookmark.url) {
+        const parsed = parseActiveBookmarkTitle(bookmark.title);
         pages.push({
-          id: bookmark.id, // Используем ID закладки как ID страницы
-          title: bookmark.title,
+          id: bookmark.id,
+          title: parsed.title,
           url: bookmark.url,
           favicon: `chrome://favicon/${bookmark.url}`,
           addedAt: bookmark.dateAdded ? new Date(bookmark.dateAdded).toISOString() : new Date().toISOString(),
-          resetType: 'midnight',
-          resetInterval: 24
+          resetType: parsed.resetType,
+          resetInterval: 24 // По умолчанию для UI
         });
       }
     }
@@ -119,6 +120,26 @@ async function getActivePages() {
     console.error('Error getting active pages:', error);
     return [];
   }
+}
+
+// Парсинг метаданных из Active: "Title [resetType]"
+function parseActiveBookmarkTitle(fullTitle) {
+  const match = fullTitle.match(/^(.+?)\s*\[([^\]]+)\]$/);
+  
+  if (!match) {
+    return {
+      title: fullTitle,
+      resetType: 'midnight'
+    };
+  }
+  
+  const title = match[1];
+  const resetType = match[2];
+  
+  return {
+    title: title,
+    resetType: resetType === 'interval' ? 'interval' : 'midnight'
+  };
 }
 
 // Функция чтения отработанных страниц из закладок
@@ -217,9 +238,12 @@ async function addPageToActive(tab) {
       return;
     }
     
+    // Создаём закладку с метаданными [resetType]
+    const titleWithMetadata = `${tab.title} [midnight]`;
+    
     await chrome.bookmarks.create({
       parentId: ids.active,
-      title: tab.title,
+      title: titleWithMetadata,
       url: tab.url
     });
     
@@ -387,7 +411,9 @@ async function checkAndRestoreOldPages() {
       if (shouldRestore) {
         console.log('Restoring page:', page.title);
         await chrome.bookmarks.move(page.id, { parentId: ids.active });
-        await chrome.bookmarks.update(page.id, { title: page.title }); // Убираем метаданные
+        // Создаём метаданные для Active с сохранением resetType
+        const newTitle = `${page.title} [${page.resetType}]`;
+        await chrome.bookmarks.update(page.id, { title: newTitle });
       }
     }
     
@@ -418,32 +444,29 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
 // Хранилище для отслеживания открытых вкладок из панели
 const openedTabs = new Map(); // tabId -> bookmarkId
 
-// Хранилище для resetType активных страниц (пока страницы в Active)
-const pageResetTypes = new Map(); // bookmarkId -> { resetType, resetInterval }
-
 chrome.tabs.onRemoved.addListener(async (tabId, removeInfo) => {
   if (!removeInfo.isWindowClosing && openedTabs.has(tabId)) {
     const bookmarkId = openedTabs.get(tabId);
     openedTabs.delete(tabId);
     
     try {
-      // Получаем закладку
+      // Получаем закладку и читаем resetType из метаданных
       const bookmark = await chrome.bookmarks.get(bookmarkId);
       if (!bookmark || !bookmark[0]) return;
       
       const page = bookmark[0];
-      const resetSettings = pageResetTypes.get(bookmarkId) || { resetType: 'midnight', resetInterval: 24 };
+      const parsed = parseActiveBookmarkTitle(page.title);
       
-      // Перемещаем в Completed (тип будет установлен позже для interval)
+      // Перемещаем в Completed
       await movePageToCompleted(bookmarkId);
       
       // Если тип = interval, открываем диалог
-      if (resetSettings.resetType === 'interval') {
+      if (parsed.resetType === 'interval') {
         const dialogUrl = chrome.runtime.getURL('interval-dialog.html') + 
           `?bookmarkId=${bookmarkId}` +
-          `&title=${encodeURIComponent(page.title)}` +
+          `&title=${encodeURIComponent(parsed.title)}` +
           `&url=${encodeURIComponent(page.url)}` +
-          `&interval=${resetSettings.resetInterval || 24}`;
+          `&interval=24`;
         
         chrome.tabs.create({ url: dialogUrl });
       } else {
@@ -452,9 +475,6 @@ chrome.tabs.onRemoved.addListener(async (tabId, removeInfo) => {
           openNextPageFromPanel();
         }, 100);
       }
-      
-      // Очищаем resetType из памяти
-      pageResetTypes.delete(bookmarkId);
     } catch (error) {
       console.error('Error handling tab close:', error);
     }
@@ -474,27 +494,26 @@ async function movePageToCompleted(bookmarkId) {
     
     const page = bookmark[0];
     
-    // Определяем тип обновления (midnight по умолчанию, так как из Active)
-    const resetType = 'midnight';
-    const resetInterval = 24;
+    // Парсим метаданные из Active
+    const parsed = parseActiveBookmarkTitle(page.title);
     
-    // Создаём метаданные
+    // Создаём метаданные для Completed
     const completedAt = new Date().toISOString();
     const metadata = [
       completedAt,
       '', // restoreAt будет установлен позже для interval
-      resetType,
-      resetInterval,
+      parsed.resetType,
+      24, // resetInterval по умолчанию
       page.dateAdded ? new Date(page.dateAdded).toISOString() : new Date().toISOString()
     ].join('|');
     
-    const newTitle = `${page.title} [${metadata}]`;
+    const newTitle = `${parsed.title} [${metadata}]`;
     
     // Перемещаем в Completed
     await chrome.bookmarks.move(bookmarkId, { parentId: ids.completed });
     await chrome.bookmarks.update(bookmarkId, { title: newTitle });
     
-    console.log('Moved to Completed:', page.title);
+    console.log('Moved to Completed:', parsed.title);
     notifyPanelUpdate();
     
     // Если interval - откроем диалог (сейчас всегда midnight из Active)
@@ -591,10 +610,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     (async () => {
       const ids = await getFolderIds();
       await chrome.bookmarks.move(request.bookmarkId, { parentId: ids.active });
-      // Убираем метаданные из заголовка
+      // Парсим метаданные Completed и создаём метаданные Active
       const bookmark = await chrome.bookmarks.get(request.bookmarkId);
       const parsed = parseCompletedBookmarkTitle(bookmark[0].title);
-      await chrome.bookmarks.update(request.bookmarkId, { title: parsed.title });
+      // Восстанавливаем с тем же resetType, что был
+      const newTitle = `${parsed.title} [${parsed.resetType}]`;
+      await chrome.bookmarks.update(request.bookmarkId, { title: newTitle });
       notifyPanelUpdate();
       sendResponse({ success: true });
     })();
@@ -608,18 +629,28 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       const pages = await getActivePages();
       for (const page of pages) {
         await removePage(page.id);
-        pageResetTypes.delete(page.id);
       }
       sendResponse({ success: true });
     })();
     return true; // Асинхронный ответ
   } else if (request.action === 'setResetType') {
-    // Сохраняем resetType для страницы
-    pageResetTypes.set(request.bookmarkId, {
-      resetType: request.resetType,
-      resetInterval: request.resetInterval || 24
-    });
-    sendResponse({ success: true });
+    // Обновляем resetType в метаданных закладки Active
+    (async () => {
+      try {
+        const bookmark = await chrome.bookmarks.get(request.bookmarkId);
+        if (bookmark && bookmark[0]) {
+          const parsed = parseActiveBookmarkTitle(bookmark[0].title);
+          const newTitle = `${parsed.title} [${request.resetType}]`;
+          await chrome.bookmarks.update(request.bookmarkId, { title: newTitle });
+          notifyPanelUpdate();
+        }
+        sendResponse({ success: true });
+      } catch (error) {
+        console.error('Error setting reset type:', error);
+        sendResponse({ success: false });
+      }
+    })();
+    return true; // Асинхронный ответ
   } else if (request.action === 'moveToCompletedWithInterval') {
     // Перемещение в Completed с установкой интервала
     (async () => {
