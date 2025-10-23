@@ -107,7 +107,7 @@ async function getActivePages() {
           id: bookmark.id,
           title: parsed.title,
           url: bookmark.url,
-          favicon: `chrome://favicon/${bookmark.url}`,
+          favicon: `https://www.google.com/s2/favicons?domain=${new URL(bookmark.url).hostname}&sz=32`,
           addedAt: bookmark.dateAdded ? new Date(bookmark.dateAdded).toISOString() : new Date().toISOString(),
           resetType: parsed.resetType,
           resetInterval: 24 // По умолчанию для UI
@@ -158,7 +158,7 @@ async function getCompletedPages() {
           id: bookmark.id, // Используем ID закладки как ID страницы
           title: parsed.title,
           url: bookmark.url,
-          favicon: `chrome://favicon/${bookmark.url}`,
+          favicon: `https://www.google.com/s2/favicons?domain=${new URL(bookmark.url).hostname}&sz=32`,
           addedAt: parsed.addedAt,
           completedAt: parsed.completedAt,
           restoreAt: parsed.restoreAt,
@@ -561,7 +561,11 @@ async function openNextPageFromPanel() {
     // Открываем первую страницу из оставшихся
     if (pages.length > 0) {
       const nextPage = pages[0];
-      chrome.tabs.create({ url: nextPage.url });
+      chrome.tabs.create({ url: nextPage.url }, (tab) => {
+        // Регистрируем вкладку для отслеживания закрытия
+        openedTabs.set(tab.id, nextPage.id);
+        console.log('Opened next page:', nextPage.title, 'tabId:', tab.id);
+      });
     }
   } catch (error) {
     console.error('Error opening next page:', error);
