@@ -393,12 +393,17 @@ chrome.bookmarks.onChanged.addListener(async (id, changeInfo) => {
 let fastCheckInterval = null;
 let sidePanelConnections = 0;
 
-function startTimeChecker() {
+async function startTimeChecker() {
   // Проверяем сразу при запуске
-  checkAndRestoreOldPages();
+  await checkAndRestoreOldPages();
+  
+  // Очищаем старый alarm если есть
+  await chrome.alarms.clear('checkPages');
   
   // Создаём alarm для фоновых проверок (каждую минуту)
   chrome.alarms.create('checkPages', { periodInMinutes: 1 });
+  
+  console.log('Time checker started, alarm created');
 }
 
 // Слушаем срабатывание alarm
@@ -443,32 +448,46 @@ chrome.runtime.onConnect.addListener((port) => {
 // Функция проверки и восстановления старых страниц
 async function checkAndRestoreOldPages() {
   try {
+    console.log('Checking and restoring old pages...');
     const ids = await getFolderIds();
     const completedPages = await getCompletedPages();
+    
+    console.log('Found completed pages:', completedPages.length);
     
     if (completedPages.length === 0) return;
     
     const now = new Date();
     const todayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0));
     
+    console.log('Current time:', now.toISOString());
+    console.log('Today start (UTC):', todayStart.toISOString());
+    
     // Проверяем каждую отработанную страницу
     for (const page of completedPages) {
       let shouldRestore = false;
+      
+      console.log('Checking page:', page.title, {
+        resetType: page.resetType,
+        completedAt: page.completedAt,
+        restoreAt: page.restoreAt
+      });
       
       // Проверяем тип восстановления
       if (page.resetType === 'interval' && page.restoreAt) {
         // Восстановление по времени
         const restoreDate = new Date(page.restoreAt);
         shouldRestore = now >= restoreDate;
+        console.log('  Interval check: now >= restoreDate?', now >= restoreDate, restoreDate.toISOString());
       } else {
         // Восстановление в полночь (по умолчанию)
         const completedDate = new Date(page.completedAt);
         shouldRestore = completedDate < todayStart;
+        console.log('  Midnight check: completedDate < todayStart?', completedDate < todayStart, completedDate.toISOString());
       }
       
       // Если нужно восстановить - перемещаем из Completed в Active
       if (shouldRestore) {
-        console.log('Restoring page:', page.title);
+        console.log('✓ Restoring page:', page.title);
         await chrome.bookmarks.move(page.id, { parentId: ids.active });
         // Создаём метаданные для Active с сохранением resetType
         const newTitle = `${page.title} [${page.resetType}]`;
@@ -477,6 +496,7 @@ async function checkAndRestoreOldPages() {
     }
     
     notifyPanelUpdate();
+    console.log('Check and restore completed');
   } catch (error) {
     console.error('Error checking and restoring old pages:', error);
   }
