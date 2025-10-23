@@ -270,8 +270,7 @@ function movePageToCompletedById(pageId, allPages) {
       completedPages: completedPages
     });
     
-    // Удаляем из закладок (страница переместилась в отработанные)
-    removeBookmarkByUrl(page.url);
+    // НЕ удаляем из закладок - закладка остаётся в избранном
     
     // Уведомляем панель об обновлении
     chrome.runtime.sendMessage({ action: 'pagesUpdated' }).catch(() => {});
