@@ -333,13 +333,18 @@ chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
       const autoOpenEnabled = result.autoOpenEnabled !== false;
       
       if (autoOpenEnabled && result.currentTabId === tabId) {
+        const page = result.panelPages ? result.panelPages.find(p => p.id === result.openedPageId) : null;
+        
         // Перемещаем страницу в отработанные по ID
         movePageToCompletedById(result.openedPageId, result.panelPages);
         
-        // Небольшая задержка перед открытием следующей
-        setTimeout(() => {
-          openNextPageFromPanel();
-        }, 100);
+        // Если тип НЕ 'interval', открываем следующую страницу
+        // Для 'interval' следующая откроется после закрытия диалога
+        if (!page || page.resetType !== 'interval') {
+          setTimeout(() => {
+            openNextPageFromPanel();
+          }, 100);
+        }
       }
     });
   }
@@ -365,6 +370,7 @@ function movePageToCompletedById(pageId, allPages) {
       `&interval=${page.resetInterval || 24}`;
     
     chrome.tabs.create({ url: dialogUrl });
+    // НЕ открываем следующую страницу - она откроется после закрытия диалога
     return;
   }
   
