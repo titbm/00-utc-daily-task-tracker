@@ -8,7 +8,10 @@
 <body>
   <div class="header">
     <h2 id="sectionTitle">📋 Активные</h2>
-    <button id="toggleSection" class="toggle-btn" title="Отработанные сегодня">✓</button>
+    <div class="header-buttons">
+      <button id="restoreCompleted" class="icon-btn" title="Вернуть все в активные">↺</button>
+      <button id="toggleSection" class="toggle-btn" title="Отработанные сегодня">✓</button>
+    </div>
   </div>
   
   <div class="content">
@@ -32,8 +35,6 @@
       </div>
       
       <div id="completedPagesList" class="pages-list"></div>
-      
-      <button id="restoreCompleted" class="restore-completed-btn">↺ Вернуть все в активные</button>
     </div>
   </div>
   
