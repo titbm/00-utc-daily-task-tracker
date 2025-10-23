@@ -64,11 +64,12 @@ async function initializeBookmarksFolder() {
       await chrome.storage.local.set({ bookmarksFolderId: dailyPanelFolder.id });
       
       // ПЕРВАЯ УСТАНОВКА: импортируем закладки из папки в панель
-      const result = await chrome.storage.local.get(['panelPages']);
+      const result = await chrome.storage.local.get(['panelPages', 'completedPages']);
       const currentPages = result.panelPages || [];
+      const completedPages = result.completedPages || [];
       
-      if (currentPages.length === 0) {
-        // Панель пустая - импортируем из папки
+      if (currentPages.length === 0 && completedPages.length === 0) {
+        // Панель полностью пустая - импортируем из папки
         const folderBookmarks = await chrome.bookmarks.getChildren(dailyPanelFolder.id);
         const importedPages = [];
         
@@ -91,7 +92,8 @@ async function initializeBookmarksFolder() {
           await chrome.storage.local.set({ panelPages: importedPages });
         }
       } else {
-        // Панель уже есть - синхронизируем панель в закладки
+        // Панель уже есть (активные или отработанные) - синхронизируем панель в закладки
+        console.log('Panel already has pages, syncing to bookmarks...');
         await syncPagesToBookmarks();
       }
     }
