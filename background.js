@@ -604,6 +604,11 @@ async function openNextPageFromPanel() {
         openedTabs.set(tab.id, nextPage.id);
         currentWindowId = tab.windowId; // Сохраняем windowId
         console.log('Opened next page:', nextPage.title, 'tabId:', tab.id, 'windowId:', tab.windowId);
+        
+        // Помечаем вкладку как вкладку с задачей (чтобы не показывать баннер)
+        setTimeout(() => {
+          chrome.tabs.sendMessage(tab.id, { action: 'markAsTaskTab' }).catch(() => {});
+        }, 500);
       });
     } else {
       // Все страницы отработаны - открываем страницу завершения
@@ -747,6 +752,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
               openedTabs.set(newTab.id, firstPage.id);
               currentWindowId = newTab.windowId;
               console.log('Started daily tasks from banner');
+              
+              // Помечаем вкладку как вкладку с задачей
+              setTimeout(() => {
+                chrome.tabs.sendMessage(newTab.id, { action: 'markAsTaskTab' }).catch(() => {});
+              }, 500);
             });
           }
         });
