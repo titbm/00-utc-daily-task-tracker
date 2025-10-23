@@ -718,8 +718,20 @@ async function openNextPageFromPanel() {
 
 // Обработчик сообщений от popup, боковой панели и content scripts
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  if (request.action === 'openPage') {
+  if (request.action === 'openSinglePage') {
+    // Открытие ОДНОЙ страницы без запуска цикла
     console.log('Opening single page:', request.url, 'bookmarkId:', request.bookmarkId);
+    chrome.tabs.create({ url: request.url }, (tab) => {
+      // Сохраняем связь вкладки с закладкой для автоматического перемещения в Completed при закрытии
+      if (request.bookmarkId) {
+        openedTabs.set(tab.id, request.bookmarkId);
+        console.log('Tab', tab.id, 'linked to bookmark', request.bookmarkId);
+      }
+      sendResponse({ success: true });
+    });
+    return true; // Асинхронный ответ
+  } else if (request.action === 'openPage') {
+    console.log('Opening page with potential cycle:', request.url, 'bookmarkId:', request.bookmarkId);
     chrome.tabs.create({ url: request.url }, (tab) => {
       // Сохраняем связь вкладки с закладкой
       if (request.bookmarkId) {

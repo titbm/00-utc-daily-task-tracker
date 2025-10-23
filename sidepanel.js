@@ -327,8 +327,9 @@ class DailyPanel {
   
   async openPage(url, bookmarkId) {
     try {
+      // Используем openSinglePage чтобы открыть ТОЛЬКО эту страницу без цикла
       await chrome.runtime.sendMessage({
-        action: 'openPage',
+        action: 'openSinglePage',
         url: url,
         bookmarkId: bookmarkId
       });
