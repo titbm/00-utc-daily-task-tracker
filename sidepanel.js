@@ -148,7 +148,7 @@ class DailyPanel {
   
   updateCounters(activeCount, completedCount) {
     this.activeCount.textContent = `Активные: ${activeCount}`;
-    this.completedCount.textContent = `Выполненные: ${completedCount}`;
+    this.completedCount.textContent = `Завершенные: ${completedCount}`;
   }
   
   renderPages(pages, listElement, emptyStateElement, isCompleted = false) {
