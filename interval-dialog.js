@@ -24,26 +24,6 @@ function saveInterval() {
   return hours + (minutes / 60);
 }
 
-// Обработчик закрытия вкладки (beforeunload) - больше не нужен
-// Страница уже перемещена в Completed при открытии диалога
-// function handleBeforeUnload() {
-//   console.log('📤 beforeunload triggered, saving interval...');
-//   const intervalHours = saveInterval();
-//   
-//   // Отправляем сообщение в background script
-//   chrome.runtime.sendMessage({
-//     action: 'moveToCompletedWithInterval',
-//     bookmarkId: bookmarkId,
-//     intervalHours: intervalHours
-//   });
-//   
-//   console.log('📤 beforeunload calling continueAfterInterval...');
-//   // Открываем следующую страницу (background сам решит открывать или нет на основе isCycleMode)
-//   chrome.runtime.sendMessage({ action: 'continueAfterInterval' });
-// }
-
-// window.addEventListener('beforeunload', handleBeforeUnload);
-
 // Быстрые кнопки
 document.querySelectorAll('.quick-btn').forEach(btn => {
   btn.addEventListener('click', () => {

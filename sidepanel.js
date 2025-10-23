@@ -126,9 +126,6 @@ class DailyPanel {
       const activePages = activeResponse.pages || [];
       const completedPages = completedResponse.pages || [];
       
-      console.log('Active pages loaded:', activePages);
-      console.log('Completed pages loaded:', completedPages);
-      
       this.renderPages(activePages, this.activePagesList, this.emptyStateActive);
       this.renderPages(completedPages, this.completedPagesList, this.emptyStateCompleted, true);
       this.updateCounters(activePages.length, completedPages.length);
