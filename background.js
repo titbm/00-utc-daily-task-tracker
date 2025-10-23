@@ -356,13 +356,15 @@ function movePageToCompletedById(pageId, allPages) {
     return;
   }
   
-  // Если тип resetType = 'interval', показываем диалог для выбора времени
+  // Если тип resetType = 'interval', открываем диалог в новой вкладке
   if (page.resetType === 'interval') {
-    // Отправляем сообщение для показа диалога
-    chrome.runtime.sendMessage({ 
-      action: 'showIntervalDialog', 
-      page: page 
-    }).catch(() => {});
+    const dialogUrl = chrome.runtime.getURL('interval-dialog.html') + 
+      `?pageId=${page.id}` +
+      `&title=${encodeURIComponent(page.title)}` +
+      `&url=${encodeURIComponent(page.url)}` +
+      `&interval=${page.resetInterval || 24}`;
+    
+    chrome.tabs.create({ url: dialogUrl });
     return;
   }
   

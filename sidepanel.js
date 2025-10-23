@@ -26,9 +26,7 @@ class DailyPanel {
     
     // Диалоги
     this.settingsDialog = document.getElementById('settingsDialog');
-    this.intervalDialog = document.getElementById('intervalDialog');
     this.currentEditingPage = null;
-    this.currentIntervalPage = null;
     
     this.init();
   }
@@ -73,18 +71,6 @@ class DailyPanel {
     
     document.getElementById('saveSettings').addEventListener('click', () => {
       this.savePageSettings();
-    });
-    
-    // Диалог интервала
-    document.getElementById('confirmInterval').addEventListener('click', () => {
-      this.confirmInterval();
-    });
-    
-    // Слушаем сообщения от background для показа диалога
-    chrome.runtime.onMessage.addListener((message) => {
-      if (message.action === 'showIntervalDialog') {
-        this.showIntervalDialog(message.page);
-      }
     });
   }
   
@@ -338,35 +324,6 @@ class DailyPanel {
     });
     
     this.closeSettingsDialog();
-  }
-  
-  showIntervalDialog(page) {
-    this.currentIntervalPage = page;
-    
-    document.getElementById('intervalDialogPageTitle').textContent = page.title;
-    document.getElementById('intervalHoursInput').value = page.resetInterval || 24;
-    
-    this.intervalDialog.classList.add('show');
-  }
-  
-  confirmInterval() {
-    if (!this.currentIntervalPage) return;
-    
-    const hours = parseInt(document.getElementById('intervalHoursInput').value) || 24;
-    
-    chrome.runtime.sendMessage({
-      action: 'moveToCompletedWithInterval',
-      pageId: this.currentIntervalPage.id,
-      intervalHours: hours
-    });
-    
-    this.intervalDialog.classList.remove('show');
-    this.currentIntervalPage = null;
-    
-    // Открываем следующую страницу
-    setTimeout(() => {
-      chrome.runtime.sendMessage({ action: 'openNextPage' });
-    }, 200);
   }
 }
 

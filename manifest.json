@@ -26,6 +26,13 @@
     "default_path": "sidepanel.html"
   },
   
+  "web_accessible_resources": [
+    {
+      "resources": ["interval-dialog.html"],
+      "matches": ["<all_urls>"]
+    }
+  ],
+  
   "action": {
     "default_title": "Открыть Daily Panel"
   },
