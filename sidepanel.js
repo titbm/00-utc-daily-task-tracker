@@ -1,9 +1,28 @@
 class DailyPanel {
   constructor() {
-    this.pagesList = document.getElementById('pagesList');
-    this.emptyState = document.getElementById('emptyState');
-    this.clearAllBtn = document.getElementById('clearAll');
-    this.pageCount = document.getElementById('pageCount');
+    // Секции
+    this.activeSection = document.getElementById('activeSection');
+    this.completedSection = document.getElementById('completedSection');
+    
+    // Списки страниц
+    this.activePagesList = document.getElementById('activePagesList');
+    this.completedPagesList = document.getElementById('completedPagesList');
+    
+    // Пустые состояния
+    this.emptyStateActive = document.getElementById('emptyStateActive');
+    this.emptyStateCompleted = document.getElementById('emptyStateCompleted');
+    
+    // Кнопки и элементы управления
+    this.toggleSectionBtn = document.getElementById('toggleSection');
+    this.clearCompletedBtn = document.getElementById('clearCompleted');
+    this.sectionTitle = document.getElementById('sectionTitle');
+    
+    // Счетчики
+    this.activeCount = document.getElementById('activeCount');
+    this.completedCount = document.getElementById('completedCount');
+    
+    // Текущая активная секция
+    this.currentSection = 'active'; // 'active' или 'completed'
     
     this.init();
   }
@@ -14,54 +33,95 @@ class DailyPanel {
     
     // Слушаем сообщения от background script
     chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-      if (message.action === 'pageAdded') {
+      if (message.action === 'pageAdded' || message.action === 'pagesUpdated') {
         this.loadPages();
       }
     });
     
     // Обновляем список при изменении хранилища
     chrome.storage.onChanged.addListener((changes, namespace) => {
-      if (namespace === 'local' && changes.panelPages) {
+      if (namespace === 'local' && (changes.panelPages || changes.completedPages)) {
         this.loadPages();
       }
     });
   }
   
   setupEventListeners() {
-    this.clearAllBtn.addEventListener('click', () => {
-      this.clearAllPages();
+    this.toggleSectionBtn.addEventListener('click', () => {
+      this.toggleSection();
     });
+    
+    this.clearCompletedBtn.addEventListener('click', () => {
+      this.clearCompletedPages();
+    });
+  }
+  
+  toggleSection() {
+    if (this.currentSection === 'active') {
+      this.currentSection = 'completed';
+      this.activeSection.classList.remove('active');
+      this.completedSection.classList.add('active');
+      this.sectionTitle.textContent = '✓ Отработанные';
+      this.toggleSectionBtn.textContent = '📋';
+      this.toggleSectionBtn.title = 'Активные';
+    } else {
+      this.currentSection = 'active';
+      this.completedSection.classList.remove('active');
+      this.activeSection.classList.add('active');
+      this.sectionTitle.textContent = '📋 Активные';
+      this.toggleSectionBtn.textContent = '✓';
+      this.toggleSectionBtn.title = 'Отработанные сегодня';
+    }
   }
   
   loadPages() {
-    chrome.storage.local.get(['panelPages'], (result) => {
-      const pages = result.panelPages || [];
-      this.renderPages(pages);
-      this.updateCounter(pages.length);
+    chrome.storage.local.get(['panelPages', 'completedPages'], (result) => {
+      const activePages = result.panelPages || [];
+      const completedPages = this.filterTodayPages(result.completedPages || []);
+      
+      this.renderPages(activePages, this.activePagesList, this.emptyStateActive);
+      this.renderPages(completedPages, this.completedPagesList, this.emptyStateCompleted, true);
+      this.updateCounters(activePages.length, completedPages.length);
+      
+      // Очищаем старые отработанные страницы
+      if (completedPages.length !== (result.completedPages || []).length) {
+        chrome.storage.local.set({ completedPages: completedPages });
+      }
     });
   }
   
-  updateCounter(count) {
-    this.pageCount.textContent = count;
+  filterTodayPages(pages) {
+    const now = new Date();
+    const todayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0));
+    
+    return pages.filter(page => {
+      const completedDate = new Date(page.completedAt);
+      return completedDate >= todayStart;
+    });
   }
   
-  renderPages(pages) {
-    this.pagesList.innerHTML = '';
+  updateCounters(activeCount, completedCount) {
+    this.activeCount.textContent = `Активных: ${activeCount}`;
+    this.completedCount.textContent = `Отработанных: ${completedCount}`;
+  }
+  
+  renderPages(pages, listElement, emptyStateElement, isCompleted = false) {
+    listElement.innerHTML = '';
     
     if (pages.length === 0) {
-      this.emptyState.classList.remove('hidden');
+      emptyStateElement.classList.remove('hidden');
       return;
     }
     
-    this.emptyState.classList.add('hidden');
+    emptyStateElement.classList.add('hidden');
     
     pages.forEach((page, index) => {
-      const pageElement = this.createPageElement(page, index);
-      this.pagesList.appendChild(pageElement);
+      const pageElement = this.createPageElement(page, index, isCompleted);
+      listElement.appendChild(pageElement);
     });
   }
   
-  createPageElement(page, index) {
+  createPageElement(page, index, isCompleted = false) {
     const div = document.createElement('div');
     div.className = 'page-item';
     div.dataset.pageId = page.id;
@@ -103,14 +163,22 @@ class DailyPanel {
     // Обработчик клика по странице
     div.addEventListener('click', (e) => {
       if (!e.target.classList.contains('remove-btn')) {
-        this.openPage(page.url, index);
+        if (isCompleted) {
+          this.openCompletedPage(page.url);
+        } else {
+          this.openPage(page.url, index);
+        }
       }
     });
     
     // Обработчик удаления страницы
     removeBtn.addEventListener('click', (e) => {
       e.stopPropagation();
-      this.removePage(page.id);
+      if (isCompleted) {
+        this.removeCompletedPage(page.id);
+      } else {
+        this.removePage(page.id);
+      }
     });
     
     return div;
@@ -140,6 +208,10 @@ class DailyPanel {
     });
   }
   
+  openCompletedPage(url) {
+    chrome.tabs.create({ url: url });
+  }
+  
   removePage(pageId) {
     chrome.runtime.sendMessage({
       action: 'removePage',
@@ -147,11 +219,17 @@ class DailyPanel {
     });
   }
   
-  clearAllPages() {
-    if (confirm('Вы уверены, что хотите удалить все страницы из панели?')) {
-      chrome.runtime.sendMessage({
-        action: 'clearAll'
-      });
+  removeCompletedPage(pageId) {
+    chrome.storage.local.get(['completedPages'], (result) => {
+      const pages = result.completedPages || [];
+      const updatedPages = pages.filter(page => page.id !== pageId);
+      chrome.storage.local.set({ completedPages: updatedPages });
+    });
+  }
+  
+  clearCompletedPages() {
+    if (confirm('Вы уверены, что хотите удалить все отработанные страницы?')) {
+      chrome.storage.local.set({ completedPages: [] });
     }
   }
 }

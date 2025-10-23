@@ -33,7 +33,7 @@ body {
   gap: 8px;
 }
 
-.clear-btn {
+.toggle-btn {
   background: rgba(255, 255, 255, 0.2);
   border: 1px solid rgba(255, 255, 255, 0.3);
   color: white;
@@ -42,14 +42,15 @@ body {
   cursor: pointer;
   font-size: 16px;
   transition: all 0.2s;
+  min-width: 40px;
 }
 
-.clear-btn:hover {
+.toggle-btn:hover {
   background: rgba(255, 255, 255, 0.3);
   transform: scale(1.05);
 }
 
-.clear-btn:active {
+.toggle-btn:active {
   transform: scale(0.95);
 }
 
@@ -57,6 +58,15 @@ body {
   flex: 1;
   padding: 16px;
   overflow-y: auto;
+  position: relative;
+}
+
+.section {
+  display: none;
+}
+
+.section.active {
+  display: block;
 }
 
 .empty-state {
@@ -125,6 +135,18 @@ body {
 
 .page-item:active {
   transform: translateY(0);
+}
+
+#completedPagesList .page-item {
+  opacity: 0.85;
+  border-color: #d4edda;
+  background: #f8fff9;
+}
+
+#completedPagesList .page-item:hover {
+  opacity: 1;
+  border-color: #28a745;
+  box-shadow: 0 4px 12px rgba(40, 167, 69, 0.2);
 }
 
 .page-favicon {
@@ -196,15 +218,47 @@ body {
 }
 
 .counter {
-  font-size: 13px;
+  font-size: 12px;
   color: #6c757d;
   text-align: center;
   font-weight: 500;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
 }
 
 .counter span {
-  color: #667eea;
-  font-weight: 600;
+  color: #495057;
+  font-weight: 500;
+}
+
+.counter .separator {
+  color: #dee2e6;
+}
+
+.clear-completed-btn {
+  width: 100%;
+  margin-top: 16px;
+  padding: 12px;
+  background: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.clear-completed-btn:hover {
+  background: #c82333;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+}
+
+.clear-completed-btn:active {
+  transform: translateY(0);
 }
 
 /* Скроллбар */

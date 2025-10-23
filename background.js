@@ -7,9 +7,12 @@ chrome.runtime.onInstalled.addListener(() => {
   });
 
   // Инициализируем хранилище
-  chrome.storage.local.get(['panelPages'], (result) => {
+  chrome.storage.local.get(['panelPages', 'completedPages'], (result) => {
     if (!result.panelPages) {
       chrome.storage.local.set({ panelPages: [] });
+    }
+    if (!result.completedPages) {
+      chrome.storage.local.set({ completedPages: [] });
     }
   });
   
@@ -55,15 +58,46 @@ function addPageToPanel(tab) {
 chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
   if (!removeInfo.isWindowClosing) {
     // Проверяем, была ли закрыта вкладка из нашего списка
-    chrome.storage.local.get(['panelPages', 'currentTabId', 'autoOpenEnabled'], (result) => {
-      const autoOpenEnabled = result.autoOpenEnabled !== false; // По умолчанию включено
+    chrome.storage.local.get(['panelPages', 'currentTabId', 'autoOpenEnabled', 'currentIndex'], (result) => {
+      const autoOpenEnabled = result.autoOpenEnabled !== false;
       
       if (autoOpenEnabled && result.currentTabId === tabId) {
+        // Перемещаем страницу в отработанные
+        movePageToCompleted(result.currentIndex, result.panelPages);
+        
+        // Открываем следующую
         openNextPageFromPanel();
       }
     });
   }
 });
+
+// Функция перемещения страницы в отработанные
+function movePageToCompleted(pageIndex, allPages) {
+  if (pageIndex === undefined || pageIndex < 0 || !allPages || pageIndex >= allPages.length) {
+    return;
+  }
+  
+  const page = allPages[pageIndex];
+  const completedPage = {
+    ...page,
+    completedAt: new Date().toISOString()
+  };
+  
+  chrome.storage.local.get(['panelPages', 'completedPages'], (result) => {
+    const activePagesUpdated = (result.panelPages || []).filter((_, idx) => idx !== pageIndex);
+    const completedPages = result.completedPages || [];
+    completedPages.push(completedPage);
+    
+    chrome.storage.local.set({ 
+      panelPages: activePagesUpdated,
+      completedPages: completedPages
+    });
+    
+    // Уведомляем панель об обновлении
+    chrome.runtime.sendMessage({ action: 'pagesUpdated' }).catch(() => {});
+  });
+}
 
 // Функция открытия следующей страницы из панели
 function openNextPageFromPanel() {
@@ -71,8 +105,8 @@ function openNextPageFromPanel() {
     const pages = result.panelPages || [];
     let currentIndex = result.currentIndex !== undefined ? result.currentIndex : -1;
     
-    if (pages.length > 0 && currentIndex < pages.length - 1) {
-      currentIndex = currentIndex + 1;
+    // После перемещения в отработанные индексы сдвигаются, поэтому используем тот же индекс
+    if (pages.length > 0 && currentIndex < pages.length) {
       const nextPage = pages[currentIndex];
       
       chrome.tabs.create({ url: nextPage.url }, (tab) => {

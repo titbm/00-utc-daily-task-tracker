@@ -7,23 +7,41 @@
 </head>
 <body>
   <div class="header">
-    <h2>📋 Daily Panel</h2>
-    <button id="clearAll" class="clear-btn" title="Очистить все">🗑️</button>
+    <h2 id="sectionTitle">📋 Активные</h2>
+    <button id="toggleSection" class="toggle-btn" title="Отработанные сегодня">✓</button>
   </div>
   
   <div class="content">
-    <div id="emptyState" class="empty-state">
-      <div class="empty-icon">📄</div>
-      <p class="empty-title">Панель пуста</p>
-      <p class="hint">Щелкните правой кнопкой мыши на любой странице и выберите <strong>"Добавить в Daily Panel"</strong></p>
+    <!-- Активные вкладки -->
+    <div id="activeSection" class="section active">
+      <div id="emptyStateActive" class="empty-state">
+        <div class="empty-icon">📄</div>
+        <p class="empty-title">Нет активных вкладок</p>
+        <p class="hint">Щелкните правой кнопкой мыши на любой странице и выберите <strong>"Добавить в Daily Panel"</strong></p>
+      </div>
+      
+      <div id="activePagesList" class="pages-list"></div>
     </div>
     
-    <div id="pagesList" class="pages-list"></div>
+    <!-- Отработанные вкладки -->
+    <div id="completedSection" class="section">
+      <div id="emptyStateCompleted" class="empty-state">
+        <div class="empty-icon">✓</div>
+        <p class="empty-title">Нет отработанных вкладок</p>
+        <p class="hint">Вкладки, которые вы откроете и закроете сегодня, появятся здесь</p>
+      </div>
+      
+      <div id="completedPagesList" class="pages-list"></div>
+      
+      <button id="clearCompleted" class="clear-completed-btn">🗑️ Очистить отработанные</button>
+    </div>
   </div>
   
   <div class="footer">
     <div class="counter">
-      Страниц: <span id="pageCount">0</span>
+      <span id="activeCount">Активных: 0</span>
+      <span class="separator">•</span>
+      <span id="completedCount">Отработанных: 0</span>
     </div>
   </div>
   
