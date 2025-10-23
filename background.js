@@ -128,6 +128,93 @@ async function removeBookmarkByUrl(url) {
   }
 }
 
+// Функция синхронизации закладок в панель (обратная синхронизация)
+async function syncBookmarksToPages() {
+  try {
+    const result = await chrome.storage.local.get(['bookmarksFolderId', 'panelPages']);
+    const folderId = result.bookmarksFolderId;
+    const currentPages = result.panelPages || [];
+    
+    if (!folderId) return;
+    
+    // Получаем все закладки из папки
+    const folderBookmarks = await chrome.bookmarks.getChildren(folderId);
+    
+    // Создаём Set URL текущих страниц для быстрой проверки
+    const currentUrls = new Set(currentPages.map(p => p.url));
+    
+    // Добавляем новые закладки в панель
+    const newPages = [];
+    for (const bookmark of folderBookmarks) {
+      if (bookmark.url && !currentUrls.has(bookmark.url)) {
+        newPages.push({
+          id: Date.now() + Math.random(), // Уникальный ID
+          title: bookmark.title,
+          url: bookmark.url,
+          favicon: `chrome://favicon/${bookmark.url}`,
+          addedAt: new Date().toISOString()
+        });
+      }
+    }
+    
+    if (newPages.length > 0) {
+      const updatedPages = [...currentPages, ...newPages];
+      await chrome.storage.local.set({ panelPages: updatedPages });
+      
+      // Уведомляем панель об обновлении
+      chrome.runtime.sendMessage({ action: 'pagesUpdated' }).catch(() => {});
+    }
+    
+    // Проверяем удалённые закладки
+    const bookmarkUrls = new Set(folderBookmarks.filter(b => b.url).map(b => b.url));
+    const pagesToRemove = currentPages.filter(p => !bookmarkUrls.has(p.url));
+    
+    if (pagesToRemove.length > 0) {
+      const updatedPages = currentPages.filter(p => bookmarkUrls.has(p.url));
+      await chrome.storage.local.set({ panelPages: updatedPages });
+      
+      // Уведомляем панель об обновлении
+      chrome.runtime.sendMessage({ action: 'pagesUpdated' }).catch(() => {});
+    }
+  } catch (error) {
+    console.error('Error syncing bookmarks to pages:', error);
+  }
+}
+
+// Слушаем создание закладок
+chrome.bookmarks.onCreated.addListener(async (id, bookmark) => {
+  const result = await chrome.storage.local.get(['bookmarksFolderId']);
+  const folderId = result.bookmarksFolderId;
+  
+  // Проверяем, что закладка создана в нашей папке
+  if (bookmark.parentId === folderId && bookmark.url) {
+    await syncBookmarksToPages();
+  }
+});
+
+// Слушаем удаление закладок
+chrome.bookmarks.onRemoved.addListener(async (id, removeInfo) => {
+  const result = await chrome.storage.local.get(['bookmarksFolderId']);
+  const folderId = result.bookmarksFolderId;
+  
+  // Проверяем, что закладка удалена из нашей папки
+  if (removeInfo.parentId === folderId) {
+    await syncBookmarksToPages();
+  }
+});
+
+// Слушаем изменение закладок (например, изменение URL или названия)
+chrome.bookmarks.onChanged.addListener(async (id, changeInfo) => {
+  const result = await chrome.storage.local.get(['bookmarksFolderId']);
+  const folderId = result.bookmarksFolderId;
+  
+  // Получаем информацию о закладке
+  const bookmark = await chrome.bookmarks.get(id);
+  if (bookmark[0] && bookmark[0].parentId === folderId) {
+    await syncBookmarksToPages();
+  }
+});
+
 // Функция запуска периодической проверки
 function startTimeChecker() {
   // Проверяем сразу при запуске
