@@ -544,6 +544,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
 // Слушаем закрытие вкладок для автоматического открытия следующей
 // Хранилище для отслеживания открытых вкладок из панели
 const openedTabs = new Map(); // tabId -> bookmarkId
+let isCycleMode = false; // Флаг режима автоматической отработки цикла
 let currentWindowId = null; // Сохраняем windowId для открытия панели в конце
 
 chrome.tabs.onRemoved.addListener(async (tabId, removeInfo) => {
@@ -575,10 +576,8 @@ chrome.tabs.onRemoved.addListener(async (tabId, removeInfo) => {
         }
       }
       
-      // Перемещаем в Completed
-      await movePageToCompleted(bookmarkId);
-      
-      // Если тип = interval, открываем диалог
+      // Если тип = interval, НЕ перемещаем в Completed сразу, а открываем диалог
+      // Диалог сам переместит после установки интервала
       if (parsed.resetType === 'interval') {
         const dialogUrl = chrome.runtime.getURL('interval-dialog.html') + 
           `?bookmarkId=${bookmarkId}` +
@@ -587,8 +586,20 @@ chrome.tabs.onRemoved.addListener(async (tabId, removeInfo) => {
           `&interval=24`;
         
         chrome.tabs.create({ url: dialogUrl });
+        // НЕ вызываем openNextPageFromPanel здесь - это сделает диалог после закрытия
+      } else {
+        // Тип midnight - сразу перемещаем в Completed
+        await movePageToCompleted(bookmarkId);
+        
+        // Автоматически открываем следующую страницу ТОЛЬКО если активен режим цикла
+        console.log('Tab closed (midnight type). isCycleMode:', isCycleMode);
+        if (isCycleMode) {
+          console.log('Cycle mode active, opening next page...');
+          setTimeout(() => openNextPageFromPanel(), 100);
+        } else {
+          console.log('Cycle mode OFF, not opening next page');
+        }
       }
-      // НЕ открываем следующую страницу автоматически - только при явном запуске цикла
     } catch (error) {
       console.error('Error handling tab close:', error);
     }
@@ -610,6 +621,7 @@ async function movePageToCompleted(bookmarkId) {
     
     // Парсим метаданные из Active
     const parsed = parseActiveBookmarkTitle(page.title);
+    console.log('Moving to Completed:', parsed.title, 'resetType from Active:', parsed.resetType);
     
     // Создаём метаданные для Completed
     const completedAt = new Date().toISOString();
@@ -627,7 +639,7 @@ async function movePageToCompleted(bookmarkId) {
     await chrome.bookmarks.move(bookmarkId, { parentId: ids.completed });
     await chrome.bookmarks.update(bookmarkId, { title: newTitle });
     
-    console.log('Moved to Completed:', parsed.title);
+    console.log('Moved to Completed with title:', newTitle);
     notifyPanelUpdate();
     
     // Если interval - откроем диалог (сейчас всегда midnight из Active)
@@ -674,6 +686,23 @@ async function openNextPageFromPanel() {
     
     console.log('openNextPageFromPanel: remaining pages:', pages.length);
     
+    // Если страниц больше нет, выключаем режим цикла
+    if (pages.length === 0) {
+      isCycleMode = false;
+      console.log('No more pages, cycle mode disabled');
+      // Все страницы отработаны - открываем страницу завершения
+      console.log('All pages completed! Opening completion page...');
+      if (currentWindowId) {
+        const completedUrl = chrome.runtime.getURL('completed.html');
+        chrome.tabs.create({ url: completedUrl, windowId: currentWindowId });
+        currentWindowId = null; // Сбрасываем
+      } else {
+        console.error('No windowId saved, opening in current window');
+        chrome.tabs.create({ url: chrome.runtime.getURL('completed.html') });
+      }
+      return;
+    }
+    
     // Открываем первую страницу из оставшихся
     if (pages.length > 0) {
       const nextPage = pages[0];
@@ -695,28 +724,51 @@ async function openNextPageFromPanel() {
         currentWindowId = tab.windowId;
         console.log('Opened next page:', nextPage.title, 'tabId:', tab.id);
       });
-    } else {
-      // Все страницы отработаны - открываем страницу завершения
-      console.log('All pages completed! Opening completion page...');
-      if (currentWindowId) {
-        const completedUrl = chrome.runtime.getURL('completed.html');
-        chrome.tabs.create({ url: completedUrl, windowId: currentWindowId });
-        currentWindowId = null; // Сбрасываем
-      } else {
-        console.error('No windowId saved, opening in current window');
-        chrome.tabs.create({ url: chrome.runtime.getURL('completed.html') });
-      }
     }
   } catch (error) {
     console.error('Error opening next page:', error);
   }
 }
 
+// Универсальная функция запуска цикла задач
+async function startTasksCycle() {
+  isCycleMode = true;
+  console.log('Starting tasks cycle (isCycleMode = true)');
+  
+  const pages = await getActivePages();
+  if (pages.length === 0) {
+    console.log('No active pages to start');
+    return;
+  }
+  
+  const firstPage = pages[0];
+  chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
+    if (tabs[0]) {
+      let taskUrl = firstPage.url;
+      try {
+        const url = new URL(firstPage.url);
+        url.searchParams.set('daily_panel_task', '1');
+        taskUrl = url.toString();
+        await chrome.bookmarks.update(firstPage.id, { url: taskUrl });
+      } catch (e) {
+        console.log('Cannot add parameter to URL:', firstPage.url);
+      }
+      
+      chrome.tabs.create({ url: taskUrl, windowId: tabs[0].windowId }, (newTab) => {
+        openedTabs.set(newTab.id, firstPage.id);
+        currentWindowId = newTab.windowId;
+        console.log('Started tasks cycle, first page opened, tabId:', newTab.id);
+      });
+    }
+  });
+}
+
 // Обработчик сообщений от popup, боковой панели и content scripts
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'openSinglePage') {
     // Открытие ОДНОЙ страницы без запуска цикла
-    console.log('Opening single page:', request.url, 'bookmarkId:', request.bookmarkId);
+    isCycleMode = false; // Отключаем режим цикла для одиночного открытия
+    console.log('Opening single page (cycle mode OFF):', request.url, 'bookmarkId:', request.bookmarkId);
     chrome.tabs.create({ url: request.url }, (tab) => {
       // Сохраняем связь вкладки с закладкой для автоматического перемещения в Completed при закрытии
       if (request.bookmarkId) {
@@ -779,7 +831,17 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     })();
     return true; // Асинхронный ответ
   } else if (request.action === 'openNextPage') {
-    openNextPageFromPanel();
+    // Запуск цикла (используется кнопкой "Запустить задачи" в панели)
+    startTasksCycle();
+    sendResponse({ success: true });
+  } else if (request.action === 'continueAfterInterval') {
+    // Продолжаем цикл после диалога интервала (только если режим цикла активен)
+    if (isCycleMode) {
+      console.log('Continue after interval dialog, opening next page...');
+      setTimeout(() => openNextPageFromPanel(), 100);
+    } else {
+      console.log('Cycle mode OFF, not continuing after interval');
+    }
     sendResponse({ success: true });
   } else if (request.action === 'clearAll') {
     // Удаляем все страницы из Active
@@ -831,8 +893,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       for (const page of completedPages) {
         const ids = await getFolderIds();
         await chrome.bookmarks.move(page.id, { parentId: ids.active });
-        const parsed = parseCompletedBookmarkTitle(page.title);
-        const newTitle = `${parsed.title} [${parsed.resetType}]`;
+        // page уже содержит распарсенные данные из getCompletedPages()
+        console.log('RESTORE ALL: restoring page:', page.title, 'with resetType:', page.resetType);
+        const newTitle = `${page.title} [${page.resetType}]`;
+        console.log('RESTORE ALL: new title for Active:', newTitle);
         const urlWithParam = addTaskParamToUrl(page.url);
         
         await chrome.bookmarks.update(page.id, { 
@@ -843,30 +907,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       
       notifyPanelUpdate();
       
-      // Получаем обновленный список активных и запускаем первую
-      const activePages = await getActivePages();
-      if (activePages.length > 0) {
-        const firstPage = activePages[0];
-        chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
-          if (tabs[0]) {
-            let taskUrl = firstPage.url;
-            try {
-              const url = new URL(firstPage.url);
-              url.searchParams.set('daily_panel_task', '1');
-              taskUrl = url.toString();
-              await chrome.bookmarks.update(firstPage.id, { url: taskUrl });
-            } catch (e) {
-              console.log('Cannot add parameter to URL:', firstPage.url);
-            }
-            
-            chrome.tabs.create({ url: taskUrl, windowId: tabs[0].windowId }, (newTab) => {
-              openedTabs.set(newTab.id, firstPage.id);
-              currentWindowId = newTab.windowId;
-              console.log('Started repeat all, tabId:', newTab.id);
-            });
-          }
-        });
-      }
+      // Запускаем цикл через универсальную функцию
+      await startTasksCycle();
       
       sendResponse({ success: true });
     })();
@@ -880,64 +922,16 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       // Небольшая задержка для закрытия панели
       await new Promise(resolve => setTimeout(resolve, 100));
       
-      // Запускаем задачи
-      const pages = await getActivePages();
-      if (pages.length > 0) {
-        const firstPage = pages[0];
-        chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
-          if (tabs[0]) {
-            let taskUrl = firstPage.url;
-            try {
-              const url = new URL(firstPage.url);
-              url.searchParams.set('daily_panel_task', '1');
-              taskUrl = url.toString();
-              await chrome.bookmarks.update(firstPage.id, { url: taskUrl });
-            } catch (e) {
-              console.log('Cannot add parameter to URL:', firstPage.url);
-            }
-            
-            chrome.tabs.create({ url: taskUrl, windowId: tabs[0].windowId }, (newTab) => {
-              openedTabs.set(newTab.id, firstPage.id);
-              currentWindowId = newTab.windowId;
-              console.log('Started stealth mode, tabId:', newTab.id);
-            });
-          }
-        });
-      }
+      // Запускаем цикл через универсальную функцию
+      await startTasksCycle();
+      
       sendResponse({ success: true });
     })();
     return true; // Асинхронный ответ
   } else if (request.action === 'startDailyTasks') {
-    // Запуск цикла отработки задач из баннера (без закрытия панели)
-    (async () => {
-      const pages = await getActivePages();
-      if (pages.length > 0) {
-        const firstPage = pages[0];
-        chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
-          if (tabs[0]) {
-            // Добавляем параметр в URL закладки
-            let taskUrl = firstPage.url;
-            try {
-              const url = new URL(firstPage.url);
-              url.searchParams.set('daily_panel_task', '1');
-              taskUrl = url.toString();
-              // Временно обновляем URL закладки
-              await chrome.bookmarks.update(firstPage.id, { url: taskUrl });
-            } catch (e) {
-              console.log('Cannot add parameter to URL:', firstPage.url);
-            }
-            
-            chrome.tabs.create({ url: taskUrl, windowId: tabs[0].windowId }, (newTab) => {
-              openedTabs.set(newTab.id, firstPage.id);
-              currentWindowId = newTab.windowId;
-              console.log('Started daily tasks from banner, tabId:', newTab.id);
-            });
-          }
-        });
-      }
-      sendResponse({ success: true });
-    })();
-    return true; // Асинхронный ответ
+    // Запуск цикла отработки задач из баннера
+    startTasksCycle();
+    sendResponse({ success: true });
   }
 });
 

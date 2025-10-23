@@ -35,8 +35,8 @@ function handleBeforeUnload() {
     intervalHours: intervalHours
   });
   
-  // Открываем следующую страницу
-  chrome.runtime.sendMessage({ action: 'openNextPage' });
+  // Открываем следующую страницу (background сам решит открывать или нет на основе isCycleMode)
+  chrome.runtime.sendMessage({ action: 'continueAfterInterval' });
 }
 
 window.addEventListener('beforeunload', handleBeforeUnload);
@@ -73,8 +73,8 @@ document.getElementById('confirmBtn').addEventListener('click', () => {
     bookmarkId: bookmarkId,
     intervalHours: intervalHours
   }, () => {
-    // Открываем следующую страницу
-    chrome.runtime.sendMessage({ action: 'openNextPage' });
+    // Открываем следующую страницу (background сам решит открывать или нет на основе isCycleMode)
+    chrome.runtime.sendMessage({ action: 'continueAfterInterval' });
     
     // Закрываем эту вкладку
     window.close();
