@@ -237,11 +237,11 @@ body {
   color: #dee2e6;
 }
 
-.clear-completed-btn {
+.restore-completed-btn {
   width: 100%;
   margin-top: 16px;
   padding: 12px;
-  background: #dc3545;
+  background: #667eea;
   color: white;
   border: none;
   border-radius: 8px;
@@ -249,15 +249,19 @@ body {
   font-size: 14px;
   font-weight: 500;
   transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
 
-.clear-completed-btn:hover {
-  background: #c82333;
+.restore-completed-btn:hover {
+  background: #5568d3;
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
 }
 
-.clear-completed-btn:active {
+.restore-completed-btn:active {
   transform: translateY(0);
 }
 

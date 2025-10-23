@@ -14,7 +14,7 @@ class DailyPanel {
     
     // Кнопки и элементы управления
     this.toggleSectionBtn = document.getElementById('toggleSection');
-    this.clearCompletedBtn = document.getElementById('clearCompleted');
+    this.restoreCompletedBtn = document.getElementById('restoreCompleted');
     this.sectionTitle = document.getElementById('sectionTitle');
     
     // Счетчики
@@ -51,8 +51,8 @@ class DailyPanel {
       this.toggleSection();
     });
     
-    this.clearCompletedBtn.addEventListener('click', () => {
-      this.clearCompletedPages();
+    this.restoreCompletedBtn.addEventListener('click', () => {
+      this.restoreAllCompleted();
     });
   }
   
@@ -77,26 +77,60 @@ class DailyPanel {
   loadPages() {
     chrome.storage.local.get(['panelPages', 'completedPages'], (result) => {
       const activePages = result.panelPages || [];
-      const completedPages = this.filterTodayPages(result.completedPages || []);
+      const allCompletedPages = result.completedPages || [];
+      
+      // Разделяем отработанные на сегодняшние и вчерашние
+      const { todayPages, oldPages } = this.filterPagesByDate(allCompletedPages);
+      
+      // Если есть старые страницы, возвращаем их в активные
+      if (oldPages.length > 0) {
+        this.restoreOldPagesToActive(oldPages, activePages);
+        return; // loadPages будет вызван снова после обновления storage
+      }
       
       this.renderPages(activePages, this.activePagesList, this.emptyStateActive);
-      this.renderPages(completedPages, this.completedPagesList, this.emptyStateCompleted, true);
-      this.updateCounters(activePages.length, completedPages.length);
-      
-      // Очищаем старые отработанные страницы
-      if (completedPages.length !== (result.completedPages || []).length) {
-        chrome.storage.local.set({ completedPages: completedPages });
-      }
+      this.renderPages(todayPages, this.completedPagesList, this.emptyStateCompleted, true);
+      this.updateCounters(activePages.length, todayPages.length);
     });
   }
   
-  filterTodayPages(pages) {
+  filterPagesByDate(pages) {
     const now = new Date();
     const todayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0));
     
-    return pages.filter(page => {
+    const todayPages = [];
+    const oldPages = [];
+    
+    pages.forEach(page => {
       const completedDate = new Date(page.completedAt);
-      return completedDate >= todayStart;
+      if (completedDate >= todayStart) {
+        todayPages.push(page);
+      } else {
+        oldPages.push(page);
+      }
+    });
+    
+    return { todayPages, oldPages };
+  }
+  
+  restoreOldPagesToActive(oldPages, currentActivePages) {
+    // Удаляем дату завершения и добавляем обратно в активные
+    const restoredPages = oldPages.map(page => {
+      const { completedAt, ...pageWithoutDate } = page;
+      return pageWithoutDate;
+    });
+    
+    const updatedActivePages = [...currentActivePages, ...restoredPages];
+    
+    chrome.storage.local.get(['completedPages'], (result) => {
+      const allCompleted = result.completedPages || [];
+      const oldPageIds = new Set(oldPages.map(p => p.id));
+      const remainingCompleted = allCompleted.filter(p => !oldPageIds.has(p.id));
+      
+      chrome.storage.local.set({ 
+        panelPages: updatedActivePages,
+        completedPages: remainingCompleted
+      });
     });
   }
   
@@ -164,7 +198,7 @@ class DailyPanel {
     div.addEventListener('click', (e) => {
       if (!e.target.classList.contains('remove-btn')) {
         if (isCompleted) {
-          this.openCompletedPage(page.url);
+          this.restoreCompletedPage(page.id);
         } else {
           this.openPage(page.url, index);
         }
@@ -208,8 +242,31 @@ class DailyPanel {
     });
   }
   
-  openCompletedPage(url) {
-    chrome.tabs.create({ url: url });
+  restoreCompletedPage(pageId) {
+    chrome.storage.local.get(['panelPages', 'completedPages'], (result) => {
+      const activePages = result.panelPages || [];
+      const completedPages = result.completedPages || [];
+      
+      const pageToRestore = completedPages.find(p => p.id === pageId);
+      if (!pageToRestore) return;
+      
+      // Удаляем дату завершения
+      const { completedAt, ...restoredPage } = pageToRestore;
+      
+      // Обновляем списки
+      const updatedActivePages = [...activePages, restoredPage];
+      const updatedCompletedPages = completedPages.filter(p => p.id !== pageId);
+      
+      chrome.storage.local.set({ 
+        panelPages: updatedActivePages,
+        completedPages: updatedCompletedPages
+      });
+      
+      // Переключаемся на раздел активных
+      if (this.currentSection === 'completed') {
+        this.toggleSection();
+      }
+    });
   }
   
   removePage(pageId) {
@@ -227,10 +284,33 @@ class DailyPanel {
     });
   }
   
-  clearCompletedPages() {
-    if (confirm('Вы уверены, что хотите удалить все отработанные страницы?')) {
-      chrome.storage.local.set({ completedPages: [] });
-    }
+  restoreAllCompleted() {
+    chrome.storage.local.get(['panelPages', 'completedPages'], (result) => {
+      const activePages = result.panelPages || [];
+      const completedPages = result.completedPages || [];
+      
+      if (completedPages.length === 0) {
+        return;
+      }
+      
+      // Удаляем дату завершения и добавляем обратно в активные
+      const restoredPages = completedPages.map(page => {
+        const { completedAt, ...pageWithoutDate } = page;
+        return pageWithoutDate;
+      });
+      
+      const updatedActivePages = [...activePages, ...restoredPages];
+      
+      chrome.storage.local.set({ 
+        panelPages: updatedActivePages,
+        completedPages: []
+      });
+      
+      // Переключаемся на раздел активных
+      if (this.currentSection === 'completed') {
+        this.toggleSection();
+      }
+    });
   }
 }
 
