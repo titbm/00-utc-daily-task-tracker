@@ -22,6 +22,12 @@ chrome.runtime.onStartup.addListener(async () => {
   startTimeChecker();
 });
 
+// Инициализация при загрузке service worker (для случая включения расширения)
+(async () => {
+  await initializeBookmarksFolder();
+  startTimeChecker();
+})();
+
 // Глобальные переменные для хранения ID папок (только ID, не данные)
 let FOLDER_IDS = {
   main: null,
