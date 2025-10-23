@@ -241,11 +241,45 @@ async function addPageToActive(tab) {
       return;
     }
     
-    // Проверяем дубликаты
+    // Нормализуем URL (убираем параметр daily_panel_task если есть)
+    let normalizedUrl = tab.url;
+    try {
+      const url = new URL(tab.url);
+      url.searchParams.delete('daily_panel_task');
+      normalizedUrl = url.toString();
+    } catch (e) {
+      // Если URL не парсится, используем как есть
+    }
+    
+    // Проверяем дубликаты в Active
     const activePages = await getActivePages();
-    const exists = activePages.some(p => p.url === tab.url);
-    if (exists) {
-      console.log('Page already exists:', tab.url);
+    const existsInActive = activePages.some(p => {
+      let pageUrl = p.url;
+      try {
+        const url = new URL(p.url);
+        url.searchParams.delete('daily_panel_task');
+        pageUrl = url.toString();
+      } catch (e) {}
+      return pageUrl === normalizedUrl;
+    });
+    if (existsInActive) {
+      console.log('Page already exists in Active:', normalizedUrl);
+      return;
+    }
+    
+    // Проверяем дубликаты в Completed
+    const completedPages = await getCompletedPages();
+    const existsInCompleted = completedPages.some(p => {
+      let pageUrl = p.url;
+      try {
+        const url = new URL(p.url);
+        url.searchParams.delete('daily_panel_task');
+        pageUrl = url.toString();
+      } catch (e) {}
+      return pageUrl === normalizedUrl;
+    });
+    if (existsInCompleted) {
+      console.log('Page already exists in Completed:', normalizedUrl);
       return;
     }
     
@@ -255,7 +289,7 @@ async function addPageToActive(tab) {
     await chrome.bookmarks.create({
       parentId: ids.active,
       title: titleWithMetadata,
-      url: tab.url
+      url: normalizedUrl
     });
     
     console.log('Added page to Active:', tab.title);
