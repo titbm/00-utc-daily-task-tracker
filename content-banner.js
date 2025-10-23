@@ -16,10 +16,6 @@ function createBanner() {
   banner.id = 'daily-panel-banner';
   banner.innerHTML = `
     <div style="
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
       background: white;
       box-shadow: 0 2px 8px rgba(0,0,0,0.1);
       padding: 8px 20px;
@@ -27,7 +23,6 @@ function createBanner() {
       align-items: center;
       justify-content: center;
       gap: 16px;
-      z-index: 999999;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     ">
       <span style="font-weight: 600; color: #212529; font-size: 13px;">
@@ -51,9 +46,6 @@ function createBanner() {
   
   document.body.prepend(banner);
   
-  // Добавляем отступ для body чтобы контент не перекрывался
-  document.body.style.paddingTop = '36px';
-  
   // Обработчик кнопки
   const startBtn = banner.querySelector('#daily-panel-start-btn');
   startBtn.addEventListener('mouseenter', () => {
@@ -75,7 +67,6 @@ function removeBanner() {
   if (banner) {
     banner.remove();
     banner = null;
-    document.body.style.paddingTop = '';
   }
 }
 
