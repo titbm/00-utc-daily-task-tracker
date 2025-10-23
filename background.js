@@ -22,12 +22,6 @@ chrome.runtime.onStartup.addListener(async () => {
   await startTimeChecker();
 });
 
-// Инициализация при загрузке service worker (для случая включения расширения)
-(async () => {
-  await initializeBookmarksFolder();
-  await startTimeChecker();
-})();
-
 // Глобальные переменные для хранения ID папок (только ID, не данные)
 let FOLDER_IDS = {
   main: null,
@@ -394,8 +388,12 @@ let fastCheckInterval = null;
 let sidePanelConnections = 0;
 
 async function startTimeChecker() {
+  console.log('⏰ startTimeChecker called');
+  
   // Проверяем сразу при запуске
+  console.log('⏰ Starting checkAndRestoreOldPages...');
   await checkAndRestoreOldPages();
+  console.log('⏰ checkAndRestoreOldPages completed');
   
   // Очищаем старый alarm если есть
   await chrome.alarms.clear('checkPages');
@@ -403,7 +401,7 @@ async function startTimeChecker() {
   // Создаём alarm для фоновых проверок (каждую минуту)
   chrome.alarms.create('checkPages', { periodInMinutes: 1 });
   
-  console.log('Time checker started, alarm created');
+  console.log('⏰ Time checker started, alarm created');
 }
 
 // Слушаем срабатывание alarm
@@ -488,10 +486,14 @@ async function checkAndRestoreOldPages() {
       // Если нужно восстановить - перемещаем из Completed в Active
       if (shouldRestore) {
         console.log('✓ Restoring page:', page.title);
+        console.log('  Moving bookmark', page.id, 'from Completed to Active folder', ids.active);
         await chrome.bookmarks.move(page.id, { parentId: ids.active });
+        console.log('  Bookmark moved successfully');
+        
         // Создаём метаданные для Active с сохранением resetType
         const newTitle = `${page.title} [${page.resetType}]`;
         await chrome.bookmarks.update(page.id, { title: newTitle });
+        console.log('  Bookmark title updated to:', newTitle);
       }
     }
     
@@ -898,3 +900,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true; // Асинхронный ответ
   }
 });
+
+    // Инициализация при загрузке service worker (для случая включения расширения)
+    (async () => {
+      console.log('🔄 Service worker loaded - starting initialization...');
+      await initializeBookmarksFolder();
+      await startTimeChecker();
+      console.log('✅ Service worker initialization complete');
+    })();
