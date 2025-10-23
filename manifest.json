@@ -10,7 +10,8 @@
     "contextMenus",
     "storage",
     "sidePanel",
-    "bookmarks"
+    "bookmarks",
+    "alarms"
   ],
   
   "host_permissions": [

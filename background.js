@@ -216,15 +216,55 @@ chrome.bookmarks.onChanged.addListener(async (id, changeInfo) => {
 });
 
 // Функция запуска периодической проверки
+let fastCheckInterval = null;
+let sidePanelConnections = 0;
+
 function startTimeChecker() {
   // Проверяем сразу при запуске
   checkAndRestoreOldPages();
   
-  // Устанавливаем интервал проверки каждые 5 секунд
-  setInterval(() => {
-    checkAndRestoreOldPages();
-  }, 5000);
+  // Создаём alarm для фоновых проверок (каждую минуту)
+  chrome.alarms.create('checkPages', { periodInMinutes: 1 });
 }
+
+// Слушаем срабатывание alarm
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name === 'checkPages') {
+    checkAndRestoreOldPages();
+  }
+});
+
+// Функция для быстрых проверок когда панель открыта
+function startFastChecks() {
+  if (fastCheckInterval) return; // Уже запущен
+  
+  fastCheckInterval = setInterval(() => {
+    checkAndRestoreOldPages();
+  }, 5000); // Каждые 5 секунд
+}
+
+function stopFastChecks() {
+  if (fastCheckInterval) {
+    clearInterval(fastCheckInterval);
+    fastCheckInterval = null;
+  }
+}
+
+// Слушаем подключения от sidepanel
+chrome.runtime.onConnect.addListener((port) => {
+  if (port.name === 'sidepanel') {
+    sidePanelConnections++;
+    startFastChecks();
+    
+    port.onDisconnect.addListener(() => {
+      sidePanelConnections--;
+      if (sidePanelConnections <= 0) {
+        sidePanelConnections = 0;
+        stopFastChecks();
+      }
+    });
+  }
+});
 
 // Функция проверки и восстановления старых страниц
 function checkAndRestoreOldPages() {

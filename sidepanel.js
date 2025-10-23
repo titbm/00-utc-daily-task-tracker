@@ -34,6 +34,9 @@ class DailyPanel {
     this.loadPages();
     this.setupEventListeners();
     
+    // Подключаемся к background для включения быстрых проверок
+    this.port = chrome.runtime.connect({ name: 'sidepanel' });
+    
     // Слушаем сообщения от background script
     chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       if (message.action === 'pageAdded' || message.action === 'pagesUpdated') {
