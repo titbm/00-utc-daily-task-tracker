@@ -286,13 +286,23 @@ async function addPageToActive(tab) {
     // Создаём закладку с метаданными [resetType]
     const titleWithMetadata = `${tab.title} [midnight]`;
     
+    // Добавляем параметр daily_panel_task=1 к URL
+    let urlWithParam = normalizedUrl;
+    try {
+      const url = new URL(normalizedUrl);
+      url.searchParams.set('daily_panel_task', '1');
+      urlWithParam = url.toString();
+    } catch (e) {
+      console.error('Cannot add parameter to URL:', normalizedUrl, e);
+    }
+    
     await chrome.bookmarks.create({
       parentId: ids.active,
       title: titleWithMetadata,
-      url: normalizedUrl
+      url: urlWithParam
     });
     
-    console.log('Added page to Active:', tab.title);
+    console.log('Added page to Active:', tab.title, 'with URL:', urlWithParam);
     notifyPanelUpdate();
   } catch (error) {
     console.error('Error adding page to Active:', error);
@@ -492,8 +502,23 @@ async function checkAndRestoreOldPages() {
         
         // Создаём метаданные для Active с сохранением resetType
         const newTitle = `${page.title} [${page.resetType}]`;
-        await chrome.bookmarks.update(page.id, { title: newTitle });
+        
+        // Добавляем параметр daily_panel_task=1 к URL
+        let urlWithParam = page.url;
+        try {
+          const url = new URL(page.url);
+          url.searchParams.set('daily_panel_task', '1');
+          urlWithParam = url.toString();
+        } catch (e) {
+          console.error('Cannot add parameter to URL:', page.url, e);
+        }
+        
+        await chrome.bookmarks.update(page.id, { 
+          title: newTitle,
+          url: urlWithParam
+        });
         console.log('  Bookmark title updated to:', newTitle);
+        console.log('  Bookmark URL updated to:', urlWithParam);
       }
     }
     
@@ -738,7 +763,21 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       const parsed = parseCompletedBookmarkTitle(bookmark[0].title);
       // Восстанавливаем с тем же resetType, что был
       const newTitle = `${parsed.title} [${parsed.resetType}]`;
-      await chrome.bookmarks.update(request.bookmarkId, { title: newTitle });
+      
+      // Добавляем параметр daily_panel_task=1 к URL
+      let urlWithParam = bookmark[0].url;
+      try {
+        const url = new URL(bookmark[0].url);
+        url.searchParams.set('daily_panel_task', '1');
+        urlWithParam = url.toString();
+      } catch (e) {
+        console.error('Cannot add parameter to URL:', bookmark[0].url, e);
+      }
+      
+      await chrome.bookmarks.update(request.bookmarkId, { 
+        title: newTitle,
+        url: urlWithParam
+      });
       notifyPanelUpdate();
       sendResponse({ success: true });
     })();
@@ -798,7 +837,21 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         await chrome.bookmarks.move(page.id, { parentId: ids.active });
         const parsed = parseCompletedBookmarkTitle(page.title);
         const newTitle = `${parsed.title} [${parsed.resetType}]`;
-        await chrome.bookmarks.update(page.id, { title: newTitle });
+        
+        // Добавляем параметр daily_panel_task=1 к URL
+        let urlWithParam = page.url;
+        try {
+          const url = new URL(page.url);
+          url.searchParams.set('daily_panel_task', '1');
+          urlWithParam = url.toString();
+        } catch (e) {
+          console.error('Cannot add parameter to URL:', page.url, e);
+        }
+        
+        await chrome.bookmarks.update(page.id, { 
+          title: newTitle,
+          url: urlWithParam
+        });
       }
       
       notifyPanelUpdate();
