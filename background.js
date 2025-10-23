@@ -29,8 +29,17 @@ let FOLDER_IDS = {
   completed: null
 };
 
+// Флаг для предотвращения параллельной инициализации
+let isInitializing = false;
+
 // Функция инициализации папки закладок (с двумя подпапками)
 async function initializeBookmarksFolder() {
+  if (isInitializing) {
+    console.log('Already initializing, skipping...');
+    return;
+  }
+  
+  isInitializing = true;
   try {
     const bookmarkTreeNodes = await chrome.bookmarks.getTree();
     const bookmarksBar = bookmarkTreeNodes[0].children.find(node => node.id === '1');
@@ -80,6 +89,8 @@ async function initializeBookmarksFolder() {
     console.log('Folder IDs initialized:', FOLDER_IDS);
   } catch (error) {
     console.error('Error initializing bookmarks folder:', error);
+  } finally {
+    isInitializing = false;
   }
 }
 
