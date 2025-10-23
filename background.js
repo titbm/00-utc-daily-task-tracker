@@ -599,20 +599,15 @@ async function openNextPageFromPanel() {
     // Открываем первую страницу из оставшихся
     if (pages.length > 0) {
       const nextPage = pages[0];
-      chrome.tabs.create({ url: nextPage.url }, (tab) => {
+      // Добавляем параметр в URL для пометки вкладки как задачи
+      const taskUrl = new URL(nextPage.url);
+      taskUrl.searchParams.set('daily_panel_task', '1');
+      
+      chrome.tabs.create({ url: taskUrl.toString() }, (tab) => {
         // Регистрируем вкладку для отслеживания закрытия
         openedTabs.set(tab.id, nextPage.id);
         currentWindowId = tab.windowId; // Сохраняем windowId
         console.log('Opened next page:', nextPage.title, 'tabId:', tab.id, 'windowId:', tab.windowId);
-        
-        // Помечаем вкладку как вкладку с задачей (сразу и после загрузки)
-        const markTab = () => {
-          chrome.tabs.sendMessage(tab.id, { action: 'markAsTaskTab' }).catch(() => {});
-        };
-        markTab(); // Сразу
-        setTimeout(markTab, 100); // Через 100ms
-        setTimeout(markTab, 500); // Через 500ms
-        setTimeout(markTab, 1000); // Через 1s на всякий случай
       });
     } else {
       // Все страницы отработаны - открываем страницу завершения
@@ -752,19 +747,14 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         const firstPage = pages[0];
         chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
           if (tabs[0]) {
-            chrome.tabs.create({ url: firstPage.url, windowId: tabs[0].windowId }, (newTab) => {
+            // Добавляем параметр в URL для пометки вкладки как задачи
+            const taskUrl = new URL(firstPage.url);
+            taskUrl.searchParams.set('daily_panel_task', '1');
+            
+            chrome.tabs.create({ url: taskUrl.toString(), windowId: tabs[0].windowId }, (newTab) => {
               openedTabs.set(newTab.id, firstPage.id);
               currentWindowId = newTab.windowId;
               console.log('Started daily tasks from banner');
-              
-              // Помечаем вкладку как вкладку с задачей (сразу и после загрузки)
-              const markTab = () => {
-                chrome.tabs.sendMessage(newTab.id, { action: 'markAsTaskTab' }).catch(() => {});
-              };
-              markTab(); // Сразу
-              setTimeout(markTab, 100); // Через 100ms
-              setTimeout(markTab, 500); // Через 500ms
-              setTimeout(markTab, 1000); // Через 1s на всякий случай
             });
           }
         });

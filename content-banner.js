@@ -1,12 +1,16 @@
 // Content script для отображения баннера с активными задачами
 
 let banner = null;
-let isTaskTab = false; // Флаг для вкладок, открытых из Daily Panel
-let hasCheckedTaskStatus = false; // Флаг проверки статуса
+
+// Проверка, является ли текущая вкладка задачей (по URL параметру)
+function isTaskTab() {
+  const urlParams = new URLSearchParams(window.location.search);
+  return urlParams.has('daily_panel_task');
+}
 
 // Создание баннера
 function createBanner() {
-  if (banner || isTaskTab) return; // Не показываем баннер во вкладках с отработкой
+  if (banner || isTaskTab()) return; // Не показываем баннер во вкладках с отработкой
   
   banner = document.createElement('div');
   banner.id = 'daily-panel-banner';
@@ -77,14 +81,8 @@ function removeBanner() {
 
 // Проверка наличия активных страниц
 async function checkActiveTasks() {
-  // Ждем немного, чтобы успело прийти сообщение markAsTaskTab
-  if (!hasCheckedTaskStatus) {
-    await new Promise(resolve => setTimeout(resolve, 200));
-    hasCheckedTaskStatus = true;
-  }
-  
-  // Если это вкладка с задачей - не показываем баннер
-  if (isTaskTab) {
+  // Если это вкладка с задачей (проверяем URL) - не показываем баннер
+  if (isTaskTab()) {
     removeBanner();
     return;
   }
@@ -114,9 +112,5 @@ if (document.readyState === 'loading') {
 chrome.runtime.onMessage.addListener((message) => {
   if (message.action === 'pagesUpdated') {
     checkActiveTasks();
-  } else if (message.action === 'markAsTaskTab') {
-    // Эта вкладка открыта для отработки задачи - не показываем баннер
-    isTaskTab = true;
-    removeBanner();
   }
 });
