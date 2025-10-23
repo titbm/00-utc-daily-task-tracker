@@ -24,22 +24,25 @@ function saveInterval() {
   return hours + (minutes / 60);
 }
 
-// Обработчик закрытия вкладки (beforeunload) - сохраняем интервал из формы
-function handleBeforeUnload() {
-  const intervalHours = saveInterval();
-  
-  // Отправляем сообщение в background script
-  chrome.runtime.sendMessage({
-    action: 'moveToCompletedWithInterval',
-    bookmarkId: bookmarkId,
-    intervalHours: intervalHours
-  });
-  
-  // Открываем следующую страницу (background сам решит открывать или нет на основе isCycleMode)
-  chrome.runtime.sendMessage({ action: 'continueAfterInterval' });
-}
+// Обработчик закрытия вкладки (beforeunload) - больше не нужен
+// Страница уже перемещена в Completed при открытии диалога
+// function handleBeforeUnload() {
+//   console.log('📤 beforeunload triggered, saving interval...');
+//   const intervalHours = saveInterval();
+//   
+//   // Отправляем сообщение в background script
+//   chrome.runtime.sendMessage({
+//     action: 'moveToCompletedWithInterval',
+//     bookmarkId: bookmarkId,
+//     intervalHours: intervalHours
+//   });
+//   
+//   console.log('📤 beforeunload calling continueAfterInterval...');
+//   // Открываем следующую страницу (background сам решит открывать или нет на основе isCycleMode)
+//   chrome.runtime.sendMessage({ action: 'continueAfterInterval' });
+// }
 
-window.addEventListener('beforeunload', handleBeforeUnload);
+// window.addEventListener('beforeunload', handleBeforeUnload);
 
 // Быстрые кнопки
 document.querySelectorAll('.quick-btn').forEach(btn => {
@@ -64,19 +67,16 @@ document.getElementById('confirmBtn').addEventListener('click', () => {
   
   const intervalHours = hours + (minutes / 60);
   
-  // Отменяем обработчик beforeunload, чтобы не было дублирования
-  window.removeEventListener('beforeunload', handleBeforeUnload);
+  console.log('✅ Updating interval to:', intervalHours, 'hours');
   
-  // Отправляем сообщение в background script
+  // Страница уже в Completed, просто обновляем интервал
   chrome.runtime.sendMessage({
-    action: 'moveToCompletedWithInterval',
+    action: 'setPageInterval',
     bookmarkId: bookmarkId,
     intervalHours: intervalHours
   }, () => {
-    // Открываем следующую страницу (background сам решит открывать или нет на основе isCycleMode)
-    chrome.runtime.sendMessage({ action: 'continueAfterInterval' });
-    
-    // Закрываем эту вкладку
+    console.log('✅ Interval updated, closing dialog...');
+    // Закрываем диалог
     window.close();
   });
 });
