@@ -9,7 +9,8 @@
     "tabs",
     "contextMenus",
     "storage",
-    "sidePanel"
+    "sidePanel",
+    "bookmarks"
   ],
   
   "host_permissions": [

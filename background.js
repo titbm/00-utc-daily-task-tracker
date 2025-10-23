@@ -19,6 +19,9 @@ chrome.runtime.onInstalled.addListener(() => {
   // Включаем боковую панель для всех вкладок
   chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch((error) => console.error(error));
   
+  // Создаём или находим папку в закладках
+  initializeBookmarksFolder();
+  
   // Запускаем периодическую проверку времени
   startTimeChecker();
 });
@@ -26,7 +29,104 @@ chrome.runtime.onInstalled.addListener(() => {
 // Запускаем проверку времени при старте service worker
 chrome.runtime.onStartup.addListener(() => {
   startTimeChecker();
+  initializeBookmarksFolder();
 });
+
+// Функция инициализации папки закладок
+async function initializeBookmarksFolder() {
+  try {
+    const bookmarkTreeNodes = await chrome.bookmarks.getTree();
+    const bookmarksBar = bookmarkTreeNodes[0].children.find(node => node.id === '1');
+    
+    if (!bookmarksBar) return;
+    
+    // Ищем существующую папку Daily Panel
+    let dailyPanelFolder = bookmarksBar.children.find(node => node.title === 'Daily Panel');
+    
+    if (!dailyPanelFolder) {
+      // Создаём новую папку
+      dailyPanelFolder = await chrome.bookmarks.create({
+        parentId: bookmarksBar.id,
+        title: 'Daily Panel'
+      });
+    }
+    
+    // Сохраняем ID папки
+    chrome.storage.local.set({ bookmarksFolderId: dailyPanelFolder.id });
+    
+    // Синхронизируем существующие страницы
+    syncPagesToBookmarks();
+  } catch (error) {
+    console.error('Error initializing bookmarks folder:', error);
+  }
+}
+
+// Функция синхронизации страниц в закладки
+async function syncPagesToBookmarks() {
+  try {
+    const result = await chrome.storage.local.get(['panelPages', 'bookmarksFolderId']);
+    const pages = result.panelPages || [];
+    const folderId = result.bookmarksFolderId;
+    
+    if (!folderId) return;
+    
+    // Получаем текущие закладки в папке
+    const folderBookmarks = await chrome.bookmarks.getChildren(folderId);
+    
+    // Удаляем все существующие закладки
+    for (const bookmark of folderBookmarks) {
+      await chrome.bookmarks.remove(bookmark.id);
+    }
+    
+    // Добавляем текущие страницы
+    for (const page of pages) {
+      await chrome.bookmarks.create({
+        parentId: folderId,
+        title: page.title,
+        url: page.url
+      });
+    }
+  } catch (error) {
+    console.error('Error syncing pages to bookmarks:', error);
+  }
+}
+
+// Функция добавления закладки
+async function addBookmark(page) {
+  try {
+    const result = await chrome.storage.local.get(['bookmarksFolderId']);
+    const folderId = result.bookmarksFolderId;
+    
+    if (!folderId) return;
+    
+    await chrome.bookmarks.create({
+      parentId: folderId,
+      title: page.title,
+      url: page.url
+    });
+  } catch (error) {
+    console.error('Error adding bookmark:', error);
+  }
+}
+
+// Функция удаления закладки по URL
+async function removeBookmarkByUrl(url) {
+  try {
+    const result = await chrome.storage.local.get(['bookmarksFolderId']);
+    const folderId = result.bookmarksFolderId;
+    
+    if (!folderId) return;
+    
+    const folderBookmarks = await chrome.bookmarks.getChildren(folderId);
+    const bookmark = folderBookmarks.find(b => b.url === url);
+    
+    if (bookmark) {
+      await chrome.bookmarks.remove(bookmark.id);
+    }
+  } catch (error) {
+    console.error('Error removing bookmark:', error);
+  }
+}
 
 // Функция запуска периодической проверки
 function startTimeChecker() {
@@ -78,6 +178,9 @@ function checkAndRestoreOldPages() {
         lastCheckDate: now.toISOString()
       });
       
+      // Синхронизируем с закладками (восстанавливаем страницы в закладки)
+      syncPagesToBookmarks();
+      
       // Уведомляем панель об обновлении
       chrome.runtime.sendMessage({ action: 'pagesUpdated' }).catch(() => {});
     }
@@ -109,6 +212,9 @@ function addPageToPanel(tab) {
     if (!exists) {
       pages.push(pageData);
       chrome.storage.local.set({ panelPages: pages });
+      
+      // Добавляем в закладки
+      addBookmark(pageData);
       
       // Уведомляем боковую панель об обновлении
       chrome.runtime.sendMessage({ action: 'pageAdded', page: pageData }).catch(() => {
@@ -164,6 +270,9 @@ function movePageToCompletedById(pageId, allPages) {
       completedPages: completedPages
     });
     
+    // Удаляем из закладок (страница переместилась в отработанные)
+    removeBookmarkByUrl(page.url);
+    
     // Уведомляем панель об обновлении
     chrome.runtime.sendMessage({ action: 'pagesUpdated' }).catch(() => {});
   });
@@ -216,8 +325,15 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   } else if (request.action === 'removePage') {
     chrome.storage.local.get(['panelPages'], (result) => {
       const pages = result.panelPages || [];
+      const pageToRemove = pages.find(page => page.id === request.pageId);
       const updatedPages = pages.filter(page => page.id !== request.pageId);
+      
       chrome.storage.local.set({ panelPages: updatedPages });
+      
+      // Удаляем из закладок
+      if (pageToRemove) {
+        removeBookmarkByUrl(pageToRemove.url);
+      }
     });
   } else if (request.action === 'clearAll') {
     chrome.storage.local.set({ 
