@@ -42,7 +42,8 @@
   ],
   
   "action": {
-    "default_title": "Открыть Daily Panel"
+    "default_title": "Открыть Daily Panel",
+    "default_popup": "popup.html"
   },
   
   "icons": {
