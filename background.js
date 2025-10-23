@@ -582,6 +582,17 @@ async function openNextPageFromPanel() {
         openedTabs.set(tab.id, nextPage.id);
         console.log('Opened next page:', nextPage.title, 'tabId:', tab.id);
       });
+    } else {
+      // Все страницы отработаны - открываем панель на вкладке "Отработанные"
+      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        if (tabs[0]) {
+          chrome.sidePanel.open({ windowId: tabs[0].windowId });
+          // Отправляем сообщение панели переключиться на completed
+          setTimeout(() => {
+            chrome.runtime.sendMessage({ action: 'showCompleted' }).catch(() => {});
+          }, 500);
+        }
+      });
     }
   } catch (error) {
     console.error('Error opening next page:', error);
@@ -589,8 +600,29 @@ async function openNextPageFromPanel() {
 }
 
 // Обработчик клика по иконке расширения
-chrome.action.onClicked.addListener((tab) => {
-  chrome.sidePanel.open({ windowId: tab.windowId });
+chrome.action.onClicked.addListener(async (tab) => {
+  try {
+    const pages = await getActivePages();
+    
+    if (pages.length > 0) {
+      // Если есть активные страницы - открываем первую
+      const firstPage = pages[0];
+      chrome.tabs.create({ url: firstPage.url }, (newTab) => {
+        openedTabs.set(newTab.id, firstPage.id);
+        console.log('Started auto-open cycle from icon click');
+      });
+    } else {
+      // Если активных нет - открываем панель на вкладке "Отработанные"
+      chrome.sidePanel.open({ windowId: tab.windowId });
+      // Отправляем сообщение панели переключиться на completed
+      setTimeout(() => {
+        chrome.runtime.sendMessage({ action: 'showCompleted' }).catch(() => {});
+      }, 500);
+    }
+  } catch (error) {
+    console.error('Error handling icon click:', error);
+    chrome.sidePanel.open({ windowId: tab.windowId });
+  }
 });
 
 // Обработчик сообщений от боковой панели

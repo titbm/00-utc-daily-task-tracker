@@ -41,6 +41,11 @@ class DailyPanel {
     chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       if (message.action === 'pageAdded' || message.action === 'pagesUpdated') {
         this.loadPages();
+      } else if (message.action === 'showCompleted') {
+        // Переключаемся на вкладку "Отработанные"
+        if (this.currentSection === 'active') {
+          this.toggleSection();
+        }
       }
     });
   }
