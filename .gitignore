@@ -1,0 +1,19 @@
+# Временные файлы
+*.log
+*.tmp
+
+# Файлы ОС
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Опциональные файлы расширения
+*.pem
+*.crx
+*.zip
