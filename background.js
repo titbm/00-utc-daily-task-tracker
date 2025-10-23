@@ -13,19 +13,19 @@ chrome.runtime.onInstalled.addListener(async () => {
   await initializeBookmarksFolder();
   
   // Запускаем периодическую проверку времени
-  startTimeChecker();
+  await startTimeChecker();
 });
 
 // Запускаем проверку времени при старте service worker
 chrome.runtime.onStartup.addListener(async () => {
   await initializeBookmarksFolder();
-  startTimeChecker();
+  await startTimeChecker();
 });
 
 // Инициализация при загрузке service worker (для случая включения расширения)
 (async () => {
   await initializeBookmarksFolder();
-  startTimeChecker();
+  await startTimeChecker();
 })();
 
 // Глобальные переменные для хранения ID папок (только ID, не данные)
