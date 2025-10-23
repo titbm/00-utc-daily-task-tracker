@@ -605,10 +605,14 @@ async function openNextPageFromPanel() {
         currentWindowId = tab.windowId; // Сохраняем windowId
         console.log('Opened next page:', nextPage.title, 'tabId:', tab.id, 'windowId:', tab.windowId);
         
-        // Помечаем вкладку как вкладку с задачей (чтобы не показывать баннер)
-        setTimeout(() => {
+        // Помечаем вкладку как вкладку с задачей (сразу и после загрузки)
+        const markTab = () => {
           chrome.tabs.sendMessage(tab.id, { action: 'markAsTaskTab' }).catch(() => {});
-        }, 500);
+        };
+        markTab(); // Сразу
+        setTimeout(markTab, 100); // Через 100ms
+        setTimeout(markTab, 500); // Через 500ms
+        setTimeout(markTab, 1000); // Через 1s на всякий случай
       });
     } else {
       // Все страницы отработаны - открываем страницу завершения
@@ -753,10 +757,14 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
               currentWindowId = newTab.windowId;
               console.log('Started daily tasks from banner');
               
-              // Помечаем вкладку как вкладку с задачей
-              setTimeout(() => {
+              // Помечаем вкладку как вкладку с задачей (сразу и после загрузки)
+              const markTab = () => {
                 chrome.tabs.sendMessage(newTab.id, { action: 'markAsTaskTab' }).catch(() => {});
-              }, 500);
+              };
+              markTab(); // Сразу
+              setTimeout(markTab, 100); // Через 100ms
+              setTimeout(markTab, 500); // Через 500ms
+              setTimeout(markTab, 1000); // Через 1s на всякий случай
             });
           }
         });
