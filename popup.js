@@ -25,6 +25,20 @@
   } else {
     // Есть активные задачи - кнопка работает
     stealthBtn.addEventListener('click', async () => {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      // Закрываем боковую панель если открыта
+      try {
+        await chrome.sidePanel.setOptions({
+          tabId: tab.id,
+          enabled: false
+        });
+        await chrome.sidePanel.setOptions({
+          tabId: tab.id,
+          enabled: true
+        });
+      } catch (e) {
+        // Игнорируем ошибки
+      }
       chrome.runtime.sendMessage({ action: 'startDailyTasks' });
       window.close();
     });
