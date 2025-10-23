@@ -170,14 +170,17 @@ function parseCompletedBookmarkTitle(fullTitle) {
   const title = match[1];
   const metadata = match[2].split('|');
   
-  return {
+  const parsed = {
     title: title,
     completedAt: metadata[0] || new Date().toISOString(),
-    restoreAt: metadata[1] || null,
+    restoreAt: (metadata[1] && metadata[1] !== '') ? metadata[1] : null,
     resetType: metadata[2] || 'midnight',
     resetInterval: parseInt(metadata[3]) || 24,
     addedAt: metadata[4] || new Date().toISOString()
   };
+  
+  console.log('Parsed completed bookmark:', parsed);
+  return parsed;
 }
 
 // Создание названия закладки с метаданными для completed
@@ -190,7 +193,9 @@ function createCompletedBookmarkTitle(page) {
     page.addedAt || new Date().toISOString()
   ].join('|');
   
-  return `${page.title} [${metadata}]`;
+  const title = `${page.title} [${metadata}]`;
+  console.log('Created bookmark title:', title, 'from page:', page);
+  return title;
 }
 
 // Функция синхронизации страниц из панели в закладки (панель -> закладки в две папки)
