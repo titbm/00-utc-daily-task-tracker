@@ -24,6 +24,12 @@ class DailyPanel {
     // Текущая активная секция
     this.currentSection = 'active'; // 'active' или 'completed'
     
+    // Диалоги
+    this.settingsDialog = document.getElementById('settingsDialog');
+    this.intervalDialog = document.getElementById('intervalDialog');
+    this.currentEditingPage = null;
+    this.currentIntervalPage = null;
+    
     this.init();
   }
   
@@ -53,6 +59,32 @@ class DailyPanel {
     
     this.restoreCompletedBtn.addEventListener('click', () => {
       this.restoreAllCompleted();
+    });
+    
+    // Диалог настроек
+    document.getElementById('resetTypeSelect').addEventListener('change', (e) => {
+      const intervalGroup = document.getElementById('intervalGroup');
+      intervalGroup.style.display = e.target.value === 'interval' ? 'block' : 'none';
+    });
+    
+    document.getElementById('cancelSettings').addEventListener('click', () => {
+      this.closeSettingsDialog();
+    });
+    
+    document.getElementById('saveSettings').addEventListener('click', () => {
+      this.savePageSettings();
+    });
+    
+    // Диалог интервала
+    document.getElementById('confirmInterval').addEventListener('click', () => {
+      this.confirmInterval();
+    });
+    
+    // Слушаем сообщения от background для показа диалога
+    chrome.runtime.onMessage.addListener((message) => {
+      if (message.action === 'showIntervalDialog') {
+        this.showIntervalDialog(message.page);
+      }
     });
   }
   
@@ -141,20 +173,31 @@ class DailyPanel {
     
     // Только для активных вкладок добавляем кнопку удаления
     if (!isCompleted) {
-      const removeBtn = document.createElement('button');
-      removeBtn.className = 'remove-btn';
-      removeBtn.textContent = '×';
-      removeBtn.title = 'Удалить';
-      div.appendChild(removeBtn);
-      
-      // Обработчик удаления страницы
-      removeBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        this.removePage(page.id);
-      });
-    }
+    const removeBtn = document.createElement('button');
+    removeBtn.className = 'remove-btn';
+    removeBtn.textContent = '×';
+    removeBtn.title = 'Удалить';
     
-    // Обработчик клика по странице
+    const settingsBtn = document.createElement('button');
+    settingsBtn.className = 'page-settings-btn';
+    settingsBtn.textContent = '⚙';
+    settingsBtn.title = 'Настройки';
+    
+    div.appendChild(settingsBtn);
+    div.appendChild(removeBtn);
+    
+    // Обработчик настроек страницы
+    settingsBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.openSettingsDialog(page);
+    });
+    
+    // Обработчик удаления страницы
+    removeBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.removePage(page.id);
+    });
+  }    // Обработчик клика по странице
     div.addEventListener('click', (e) => {
       if (!e.target.classList.contains('remove-btn')) {
         if (isCompleted) {
@@ -259,6 +302,71 @@ class DailyPanel {
         this.toggleSection();
       }
     });
+  }
+  
+  openSettingsDialog(page) {
+    this.currentEditingPage = page;
+    
+    document.getElementById('dialogPageTitle').textContent = page.title;
+    document.getElementById('resetTypeSelect').value = page.resetType || 'midnight';
+    document.getElementById('resetIntervalInput').value = page.resetInterval || 24;
+    
+    const intervalGroup = document.getElementById('intervalGroup');
+    intervalGroup.style.display = (page.resetType === 'interval') ? 'block' : 'none';
+    
+    this.settingsDialog.classList.add('show');
+  }
+  
+  closeSettingsDialog() {
+    this.settingsDialog.classList.remove('show');
+    this.currentEditingPage = null;
+  }
+  
+  savePageSettings() {
+    if (!this.currentEditingPage) return;
+    
+    const resetType = document.getElementById('resetTypeSelect').value;
+    const resetInterval = parseInt(document.getElementById('resetIntervalInput').value) || 24;
+    
+    chrome.runtime.sendMessage({
+      action: 'updatePageSettings',
+      pageId: this.currentEditingPage.id,
+      settings: {
+        resetType: resetType,
+        resetInterval: resetInterval
+      }
+    });
+    
+    this.closeSettingsDialog();
+  }
+  
+  showIntervalDialog(page) {
+    this.currentIntervalPage = page;
+    
+    document.getElementById('intervalDialogPageTitle').textContent = page.title;
+    document.getElementById('intervalHoursInput').value = page.resetInterval || 24;
+    
+    this.intervalDialog.classList.add('show');
+  }
+  
+  confirmInterval() {
+    if (!this.currentIntervalPage) return;
+    
+    const hours = parseInt(document.getElementById('intervalHoursInput').value) || 24;
+    
+    chrome.runtime.sendMessage({
+      action: 'moveToCompletedWithInterval',
+      pageId: this.currentIntervalPage.id,
+      intervalHours: hours
+    });
+    
+    this.intervalDialog.classList.remove('show');
+    this.currentIntervalPage = null;
+    
+    // Открываем следующую страницу
+    setTimeout(() => {
+      chrome.runtime.sendMessage({ action: 'openNextPage' });
+    }, 200);
   }
 }
 

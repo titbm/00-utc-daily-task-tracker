@@ -242,8 +242,20 @@ function checkAndRestoreOldPages() {
     const todayPages = [];
     
     completedPages.forEach(page => {
-      const completedDate = new Date(page.completedAt);
-      if (completedDate < todayStart) {
+      let shouldRestore = false;
+      
+      // Проверяем тип восстановления
+      if (page.resetType === 'interval' && page.restoreAt) {
+        // Восстановление по времени
+        const restoreDate = new Date(page.restoreAt);
+        shouldRestore = now >= restoreDate;
+      } else {
+        // Восстановление в полночь (по умолчанию)
+        const completedDate = new Date(page.completedAt);
+        shouldRestore = completedDate < todayStart;
+      }
+      
+      if (shouldRestore) {
         oldPages.push(page);
       } else {
         todayPages.push(page);
@@ -253,7 +265,7 @@ function checkAndRestoreOldPages() {
     // Если есть старые страницы, восстанавливаем их
     if (oldPages.length > 0) {
       const restoredPages = oldPages.map(page => {
-        const { completedAt, ...pageWithoutDate } = page;
+        const { completedAt, restoreAt, ...pageWithoutDate } = page;
         return pageWithoutDate;
       });
       
@@ -288,7 +300,9 @@ function addPageToPanel(tab) {
     title: tab.title,
     url: tab.url,
     favicon: tab.favIconUrl || 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><rect width="16" height="16" fill="%23ddd"/></svg>',
-    addedAt: new Date().toISOString()
+    addedAt: new Date().toISOString(),
+    resetType: 'midnight', // 'midnight' или 'interval'
+    resetInterval: 24 // часов (по умолчанию 24)
   };
 
   chrome.storage.local.get(['panelPages'], (result) => {
@@ -342,6 +356,16 @@ function movePageToCompletedById(pageId, allPages) {
     return;
   }
   
+  // Если тип resetType = 'interval', показываем диалог для выбора времени
+  if (page.resetType === 'interval') {
+    // Отправляем сообщение для показа диалога
+    chrome.runtime.sendMessage({ 
+      action: 'showIntervalDialog', 
+      page: page 
+    }).catch(() => {});
+    return;
+  }
+  
   const completedPage = {
     ...page,
     completedAt: new Date().toISOString()
@@ -358,6 +382,37 @@ function movePageToCompletedById(pageId, allPages) {
     });
     
     // НЕ удаляем из закладок - закладка остаётся в избранном
+    
+    // Уведомляем панель об обновлении
+    chrome.runtime.sendMessage({ action: 'pagesUpdated' }).catch(() => {});
+  });
+}
+
+// Функция перемещения страницы с интервалом в отработанные
+function movePageToCompletedWithInterval(pageId, intervalHours) {
+  chrome.storage.local.get(['panelPages', 'completedPages'], (result) => {
+    const allPages = result.panelPages || [];
+    const page = allPages.find(p => p.id === pageId);
+    
+    if (!page) return;
+    
+    const now = new Date();
+    const restoreAt = new Date(now.getTime() + intervalHours * 60 * 60 * 1000);
+    
+    const completedPage = {
+      ...page,
+      completedAt: now.toISOString(),
+      restoreAt: restoreAt.toISOString()
+    };
+    
+    const activePagesUpdated = allPages.filter(p => p.id !== pageId);
+    const completedPages = result.completedPages || [];
+    completedPages.push(completedPage);
+    
+    chrome.storage.local.set({ 
+      panelPages: activePagesUpdated,
+      completedPages: completedPages
+    });
     
     // Уведомляем панель об обновлении
     chrome.runtime.sendMessage({ action: 'pagesUpdated' }).catch(() => {});
@@ -408,6 +463,21 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         openedPageId: request.pageId
       });
     });
+  } else if (request.action === 'moveToCompletedWithInterval') {
+    movePageToCompletedWithInterval(request.pageId, request.intervalHours);
+  } else if (request.action === 'updatePageSettings') {
+    chrome.storage.local.get(['panelPages'], (result) => {
+      const pages = result.panelPages || [];
+      const pageIndex = pages.findIndex(p => p.id === request.pageId);
+      
+      if (pageIndex !== -1) {
+        pages[pageIndex] = { ...pages[pageIndex], ...request.settings };
+        chrome.storage.local.set({ panelPages: pages });
+        
+        // Уведомляем панель об обновлении
+        chrome.runtime.sendMessage({ action: 'pagesUpdated' }).catch(() => {});
+      }
+    });
   } else if (request.action === 'removePage') {
     chrome.storage.local.get(['panelPages'], (result) => {
       const pages = result.panelPages || [];
@@ -421,6 +491,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         removeBookmarkByUrl(pageToRemove.url);
       }
     });
+  } else if (request.action === 'openNextPage') {
+    openNextPageFromPanel();
   } else if (request.action === 'clearAll') {
     chrome.storage.local.set({ 
       panelPages: [],
