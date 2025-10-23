@@ -15,6 +15,7 @@ class DailyPanel {
     // Кнопки и элементы управления
     this.toggleSectionBtn = document.getElementById('toggleSection');
     this.restoreCompletedBtn = document.getElementById('restoreCompleted');
+    this.startTasksBtn = document.getElementById('startTasks');
     this.sectionTitle = document.getElementById('sectionTitle');
     
     // Счетчики
@@ -61,6 +62,10 @@ class DailyPanel {
     this.restoreCompletedBtn.addEventListener('click', () => {
       this.restoreAllCompleted();
     });
+    
+    this.startTasksBtn.addEventListener('click', () => {
+      this.startAllTasks();
+    });
   }
   
   toggleSection() {
@@ -71,6 +76,9 @@ class DailyPanel {
       this.sectionTitle.textContent = '✓ Отработанные';
       this.toggleSectionBtn.textContent = '📋';
       this.toggleSectionBtn.title = 'Активные';
+      // Показываем кнопку восстановления, скрываем кнопку запуска
+      this.startTasksBtn.style.display = 'none';
+      this.restoreCompletedBtn.style.display = 'flex';
     } else {
       this.currentSection = 'active';
       this.completedSection.classList.remove('active');
@@ -78,6 +86,9 @@ class DailyPanel {
       this.sectionTitle.textContent = '📋 Активные';
       this.toggleSectionBtn.textContent = '✓';
       this.toggleSectionBtn.title = 'Отработанные сегодня';
+      // Показываем кнопку запуска, скрываем кнопку восстановления
+      this.startTasksBtn.style.display = 'flex';
+      this.restoreCompletedBtn.style.display = 'none';
     }
   }
   
@@ -333,6 +344,15 @@ class DailyPanel {
       }
     } catch (error) {
       console.error('Error restoring all completed:', error);
+    }
+  }
+  
+  async startAllTasks() {
+    try {
+      // Запускаем отработку всех задач через background
+      await chrome.runtime.sendMessage({ action: 'openNextPage' });
+    } catch (error) {
+      console.error('Error starting all tasks:', error);
     }
   }
   
