@@ -65,6 +65,17 @@ class DailyPanel {
     this.startTasksBtn.addEventListener('click', () => {
       this.startAllTasks();
     });
+    
+    // Ссылка "Перейти в раздел Выполненные"
+    const goToCompletedLink = document.getElementById('goToCompleted');
+    if (goToCompletedLink) {
+      goToCompletedLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (this.currentSection === 'active') {
+          this.toggleSection();
+        }
+      });
+    }
   }
   
   toggleSection() {

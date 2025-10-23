@@ -39,8 +39,19 @@ body {
   transition: opacity 0.2s;
 }
 
-.clickable-title:hover {
-  opacity: 0.85;
+.switch-icon {
+  margin-left: 8px;
+  font-size: 16px;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.clickable-title:hover .switch-icon {
+  opacity: 0.7;
+}
+
+.clickable-title:active {
+  opacity: 0.7;
 }
 
 .clickable-title:active {
@@ -119,8 +130,19 @@ body {
   margin: 0 auto;
 }
 
-.empty-state .hint strong {
+.empty-link {
+  display: inline-block;
+  margin-top: 16px;
   color: #667eea;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.empty-link:hover {
+  color: #5568d3;
+  text-decoration: underline;
 }
 
 .pages-list {
