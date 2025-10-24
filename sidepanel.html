@@ -3,6 +3,8 @@
 <head>
   <meta charset="utf-8">
   <title>Daily Panel</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet">
   <link rel="stylesheet" href="sidepanel.css">
 </head>
 <body>
@@ -10,15 +12,19 @@
   <div class="tabs-header">
     <button id="activeTab" class="tab-btn active">Active</button>
     <button id="completedTab" class="tab-btn">Completed</button>
+    <button id="startAllTasks" class="header-action-btn">
+      <span class="material-symbols-outlined">play_arrow</span>
+      Start
+    </button>
+    <button id="restoreAllCompleted" class="header-action-btn" style="display: none;">
+      <span class="material-symbols-outlined">refresh</span>
+      Reset
+    </button>
   </div>
   
   <div class="content">
     <!-- Активные вкладки -->
     <div id="activeSection" class="section active">
-      <!-- Кнопка для Active секции -->
-      <div class="section-actions">
-        <button id="startAllTasks" class="action-btn">Start All Tasks</button>
-      </div>
       
       <div id="emptyStateActive" class="empty-state">
         <div class="empty-icon">📄</div>
@@ -32,11 +38,6 @@
     
     <!-- Отработанные вкладки -->
     <div id="completedSection" class="section">
-      <!-- Кнопка для Completed секции -->
-      <div class="section-actions">
-        <button id="restoreAllCompleted" class="action-btn">Set All Visited to Unvisited</button>
-      </div>
-      
       <div id="emptyStateCompleted" class="empty-state">
         <div class="empty-icon">✓</div>
         <p class="empty-title">Нет отработанных вкладок</p>

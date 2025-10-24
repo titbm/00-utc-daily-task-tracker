@@ -141,6 +141,8 @@ class DailyPanel {
   
   toggleSection() {
     const titleText = this.sectionTitle ? this.sectionTitle.querySelector('.title-text') : null;
+    const startAllBtn = document.getElementById('startAllTasks');
+    const restoreAllBtn = document.getElementById('restoreAllCompleted');
     
     if (this.currentSection === 'active') {
       this.currentSection = 'completed';
@@ -152,9 +154,14 @@ class DailyPanel {
       if (this.completedTab) this.completedTab.classList.add('active');
       
       if (titleText) titleText.textContent = 'Завершенные';
-      // Показываем кнопку восстановления, скрываем кнопку запуска
+      
+      // Показываем кнопку Reset, скрываем кнопку Start в шапке
+      if (startAllBtn) startAllBtn.style.display = 'none';
+      if (restoreAllBtn) restoreAllBtn.style.display = 'flex';
+      
+      // Старые кнопки для совместимости
       if (this.startTasksBtn) this.startTasksBtn.style.display = 'none';
-      if (this.restoreCompletedBtn) this.restoreCompletedBtn.style.display = 'flex';
+      if (this.restoreCompletedBtn) this.restoreCompletedBtn.style.display = 'none';
     } else {
       this.currentSection = 'active';
       this.completedSection.classList.remove('active');
@@ -165,7 +172,12 @@ class DailyPanel {
       if (this.activeTab) this.activeTab.classList.add('active');
       
       if (titleText) titleText.textContent = 'Активные';
-      // Показываем кнопку запуска, скрываем кнопку восстановления
+      
+      // Показываем кнопку Start, скрываем кнопку Reset в шапке
+      if (startAllBtn) startAllBtn.style.display = 'flex';
+      if (restoreAllBtn) restoreAllBtn.style.display = 'none';
+      
+      // Старые кнопки для совместимости
       if (this.startTasksBtn) this.startTasksBtn.style.display = 'flex';
       if (this.restoreCompletedBtn) this.restoreCompletedBtn.style.display = 'none';
     }
