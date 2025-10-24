@@ -488,7 +488,9 @@ chrome.tabs.onRemoved.addListener(async (tabId, removeInfo) => {
           `&interval=24`;
         
         chrome.tabs.create({ url: dialogUrl }, (dialogTab) => {
-          intervalDialogTabs.add(dialogTab.id);
+          if (dialogTab) {
+            intervalDialogTabs.add(dialogTab.id);
+          }
         });
         // Цикл продолжится когда диалог закроется
         
@@ -630,9 +632,11 @@ function openNextInCycle() {
   }
   
   chrome.tabs.create({ url: taskUrl }, (tab) => {
-    openedTabs.set(tab.id, page.id);
-    if (!currentWindowId) {
-      currentWindowId = tab.windowId;
+    if (tab) {
+      openedTabs.set(tab.id, page.id);
+      if (!currentWindowId) {
+        currentWindowId = tab.windowId;
+      }
     }
   });
 }
@@ -643,23 +647,20 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     // Открытие ОДНОЙ страницы без запуска цикла
     isCycleMode = false;
     chrome.tabs.create({ url: request.url }, (tab) => {
-      if (request.bookmarkId) {
+      if (tab && request.bookmarkId) {
         openedTabs.set(tab.id, request.bookmarkId);
       }
       sendResponse({ success: true });
     });
     return true; // Асинхронный ответ
   } else if (request.action === 'openPage') {
-    console.log('Opening page with potential cycle:', request.url, 'bookmarkId:', request.bookmarkId);
     chrome.tabs.create({ url: request.url }, (tab) => {
-      // Сохраняем связь вкладки с закладкой
-      if (request.bookmarkId) {
+      if (tab && request.bookmarkId) {
         openedTabs.set(tab.id, request.bookmarkId);
-        console.log('Tab', tab.id, 'linked to bookmark', request.bookmarkId);
       }
       sendResponse({ success: true });
     });
-    return true; // Асинхронный ответ
+    return true;
   } else if (request.action === 'getActivePages') {
     getActivePages().then(pages => sendResponse({ pages }));
     return true; // Асинхронный ответ
