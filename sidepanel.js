@@ -64,6 +64,14 @@ class DailyPanel {
       }
     });
     
+    // Новая кнопка "Set All Visited to Unvisited"
+    const restoreAllBtn = document.getElementById('restoreAllCompleted');
+    if (restoreAllBtn) {
+      restoreAllBtn.addEventListener('click', () => {
+        this.restoreAllCompleted();
+      });
+    }
+    
     this.startTasksBtn.addEventListener('click', () => {
       if (!this.startTasksBtn.disabled) {
         this.startAllTasks();
