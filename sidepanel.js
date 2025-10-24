@@ -72,6 +72,14 @@ class DailyPanel {
       });
     }
     
+    // Новая кнопка "Start All Tasks"
+    const startAllBtn = document.getElementById('startAllTasks');
+    if (startAllBtn) {
+      startAllBtn.addEventListener('click', () => {
+        this.startAllTasks();
+      });
+    }
+    
     this.startTasksBtn.addEventListener('click', () => {
       if (!this.startTasksBtn.disabled) {
         this.startAllTasks();
