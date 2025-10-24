@@ -12,7 +12,11 @@ class DailyPanel {
     this.emptyStateActive = document.getElementById('emptyStateActive');
     this.emptyStateCompleted = document.getElementById('emptyStateCompleted');
     
-    // Кнопки и элементы управления
+    // Табы
+    this.activeTab = document.getElementById('activeTab');
+    this.completedTab = document.getElementById('completedTab');
+    
+    // Кнопки и элементы управления (старые, для совместимости)
     this.restoreCompletedBtn = document.getElementById('restoreCompleted');
     this.startTasksBtn = document.getElementById('startTasks');
     this.sectionTitle = document.getElementById('sectionTitle');
@@ -54,15 +58,37 @@ class DailyPanel {
   }
   
   setupEventListeners() {
-    this.sectionTitle.addEventListener('click', () => {
-      this.toggleSection();
-    });
+    // Табы переключения разделов
+    if (this.activeTab) {
+      this.activeTab.addEventListener('click', () => {
+        if (this.currentSection !== 'active') {
+          this.toggleSection();
+        }
+      });
+    }
     
-    this.restoreCompletedBtn.addEventListener('click', () => {
-      if (!this.restoreCompletedBtn.disabled) {
-        this.restoreAllCompleted();
-      }
-    });
+    if (this.completedTab) {
+      this.completedTab.addEventListener('click', () => {
+        if (this.currentSection !== 'completed') {
+          this.toggleSection();
+        }
+      });
+    }
+    
+    // Старые обработчики для совместимости
+    if (this.sectionTitle) {
+      this.sectionTitle.addEventListener('click', () => {
+        this.toggleSection();
+      });
+    }
+    
+    if (this.restoreCompletedBtn) {
+      this.restoreCompletedBtn.addEventListener('click', () => {
+        if (!this.restoreCompletedBtn.disabled) {
+          this.restoreAllCompleted();
+        }
+      });
+    }
     
     // Новая кнопка "Set All Visited to Unvisited"
     const restoreAllBtn = document.getElementById('restoreAllCompleted');
@@ -80,11 +106,13 @@ class DailyPanel {
       });
     }
     
-    this.startTasksBtn.addEventListener('click', () => {
-      if (!this.startTasksBtn.disabled) {
-        this.startAllTasks();
-      }
-    });
+    if (this.startTasksBtn) {
+      this.startTasksBtn.addEventListener('click', () => {
+        if (!this.startTasksBtn.disabled) {
+          this.startAllTasks();
+        }
+      });
+    }
     
     // Ссылка "Перейти в раздел Завершенные"
     const goToCompletedLink = document.getElementById('goToCompleted');
@@ -112,24 +140,34 @@ class DailyPanel {
   }
   
   toggleSection() {
-    const titleText = this.sectionTitle.querySelector('.title-text');
+    const titleText = this.sectionTitle ? this.sectionTitle.querySelector('.title-text') : null;
     
     if (this.currentSection === 'active') {
       this.currentSection = 'completed';
       this.activeSection.classList.remove('active');
       this.completedSection.classList.add('active');
-      titleText.textContent = 'Завершенные';
+      
+      // Обновляем табы
+      if (this.activeTab) this.activeTab.classList.remove('active');
+      if (this.completedTab) this.completedTab.classList.add('active');
+      
+      if (titleText) titleText.textContent = 'Завершенные';
       // Показываем кнопку восстановления, скрываем кнопку запуска
-      this.startTasksBtn.style.display = 'none';
-      this.restoreCompletedBtn.style.display = 'flex';
+      if (this.startTasksBtn) this.startTasksBtn.style.display = 'none';
+      if (this.restoreCompletedBtn) this.restoreCompletedBtn.style.display = 'flex';
     } else {
       this.currentSection = 'active';
       this.completedSection.classList.remove('active');
       this.activeSection.classList.add('active');
-      titleText.textContent = 'Активные';
+      
+      // Обновляем табы
+      if (this.completedTab) this.completedTab.classList.remove('active');
+      if (this.activeTab) this.activeTab.classList.add('active');
+      
+      if (titleText) titleText.textContent = 'Активные';
       // Показываем кнопку запуска, скрываем кнопку восстановления
-      this.startTasksBtn.style.display = 'flex';
-      this.restoreCompletedBtn.style.display = 'none';
+      if (this.startTasksBtn) this.startTasksBtn.style.display = 'flex';
+      if (this.restoreCompletedBtn) this.restoreCompletedBtn.style.display = 'none';
     }
   }
   

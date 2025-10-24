@@ -6,24 +6,18 @@
   <link rel="stylesheet" href="sidepanel.css">
 </head>
 <body>
-  <div class="header">
-    <h2 id="sectionTitle" class="clickable-title">
-      <span class="title-text">Активные</span>
-      <span class="switch-icon">⇄</span>
-    </h2>
-    <div class="header-buttons">
-      <button id="startTasks" class="icon-btn" title="Запустить отработку всех задач">▷</button>
-      <button id="restoreCompleted" class="icon-btn" title="Вернуть все в активные" style="display: none;">↺</button>
-    </div>
+  <!-- Новая шапка с табами -->
+  <div class="tabs-header">
+    <button id="activeTab" class="tab-btn active">Active</button>
+    <button id="completedTab" class="tab-btn">Completed</button>
   </div>
   
   <div class="content">
     <!-- Активные вкладки -->
     <div id="activeSection" class="section active">
-      <!-- Заголовок секции Unvisited Links -->
-      <div class="section-header">
-        <h3 class="section-title">Unvisited Links</h3>
-        <button id="startAllTasks" class="start-all-btn">Start All Tasks</button>
+      <!-- Кнопка для Active секции -->
+      <div class="section-actions">
+        <button id="startAllTasks" class="action-btn">Start All Tasks</button>
       </div>
       
       <div id="emptyStateActive" class="empty-state">
@@ -38,10 +32,9 @@
     
     <!-- Отработанные вкладки -->
     <div id="completedSection" class="section">
-      <!-- Заголовок секции Visited Links -->
-      <div class="section-header">
-        <h3 class="section-title">Visited Links</h3>
-        <button id="restoreAllCompleted" class="restore-all-btn">Set All Visited to Unvisited</button>
+      <!-- Кнопка для Completed секции -->
+      <div class="section-actions">
+        <button id="restoreAllCompleted" class="action-btn">Set All Visited to Unvisited</button>
       </div>
       
       <div id="emptyStateCompleted" class="empty-state">

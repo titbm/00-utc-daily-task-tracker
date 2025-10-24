@@ -13,8 +13,40 @@ body {
   flex-direction: column;
 }
 
-.header {
-  display: none;
+/* Шапка с табами */
+.tabs-header {
+  display: flex;
+  gap: 8px;
+  padding: 16px;
+  background: #ffffff;
+  flex-shrink: 0;
+}
+
+.tab-btn {
+  flex: 1;
+  padding: 12px 16px;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  letter-spacing: 0.015em;
+  background: #e5e5e5;
+  color: #6c757d;
+}
+
+.tab-btn.active {
+  background: #000000;
+  color: #ffffff;
+}
+
+.tab-btn:hover:not(.active) {
+  background: #d0d0d0;
+}
+
+.tab-btn:active {
+  transform: scale(0.98);
 }
 
 .header h2 {
@@ -103,23 +135,13 @@ body {
   display: block;
 }
 
-/* Section Header (Visited Links style) */
-.section-header {
+/* Section Actions */
+.section-actions {
   padding: 0 0 16px 0;
   margin-bottom: 4px;
 }
 
-.section-title {
-  color: #000000;
-  font-size: 24px;
-  font-weight: 700;
-  margin: 0 0 16px 0;
-  letter-spacing: -0.015em;
-  line-height: 1.2;
-}
-
-.restore-all-btn,
-.start-all-btn {
+.action-btn {
   width: 100%;
   background: #e5e5e5;
   color: #000000;
@@ -133,19 +155,17 @@ body {
   letter-spacing: 0.015em;
 }
 
-.restore-all-btn:hover,
-.start-all-btn:hover {
+.action-btn:hover {
   background: #ffffff;
   transform: translateY(-1px);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
-.restore-all-btn:active,
-.start-all-btn:active {
+.action-btn:active {
   transform: translateY(0);
 }
 
-.start-all-btn:disabled {
+.action-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
   pointer-events: none;
