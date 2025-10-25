@@ -237,27 +237,33 @@ async function createBanner() {
   const tabStatus = await getTabStatus();
   
   // Определяем тип баннера
-  let bannerType = 'normal'; // normal | cycle
+  let bannerType = 'normal'; // normal | cycle | panel
   let bannerText = 'Daily tasks are not completed';
-  let bannerIcon = '';
+  let bannerIcon = 'sync'; // sync или bedtime
   let bannerColor = '#000000';
   
   if (tabStatus.isTask && tabStatus.fromCycle) {
-    // Вкладка из цикла
+    // Вкладка из цикла - крутящаяся иконка
     bannerType = 'cycle';
-    bannerText = 'Task cycle is running';
-    bannerIcon = '<span class="material-symbols-outlined" style="font-size: 18px;">sync</span>';
+    bannerIcon = 'sync';
     bannerColor = '#8B00FF'; // Фиолетовый для цикла
-  } else if (tabStatus.isTask) {
-    // Вкладка открыта вручную из панели - не показываем баннер
-    return;
+  } else if (tabStatus.isTask && !tabStatus.fromCycle) {
+    // Вкладка открыта вручную из панели - крутящаяся луна
+    bannerType = 'panel';
+    bannerIcon = 'bedtime';
+    bannerColor = '#FFA500'; // Оранжевый для панели
   }
+  // else - обычная страница, показываем normal баннер
   
   banner = document.createElement('div');
   banner.id = 'daily-panel-banner';
   
-  if (bannerType === 'cycle') {
-    // Минималистичный индикатор цикла в правом нижнем углу
+  if (bannerType === 'cycle' || bannerType === 'panel') {
+    // Минималистичный индикатор в правом нижнем углу
+    const iconColor = bannerType === 'cycle' ? '#8B00FF' : '#FFA500';
+    const tooltipText = bannerType === 'cycle' ? 'Task cycle is running' : 'Opened from panel';
+    const animationType = bannerType === 'cycle' ? 'rotate 2s linear infinite' : 'rotate 4s linear infinite';
+    
     banner.innerHTML = `
       <div style="
         position: fixed;
@@ -278,9 +284,9 @@ async function createBanner() {
       " id="cycle-indicator">
         <span class="material-symbols-outlined" style="
           font-size: 28px;
-          color: #8B00FF;
+          color: ${iconColor};
           font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 28;
-        ">sync</span>
+        ">${bannerIcon}</span>
       </div>
     `;
     
@@ -289,14 +295,16 @@ async function createBanner() {
     // Анимация вращения иконки
     const icon = banner.querySelector('.material-symbols-outlined');
     if (icon) {
-      icon.style.animation = 'rotate 2s linear infinite';
+      icon.style.animation = animationType;
     }
     
     // Hover эффект
     const indicator = banner.querySelector('#cycle-indicator');
+    const hoverShadowColor = bannerType === 'cycle' ? 'rgba(139, 0, 255, 0.3)' : 'rgba(255, 165, 0, 0.3)';
+    
     indicator.addEventListener('mouseenter', () => {
       indicator.style.transform = 'scale(1.1)';
-      indicator.style.boxShadow = '0 6px 20px rgba(139, 0, 255, 0.3)';
+      indicator.style.boxShadow = `0 6px 20px ${hoverShadowColor}`;
     });
     indicator.addEventListener('mouseleave', () => {
       indicator.style.transform = 'scale(1)';
@@ -304,7 +312,7 @@ async function createBanner() {
     });
     
     // Tooltip при наведении
-    indicator.title = 'Task cycle is running';
+    indicator.title = tooltipText;
     
   } else {
     // Обычный баннер сверху для normal режима

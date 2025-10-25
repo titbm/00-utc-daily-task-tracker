@@ -274,18 +274,6 @@ function createCompletedBookmarkTitle(page) {
   return `${page.title} [${metadata}]`;
 }
 
-// Функция добавления параметра daily_panel_task=1 к URL
-function addTaskParamToUrl(url) {
-  try {
-    const urlObj = new URL(url);
-    urlObj.searchParams.set('daily_panel_task', '1');
-    return urlObj.toString();
-  } catch (e) {
-    console.error('Cannot add parameter to URL:', url, e);
-    return url; // Возвращаем оригинальный URL если не удалось распарсить
-  }
-}
-
 // Функция добавления страницы в Active
 async function addPageToActive(tab) {
   try {
@@ -295,50 +283,23 @@ async function addPageToActive(tab) {
       return;
     }
     
-    // Нормализуем URL (убираем параметр daily_panel_task если есть)
-    let normalizedUrl = tab.url;
-    try {
-      const url = new URL(tab.url);
-      url.searchParams.delete('daily_panel_task');
-      normalizedUrl = url.toString();
-    } catch (e) {
-      // Если URL не парсится, используем как есть
-    }
-    
     // Проверяем дубликаты в Active
     const activePages = await getActivePages();
-    const existsInActive = activePages.some(p => {
-      let pageUrl = p.url;
-      try {
-        const url = new URL(p.url);
-        url.searchParams.delete('daily_panel_task');
-        pageUrl = url.toString();
-      } catch (e) {}
-      return pageUrl === normalizedUrl;
-    });
+    const existsInActive = activePages.some(p => p.url === tab.url);
     if (existsInActive) return { exists: true, location: 'active' };
     
     // Проверяем дубликаты в Completed
     const completedPages = await getCompletedPages();
-    const existsInCompleted = completedPages.some(p => {
-      let pageUrl = p.url;
-      try {
-        const url = new URL(p.url);
-        url.searchParams.delete('daily_panel_task');
-        pageUrl = url.toString();
-      } catch (e) {}
-      return pageUrl === normalizedUrl;
-    });
+    const existsInCompleted = completedPages.some(p => p.url === tab.url);
     if (existsInCompleted) return { exists: true, location: 'completed' };
     
     // Создаём закладку с метаданными [resetType]
     const titleWithMetadata = `${tab.title} [midnight]`;
-    const urlWithParam = addTaskParamToUrl(normalizedUrl);
     
     await chrome.bookmarks.create({
       parentId: ids.active,
       title: titleWithMetadata,
-      url: urlWithParam
+      url: tab.url
     });
     
     notifyPanelUpdate();
@@ -458,11 +419,10 @@ async function checkAndRestoreOldPages() {
         
         // Создаём метаданные для Active с сохранением resetType
         const newTitle = `${page.title} [${page.resetType}]`;
-        const urlWithParam = addTaskParamToUrl(page.url);
         
         await chrome.bookmarks.update(page.id, { 
           title: newTitle,
-          url: urlWithParam
+          url: page.url
         });
       }
     }
@@ -773,18 +733,8 @@ async function openNextInCycle() {
       return;
     }
     
-    // Добавляем параметр в URL
-    let taskUrl = nextPage.url;
-    try {
-      const url = new URL(nextPage.url);
-      url.searchParams.set('daily_panel_task', '1');
-      taskUrl = url.toString();
-      chrome.bookmarks.update(nextPage.id, { url: taskUrl });
-    } catch (e) {
-      // Ignore URL parse errors
-    }
-    
-    chrome.tabs.create({ url: taskUrl }, async (tab) => {
+    // Открываем задачу
+    chrome.tabs.create({ url: nextPage.url }, async (tab) => {
       if (tab) {
         // Создаём запись с полными метаданными для вкладки цикла
         openedTabs.set(tab.id, {
@@ -859,11 +809,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       const parsed = parseCompletedBookmarkTitle(bookmark[0].title);
       // Восстанавливаем с тем же resetType, что был
       const newTitle = `${parsed.title} [${parsed.resetType}]`;
-      const urlWithParam = addTaskParamToUrl(bookmark[0].url);
       
       await chrome.bookmarks.update(request.bookmarkId, { 
         title: newTitle,
-        url: urlWithParam
+        url: bookmark[0].url
       });
       notifyPanelUpdate();
       sendResponse({ success: true });
@@ -933,11 +882,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         await chrome.bookmarks.move(page.id, { parentId: ids.active });
         
         const newTitle = `${page.title} [${page.resetType}]`;
-        const urlWithParam = addTaskParamToUrl(page.url);
         
         await chrome.bookmarks.update(page.id, { 
           title: newTitle,
-          url: urlWithParam
+          url: page.url
         });
       }
       
