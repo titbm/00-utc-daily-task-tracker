@@ -33,8 +33,23 @@ class DailyPanel {
     // Кеш для оптимизации перерисовки
     this._cachedActivePages = null;
     this._cachedCompletedPages = null;
+    
+    // Debounce для checkRestore - чтобы не спамить при множественных таймерах
+    this._restoreCheckTimeout = null;
 
     this.init();
+  }
+  
+  // Debounced запрос проверки восстановления (собирает множественные вызовы в один)
+  requestRestoreCheck() {
+    if (this._restoreCheckTimeout) {
+      clearTimeout(this._restoreCheckTimeout);
+    }
+    
+    this._restoreCheckTimeout = setTimeout(() => {
+      chrome.runtime.sendMessage({ action: 'checkRestore' });
+      this._restoreCheckTimeout = null;
+    }, 500); // Подождем 500мс, соберем все истекшие таймеры
   }
   
   init() {
@@ -440,8 +455,8 @@ class DailyPanel {
           if (t <= 0 && restoreAtMs) {
             clearInterval(this._completedTimers[page.id]);
             delete this._completedTimers[page.id];
-            // Запрашиваем background проверить и восстановить страницы
-            chrome.runtime.sendMessage({ action: 'checkRestore' });
+            // Запрашиваем проверку с debounce (собираем множественные запросы в один)
+            this.requestRestoreCheck();
           }
         };
         
