@@ -536,7 +536,7 @@ chrome.tabs.onRemoved.addListener(async (tabId, removeInfo) => {
         const faviconUrl = `https://www.google.com/s2/favicons?domain=${new URL(page.url).hostname}&sz=32`;
         
         // Открываем диалог для изменения интервала
-        const dialogUrl = chrome.runtime.getURL('interval-dialog.html') + 
+        const dialogUrl = chrome.runtime.getURL('src/sidepanel/intervalDialog.html') + 
           `?bookmarkId=${bookmarkId}` +
           `&title=${encodeURIComponent(parsed.title)}` +
           `&url=${encodeURIComponent(page.url)}` +
@@ -705,11 +705,11 @@ async function openNextInCycle() {
       
       // Открываем страницу завершения
       if (currentWindowId) {
-        const completedUrl = chrome.runtime.getURL('completed.html');
+        const completedUrl = chrome.runtime.getURL('src/sidepanel/completed.html');
         chrome.tabs.create({ url: completedUrl, windowId: currentWindowId });
         currentWindowId = null;
       } else {
-        chrome.tabs.create({ url: chrome.runtime.getURL('completed.html') });
+        chrome.tabs.create({ url: chrome.runtime.getURL('src/sidepanel/completed.html') });
       }
       return;
     }
