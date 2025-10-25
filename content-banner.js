@@ -362,22 +362,24 @@ async function createBanner() {
     // Добавляем отступ для body чтобы контент не перекрывался
     document.body.style.paddingTop = '36px';
     
-    // Скрытие баннера при наведении мыши в верхнюю часть экрана
+    // Скрытие баннера при движении мыши в верхней части экрана
     const bannerContent = banner.querySelector('#normal-banner-content');
-    let hideTimeout = null;
+    let isHidden = false;
     
-    bannerContent.addEventListener('mouseenter', () => {
-      clearTimeout(hideTimeout);
-      hideTimeout = setTimeout(() => {
+    // Слушаем движение мыши по всей странице
+    document.addEventListener('mousemove', (e) => {
+      // Если курсор в верхних 100px экрана - скрываем баннер
+      if (e.clientY < 100 && !isHidden) {
+        isHidden = true;
         bannerContent.style.transform = 'translateY(-100%)';
         bannerContent.style.opacity = '0';
-      }, 500); // Задержка 500мс перед скрытием
-    });
-    
-    bannerContent.addEventListener('mouseleave', () => {
-      clearTimeout(hideTimeout);
-      bannerContent.style.transform = 'translateY(0)';
-      bannerContent.style.opacity = '1';
+      }
+      // Если курсор ниже 100px - показываем баннер
+      else if (e.clientY >= 100 && isHidden) {
+        isHidden = false;
+        bannerContent.style.transform = 'translateY(0)';
+        bannerContent.style.opacity = '1';
+      }
     });
     
     // Обработчик кнопки Start
