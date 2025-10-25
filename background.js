@@ -730,8 +730,28 @@ async function openNextInCycle() {
   await saveCycleState();
   
   try {
-    if (currentCycleIndex >= cycleQueue.length) {
-      // Все страницы завершены
+    // Проверка актуальности: ищем следующую задачу, которая ещё в Active
+    const currentActivePages = await getActivePages();
+    let nextPage = null;
+    
+    while (currentCycleIndex < cycleQueue.length) {
+      const page = cycleQueue[currentCycleIndex];
+      
+      // Проверяем: эта задача ещё в Active?
+      const stillActive = currentActivePages.some(active => active.id === page.id);
+      
+      if (stillActive) {
+        // Нашли задачу, которая ещё не выполнена
+        nextPage = page;
+        break;
+      } else {
+        // Задача уже в Completed или удалена → пропускаем
+        currentCycleIndex++;
+      }
+    }
+    
+    if (!nextPage) {
+      // Все задачи завершены
       isCycleMode = false;
       cycleQueue = [];
       currentCycleIndex = 0;
@@ -749,22 +769,20 @@ async function openNextInCycle() {
       return;
     }
     
-    const page = cycleQueue[currentCycleIndex];
-    
     // Добавляем параметр в URL
-    let taskUrl = page.url;
+    let taskUrl = nextPage.url;
     try {
-      const url = new URL(page.url);
+      const url = new URL(nextPage.url);
       url.searchParams.set('daily_panel_task', '1');
       taskUrl = url.toString();
-      chrome.bookmarks.update(page.id, { url: taskUrl });
+      chrome.bookmarks.update(nextPage.id, { url: taskUrl });
     } catch (e) {
       // Ignore URL parse errors
     }
     
     chrome.tabs.create({ url: taskUrl }, async (tab) => {
       if (tab) {
-        openedTabs.set(tab.id, page.id);
+        openedTabs.set(tab.id, nextPage.id);
         if (!currentWindowId) {
           currentWindowId = tab.windowId;
         }
@@ -783,8 +801,8 @@ async function openNextInCycle() {
 // Обработчик сообщений от popup, боковой панели и content scripts
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'openSinglePage') {
-    // Открытие ОДНОЙ страницы без запуска цикла
-    isCycleMode = false;
+    // Открытие ОДНОЙ страницы БЕЗ прерывания активного цикла
+    // НЕ меняем isCycleMode - цикл продолжит работать независимо
     chrome.tabs.create({ url: request.url }, async (tab) => {
       if (tab && request.bookmarkId) {
         openedTabs.set(tab.id, request.bookmarkId);
