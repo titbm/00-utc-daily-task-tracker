@@ -22,31 +22,31 @@
   "content_scripts": [
     {
       "matches": ["http://*/*", "https://*/*"],
-      "js": ["content-banner.js"],
+      "js": ["src/content/content.js"],
       "run_at": "document_idle"
     }
   ],
   
   "side_panel": {
-    "default_path": "sidepanel.html"
+    "default_path": "src/sidepanel/sidepanel.html"
   },
   
   "web_accessible_resources": [
     {
-      "resources": ["interval-dialog.html", "completed.html", "rough-notation.iife.js"],
+      "resources": ["src/sidepanel/intervalDialog.html", "src/sidepanel/completed.html", "src/shared/roughNotation.js"],
       "matches": ["<all_urls>"]
     }
   ],
   
   "action": {
     "default_title": "Open 00 UTC | Daily Task Tracker popup window",
-    "default_popup": "popup.html"
+    "default_popup": "src/popup/popup.html"
   },
   
   "icons": {
-    "16": "icon16.png",
-    "32": "icon32.png",
-    "48": "icon48.png",
-    "128": "icon128.png"
+    "16": "assets/icon16.png",
+    "32": "assets/icon32.png",
+    "48": "assets/icon48.png",
+    "128": "assets/icon128.png"
   }
 }
