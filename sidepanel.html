@@ -2,10 +2,12 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Daily Panel</title>
+  <title>00 UTC | Daily Task Tracker</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet">
   <link rel="stylesheet" href="sidepanel.css">
+  <script src="rough-notation.iife.js"></script>
 </head>
 <body>
   <!-- Новая шапка с табами -->
@@ -23,25 +25,26 @@
   </div>
   
   <div class="content">
-    <!-- Активные вкладки -->
+    <!-- Active tabs -->
     <div id="activeSection" class="section active">
       
       <div id="emptyStateActive" class="empty-state">
-        <div class="empty-icon">📄</div>
-        <p class="empty-title">Нет активных задач</p>
-        <p class="hint">Щелкните правой кнопкой мыши на любой странице и выберите "Добавить в Daily Panel"</p>
-        <a href="#" id="goToCompleted" class="empty-link">Перейти в раздел Завершенные</a>
+        <div class="empty-icon"><span class="material-symbols-outlined">inbox</span></div>
+        <p class="empty-title">No active tasks</p>
+        <p class="hint">To add a new task, right-click on any page and select "Add to 00 UTC | Daily Task Tracker"</p>
+        <a href="#" id="goToCompleted" class="empty-link">Go to Completed</a>
       </div>
       
       <div id="activePagesList" class="pages-list"></div>
     </div>
     
-    <!-- Отработанные вкладки -->
+    <!-- Completed tabs -->
     <div id="completedSection" class="section">
       <div id="emptyStateCompleted" class="empty-state">
-        <div class="empty-icon">✓</div>
-        <p class="empty-title">Нет отработанных вкладок</p>
-        <p class="hint">Вкладки, которые вы откроете и закроете сегодня, появятся здесь. После 00:00 UTC они автоматически вернутся в активные.</p>
+        <div class="empty-icon"><span class="material-symbols-outlined">inventory_2</span></div>
+        <p class="empty-title">No completed tasks</p>
+        <p class="hint">Links you visited today will appear here. After 00:00 UTC or your specified time interval, they will automatically return to active.</p>
+        <a href="#" id="goToActive" class="empty-link">Go to Active</a>
       </div>
       
       <div id="completedPagesList" class="pages-list"></div>
@@ -50,9 +53,9 @@
   
   <div class="footer">
     <div class="counter">
-      <span id="activeCount" class="counter-link">Активные: 0</span>
+      <span id="activeCount" class="counter-link">Active: 0</span>
       <span class="separator">•</span>
-      <span id="completedCount" class="counter-link">Завершенные: 0</span>
+      <span id="completedCount" class="counter-link">Completed: 0</span>
     </div>
   </div>
   

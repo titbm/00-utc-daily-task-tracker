@@ -2,7 +2,7 @@ chrome.runtime.onInstalled.addListener(async () => {
   // Создаем контекстное меню для добавления страниц в панель
   chrome.contextMenus.create({
     id: "addToPanel",
-    title: "Добавить в Daily Panel",
+    title: "Add to 00 UTC | Daily Task Tracker",
     contexts: ["page"]
   });
   
@@ -261,7 +261,7 @@ async function addPageToActive(tab) {
       } catch (e) {}
       return pageUrl === normalizedUrl;
     });
-    if (existsInActive) return;
+    if (existsInActive) return { exists: true, location: 'active' };
     
     // Проверяем дубликаты в Completed
     const completedPages = await getCompletedPages();
@@ -274,7 +274,7 @@ async function addPageToActive(tab) {
       } catch (e) {}
       return pageUrl === normalizedUrl;
     });
-    if (existsInCompleted) return;
+    if (existsInCompleted) return { exists: true, location: 'completed' };
     
     // Создаём закладку с метаданными [resetType]
     const titleWithMetadata = `${tab.title} [midnight]`;
@@ -287,8 +287,10 @@ async function addPageToActive(tab) {
     });
     
     notifyPanelUpdate();
+    return { exists: false, added: true };
   } catch (error) {
     console.error('Error adding page to Active:', error);
+    return { exists: false, added: false, error: error.message };
   }
 }
 
@@ -420,12 +422,23 @@ async function checkAndRestoreOldPages() {
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   if (info.menuItemId === "addToPanel") {
     try {
-      // Проверяем, не добавлена ли уже эта страница
-      const pages = await getActivePages();
-      const exists = pages.some(page => page.url === tab.url);
+      // Добавляем страницу и получаем результат
+      const result = await addPageToActive(tab);
       
-      if (!exists) {
-        await addPageToActive(tab);
+      if (result && result.exists) {
+        // Страница уже добавлена
+        chrome.tabs.sendMessage(tab.id, { 
+          action: 'showAlreadyAddedNotification',
+          title: tab.title 
+        }).catch(() => {});
+      } else {
+        // Страница успешно добавлена
+        chrome.tabs.sendMessage(tab.id, { 
+          action: 'showAddedNotification',
+          title: tab.title 
+        }).catch(() => {
+          // Игнорируем ошибки (страница может не поддерживать content scripts)
+        });
       }
     } catch (error) {
       console.error('Error adding page from context menu:', error);
@@ -480,11 +493,15 @@ chrome.tabs.onRemoved.addListener(async (tabId, removeInfo) => {
         await movePageToCompleted(bookmarkId);
         await setPageInterval(bookmarkId, 24);
         
+        // Получаем favicon
+        const faviconUrl = `https://www.google.com/s2/favicons?domain=${new URL(page.url).hostname}&sz=32`;
+        
         // Открываем диалог для изменения интервала
         const dialogUrl = chrome.runtime.getURL('interval-dialog.html') + 
           `?bookmarkId=${bookmarkId}` +
           `&title=${encodeURIComponent(parsed.title)}` +
           `&url=${encodeURIComponent(page.url)}` +
+          `&favicon=${encodeURIComponent(faviconUrl)}` +
           `&interval=24`;
         
         chrome.tabs.create({ url: dialogUrl }, (dialogTab) => {
@@ -582,6 +599,41 @@ async function setPageInterval(bookmarkId, intervalHours) {
   }
 }
 
+// Механизм поддержания активности service worker во время цикла
+let keepAliveInterval = null;
+let cycleStartTime = null;
+const MAX_CYCLE_DURATION = 10 * 60 * 1000; // 10 минут
+
+function startKeepAlive() {
+  if (keepAliveInterval) return;
+  
+  cycleStartTime = Date.now();
+  
+  // Отправляем сообщение самому себе каждые 20 секунд
+  keepAliveInterval = setInterval(() => {
+    const elapsed = Date.now() - cycleStartTime;
+    
+    if (elapsed >= MAX_CYCLE_DURATION) {
+      // Прошло 10 минут - останавливаем цикл
+      console.log('Cycle timeout: 10 minutes elapsed');
+      isCycleMode = false;
+      stopKeepAlive();
+    } else if (isCycleMode) {
+      chrome.runtime.sendMessage({ action: 'keepAlive' }).catch(() => {});
+    } else {
+      stopKeepAlive();
+    }
+  }, 20000);
+}
+
+function stopKeepAlive() {
+  if (keepAliveInterval) {
+    clearInterval(keepAliveInterval);
+    keepAliveInterval = null;
+    cycleStartTime = null;
+  }
+}
+
 // Универсальная функция запуска цикла задач
 async function startTasksCycle() {
   // Получаем все активные страницы
@@ -592,6 +644,9 @@ async function startTasksCycle() {
   cycleQueue = pages;
   currentCycleIndex = 0;
   isCycleMode = true;
+  
+  // Запускаем механизм поддержания активности
+  startKeepAlive();
   
   // Открываем первую страницу
   openNextInCycle();
@@ -606,6 +661,9 @@ function openNextInCycle() {
     isCycleMode = false;
     cycleQueue = [];
     currentCycleIndex = 0;
+    
+    // Останавливаем механизм поддержания активности
+    stopKeepAlive();
     
     // Открываем страницу завершения
     if (currentWindowId) {
@@ -793,5 +851,43 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   } else if (request.action === 'startDailyTasks') {
     startTasksCycle();
     sendResponse({ success: true });
+  } else if (request.action === 'toggleBanner') {
+    // Уведомляем все вкладки об изменении настройки баннера
+    chrome.tabs.query({}, (tabs) => {
+      tabs.forEach(tab => {
+        chrome.tabs.sendMessage(tab.id, { 
+          action: 'bannerSettingChanged', 
+          enabled: request.enabled 
+        }).catch(() => {
+          // Игнорируем ошибки (вкладки без content script)
+        });
+      });
+    });
+    sendResponse({ success: true });
+  } else if (request.action === 'keepAlive') {
+    // Простое подтверждение для поддержания активности
+    sendResponse({ success: true });
+  } else if (request.action === 'addCurrentTab') {
+    // Добавление текущей вкладки в активные задачи
+    (async () => {
+      try {
+        const tab = request.tab;
+        if (tab && tab.url && !tab.url.startsWith('chrome://')) {
+          const result = await addPageToActive(tab);
+          notifyPanelUpdate();
+          sendResponse({ 
+            success: true, 
+            exists: result?.exists || false,
+            location: result?.location
+          });
+        } else {
+          sendResponse({ success: false, message: 'Invalid tab' });
+        }
+      } catch (error) {
+        console.error('Error adding current tab:', error);
+        sendResponse({ success: false, error: error.message });
+      }
+    })();
+    return true;
   }
 });

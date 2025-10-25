@@ -1,14 +1,37 @@
 // Получаем параметры из URL
 const urlParams = new URLSearchParams(window.location.search);
 const bookmarkId = urlParams.get('bookmarkId');
-const pageTitle = decodeURIComponent(urlParams.get('title') || 'Страница');
+const pageTitle = decodeURIComponent(urlParams.get('title') || 'Page');
 const pageUrl = decodeURIComponent(urlParams.get('url') || '');
+const pageFavicon = decodeURIComponent(urlParams.get('favicon') || '');
 const defaultInterval = parseInt(urlParams.get('interval') || '24');
 
 // Отображаем информацию о странице
 document.getElementById('pageTitle').textContent = pageTitle;
 document.getElementById('pageUrl').textContent = pageUrl;
+
+// Устанавливаем фавиконку
+const faviconEl = document.getElementById('pageFavicon');
+if (pageFavicon) {
+  faviconEl.src = pageFavicon;
+  faviconEl.onerror = function() {
+    this.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><rect width="16" height="16" fill="%23ddd"/></svg>';
+  };
+} else {
+  faviconEl.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><rect width="16" height="16" fill="%23ddd"/></svg>';
+}
+
 document.getElementById('hoursInput').value = defaultInterval;
+
+// Устанавливаем фокус на поле ввода часов
+document.getElementById('hoursInput').focus();
+document.getElementById('hoursInput').select();
+
+// Обработчик клика по ссылке - открываем страницу для просмотра в новой вкладке
+document.getElementById('pageInfoLink').addEventListener('click', (e) => {
+  e.preventDefault();
+  chrome.tabs.create({ url: pageUrl });
+});
 
 // Функция для сохранения интервала
 function saveInterval() {
@@ -41,7 +64,7 @@ document.getElementById('confirmBtn').addEventListener('click', () => {
   
   // Проверка: хотя бы 1 минута
   if (hours === 0 && minutes === 0) {
-    alert('Укажите хотя бы 1 минуту');
+    alert('Please specify at least 1 minute');
     return;
   }
   
@@ -63,3 +86,18 @@ document.addEventListener('keydown', (e) => {
     document.getElementById('confirmBtn').click();
   }
 });
+
+// RoughNotation эффект для заголовка
+if (typeof RoughNotation !== 'undefined') {
+  const highlightElement = document.getElementById('highlight');
+  if (highlightElement) {
+    const annotation = RoughNotation.annotate(highlightElement, {
+      type: 'bracket',
+      color: '#8B00FF',
+      brackets: ['left', 'right'],
+      strokeWidth: 2,
+      animationDuration: 600
+    });
+    setTimeout(() => annotation.show(), 100);
+  }
+}

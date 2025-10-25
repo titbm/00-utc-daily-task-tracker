@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Daily Panel",
+  "name": "00 UTC | Daily Task Tracker",
   "version": "1.0",
-  "description": "Боковая панель для управления вкладками",
+  "description": "Task tracker for internet daily tasks",
   
   "permissions": [
     "activeTab",
@@ -10,7 +10,8 @@
     "contextMenus",
     "sidePanel",
     "bookmarks",
-    "alarms"
+    "alarms",
+    "storage"
   ],
   
   "host_permissions": [
@@ -25,7 +26,7 @@
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["content-banner.js"],
+      "js": ["rough-notation.iife.js", "content-banner.js"],
       "run_at": "document_end"
     }
   ],
@@ -36,18 +37,19 @@
   
   "web_accessible_resources": [
     {
-      "resources": ["interval-dialog.html", "completed.html"],
+      "resources": ["interval-dialog.html", "completed.html", "rough-notation.iife.js"],
       "matches": ["<all_urls>"]
     }
   ],
   
   "action": {
-    "default_title": "Открыть Daily Panel",
+    "default_title": "Open 00 UTC | Daily Task Tracker popup window",
     "default_popup": "popup.html"
   },
   
   "icons": {
     "16": "icon16.png",
+    "32": "icon32.png",
     "48": "icon48.png",
     "128": "icon128.png"
   }
