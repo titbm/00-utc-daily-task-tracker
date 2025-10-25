@@ -2,6 +2,7 @@
 import { getFolderIds } from './folderManager.js';
 import { getCompletedPages } from './bookmarkOperations.js';
 import { notifyPanelUpdate } from '../shared/notifications.js';
+import { logError } from '../shared/errorHandler.js';
 
 // Функция запуска периодической проверки
 export async function startTimeChecker() {
@@ -57,6 +58,6 @@ export async function checkAndRestoreOldPages() {
     
     notifyPanelUpdate();
   } catch (error) {
-    console.error('Error checking and restoring old pages:', error);
+    logError('checkAndRestoreOldPages', error);
   }
 }

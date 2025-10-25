@@ -2,6 +2,7 @@
 import { getFolderIds } from './folderManager.js';
 import { parseActiveBookmarkTitle, parseCompletedBookmarkTitle } from '../shared/bookmarkParser.js';
 import { notifyPanelUpdate } from '../shared/notifications.js';
+import { logError } from '../shared/errorHandler.js';
 
 // Функция чтения активных страниц из закладок
 export async function getActivePages() {
@@ -29,7 +30,7 @@ export async function getActivePages() {
     
     return pages;
   } catch (error) {
-    console.error('Error getting active pages:', error);
+    logError('getActivePages', error);
     return [];
   }
 }
@@ -62,7 +63,7 @@ export async function getCompletedPages() {
     
     return pages;
   } catch (error) {
-    console.error('Error getting completed pages:', error);
+    logError('getCompletedPages', error);
     return [];
   }
 }
@@ -72,7 +73,7 @@ export async function addPageToActive(tab) {
   try {
     const ids = await getFolderIds();
     if (!ids.active) {
-      console.error('Active folder not found');
+      logError('addPageToActive', 'Active folder not found');
       return;
     }
     
@@ -95,7 +96,7 @@ export async function addPageToActive(tab) {
     notifyPanelUpdate();
     return { exists: false, added: true };
   } catch (error) {
-    console.error('Error adding page to Active:', error);
+    logError('addPageToActive', error);
     return { exists: false, added: false, error: error.message };
   }
 }
@@ -106,6 +107,6 @@ export async function removePage(bookmarkId) {
     await chrome.bookmarks.remove(bookmarkId);
     notifyPanelUpdate();
   } catch (error) {
-    console.error('Error removing bookmark:', error);
+    logError('removePage', error);
   }
 }

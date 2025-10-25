@@ -1,4 +1,4 @@
-# Daily Panel - Chrome Extension for Task Tracking
+# 00 UTC | Daily Task Tracker - Chrome Extension for Task Tracking
 
 ## Architecture Overview
 
@@ -55,9 +55,9 @@ styles/                            # External CSS files
 
 ### Critical Data Flow: Bookmark-Based State Management
 
-**All task data lives in Chrome bookmarks** under `Bookmarks Bar > Daily Panel`:
-- `Daily Panel/Active/` - Tasks to complete, titled: `"PageTitle [resetType]"` where `resetType` = `midnight` | `interval`
-- `Daily Panel/Completed/` - Finished tasks, titled: `"PageTitle [completedAt|restoreAt|resetType|resetInterval|addedAt]"`
+**All task data lives in Chrome bookmarks** under `Bookmarks Bar > 00 UTC | Daily Task Tracker`:
+- `00 UTC | Daily Task Tracker/Active/` - Tasks to complete, titled: `"PageTitle [resetType]"` where `resetType` = `midnight` | `interval`
+- `00 UTC | Daily Task Tracker/Completed/` - Finished tasks, titled: `"PageTitle [completedAt|restoreAt|resetType|resetInterval|addedAt]"`
 
 **Tab Tracking**: Active tasks are tracked via `openedTabs` Map in `src/background/cycle.js`. When a task tab is opened (from cycle or panel), its tabId is stored with metadata (`fromCycle`, `isIntervalDialog`, `dialogFromCycle`). Content scripts query this via `getMyTabStatus` message to determine whether to show cycle indicator.
 
@@ -148,7 +148,7 @@ Used for hand-drawn UI annotations (underlines, brackets, strikethroughs):
 ### Load Extension
 1. Open `chrome://extensions/`
 2. Enable "Developer mode"
-3. Click "Load unpacked" → Select `Daily panel` folder
+3. Click "Load unpacked" → Select extension folder
 4. **Reload after changes**: Click reload icon next to extension
 
 ### Debug Each Component
@@ -186,7 +186,7 @@ Used for hand-drawn UI annotations (underlines, brackets, strikethroughs):
 - `alarms`: Background time checks without service worker timeout
 - `storage`: Settings persistence (`bannerEnabled`)
 - `tabs`: Tab creation/closure detection, message passing
-- `contextMenus`: Right-click "Add to Daily Panel"
+- `contextMenus`: Right-click "Add to 00 UTC | Daily Task Tracker"
 - `host_permissions: ["<all_urls>"]`: Required for content script injection
 
 ## Conventions

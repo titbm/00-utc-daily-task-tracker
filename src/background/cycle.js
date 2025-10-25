@@ -3,6 +3,7 @@ import { getFolderIds } from './folderManager.js';
 import { getActivePages } from './bookmarkOperations.js';
 import { parseActiveBookmarkTitle, parseCompletedBookmarkTitle, createCompletedBookmarkTitle } from '../shared/bookmarkParser.js';
 import { notifyPanelUpdate } from '../shared/notifications.js';
+import { logError } from '../shared/errorHandler.js';
 
 // Глобальное состояние цикла
 const openedTabs = new Map();
@@ -51,7 +52,7 @@ export async function movePageToCompleted(bookmarkId) {
     const bookmark = await chrome.bookmarks.get(bookmarkId);
     
     if (!bookmark || !bookmark[0]) {
-      console.error('Bookmark not found:', bookmarkId);
+      logError('movePageToCompleted', `Bookmark not found: ${bookmarkId}`);
       return;
     }
     
@@ -74,7 +75,7 @@ export async function movePageToCompleted(bookmarkId) {
     
     notifyPanelUpdate();
   } catch (error) {
-    console.error('Error moving to completed:', error);
+    logError('movePageToCompleted', error);
   }
 }
 
@@ -101,13 +102,12 @@ export async function setPageInterval(bookmarkId, intervalHours) {
     const newTitle = `${parsed.title} [${metadata}]`;
     
     await chrome.bookmarks.update(bookmarkId, { title: newTitle });
+    
     notifyPanelUpdate();
   } catch (error) {
-    console.error('Error setting interval:', error);
+    logError('setPageInterval', error);
   }
-}
-
-// Универсальная функция запуска цикла задач
+}// Универсальная функция запуска цикла задач
 export async function startTasksCycle() {
   const pages = await getActivePages();
   if (pages.length === 0) return;
@@ -183,7 +183,7 @@ async function openNextInCycle() {
       }
     });
   } catch (error) {
-    console.error('Error in openNextInCycle:', error);
+    logError('openNextInCycle', error);
     isProcessingNext = false;
     await saveCycleState();
   }
@@ -274,7 +274,7 @@ export async function handleTabRemove(tabId, removeInfo) {
         }
       }
     } catch (error) {
-      console.error('Error handling tab close:', error);
+      logError('handleTabRemove', error);
     }
   }
 }

@@ -2,6 +2,21 @@
 
 let banner = null;
 
+// Debug mode - будет загружен асинхронно
+let DEBUG_MODE = false;
+(async () => {
+  try {
+    const module = await import(chrome.runtime.getURL('src/shared/constants.js'));
+    DEBUG_MODE = module.DEBUG;
+  } catch (e) {
+    // Игнорируем ошибку загрузки
+  }
+})();
+
+const logError = (context, error) => {
+  if (DEBUG_MODE) console.error(`[${context}]`, error);
+};
+
 // Загружаем Material Symbols если ещё нет
 if (!document.getElementById('daily-panel-material-symbols')) {
   const link = document.createElement('link');
@@ -395,7 +410,7 @@ async function checkActiveTasks() {
       removeBanner();
     }
   } catch (error) {
-    console.error('Error checking active tasks:', error);
+    logError('checkActiveTasks', error);
   }
 }
 
@@ -418,9 +433,9 @@ chrome.runtime.onMessage.addListener((message) => {
       removeBanner(); // Скрываем баннер
     }
   } else if (message.action === 'showAddedNotification') {
-    showNotification('Page added to Daily Panel', message.title, 'success');
+    showNotification('Page added to active tasks', message.title, 'success');
   } else if (message.action === 'showAlreadyAddedNotification') {
-    showNotification('Page already in Daily Panel', message.title, 'info');
+    showNotification('Page already in task list', message.title, 'info');
   }
 });
 

@@ -1,4 +1,6 @@
 // Модуль управления папками закладок
+import { logError } from '../shared/errorHandler.js';
+import { FOLDER_NAME, FOLDER_NAMES } from '../shared/constants.js';
 
 // Функция инициализации папки закладок (с двумя подпапками)
 export async function initializeBookmarksFolder() {
@@ -13,8 +15,7 @@ export async function initializeBookmarksFolder() {
     const bookmarkTreeNodes = await chrome.bookmarks.getTree();
     const rootNode = bookmarkTreeNodes[0];
     
-    const FOLDER_NAME = '00 UTC | Daily Task Tracker';
-    let dailyPanelFolder = null;
+    let mainFolder = null;
     
     for (const child of rootNode.children) {
       if (child.title === FOLDER_NAME && !child.url) {
@@ -42,20 +43,20 @@ export async function initializeBookmarksFolder() {
     
     const dailyPanelChildren = await chrome.bookmarks.getChildren(dailyPanelFolder.id);
     
-    let activeFolder = dailyPanelChildren.find(node => node.title === 'Active' && !node.url);
-    let completedFolder = dailyPanelChildren.find(node => node.title === 'Completed' && !node.url);
+    let activeFolder = dailyPanelChildren.find(node => node.title === FOLDER_NAMES.ACTIVE && !node.url);
+    let completedFolder = dailyPanelChildren.find(node => node.title === FOLDER_NAMES.COMPLETED && !node.url);
     
     if (!activeFolder) {
       activeFolder = await chrome.bookmarks.create({
         parentId: dailyPanelFolder.id,
-        title: 'Active'
+        title: FOLDER_NAMES.ACTIVE
       });
     }
     
     if (!completedFolder) {
       completedFolder = await chrome.bookmarks.create({
         parentId: dailyPanelFolder.id,
-        title: 'Completed'
+        title: FOLDER_NAMES.COMPLETED
       });
     }
     
@@ -67,7 +68,7 @@ export async function initializeBookmarksFolder() {
     await chrome.storage.session.set({ FOLDER_IDS: folderIds });
     
   } catch (error) {
-    console.error('❌ Error initializing bookmarks folder:', error);
+    logError('initializeBookmarksFolder', error);
   } finally {
     await chrome.storage.session.set({ isInitializing: false });
   }

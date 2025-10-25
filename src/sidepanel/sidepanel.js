@@ -1,8 +1,16 @@
-// Константы для таймингов
-const DEBOUNCE_DELAY = 500; // мс - задержка для батчинга restore запросов
-const TIMER_INTERVAL = 1000; // мс - обновление таймеров каждую секунду
-const RESIZE_DEBOUNCE = 400; // мс - задержка для обработки resize
-const ROUGH_NOTATION_RETRY = 100; // мс - повтор инициализации RoughNotation
+// Импорт констант
+import { DEBUG, TIMINGS } from '../shared/constants.js';
+
+// Константы для удобства
+const DEBOUNCE_DELAY = TIMINGS.DEBOUNCE_DELAY;
+const TIMER_INTERVAL = TIMINGS.TIMER_INTERVAL;
+const RESIZE_DEBOUNCE = TIMINGS.RESIZE_DEBOUNCE;
+const ROUGH_NOTATION_RETRY = TIMINGS.ROUGH_NOTATION_RETRY;
+
+// Локальная функция логирования для UI
+const logError = (context, error) => {
+  if (DEBUG) console.error(`[${context}]`, error);
+};
 
 class DailyPanel {
   constructor() {
@@ -166,7 +174,7 @@ class DailyPanel {
     const tryInit = () => {
       if (window.RoughNotation) {
         if (!this.activeTab || !this.completedTab) {
-          console.error('Tab elements not found!');
+          logError('initTabHighlighter', 'Tab elements not found!');
           return;
         }
         
@@ -276,7 +284,7 @@ class DailyPanel {
       this.setButtonState(this.startTasksBtn, activePages.length > 0);
       this.setButtonState(this.restoreCompletedBtn, completedPages.length > 0);
     } catch (error) {
-      console.error('Error loading pages:', error);
+      logError('loadPages', error);
     }
   }
   
@@ -585,7 +593,7 @@ class DailyPanel {
         bookmarkId: bookmarkId
       });
     } catch (error) {
-      console.error('Error opening page:', error);
+      logError('openPage', error);
     }
   }
   
@@ -605,7 +613,7 @@ class DailyPanel {
         this.toggleSection();
       }
     } catch (error) {
-      console.error('Error restoring page:', error);
+      logError('restorePage', error);
     }
   }
   
@@ -616,7 +624,7 @@ class DailyPanel {
         bookmarkId: bookmarkId
       });
     } catch (error) {
-      console.error('Error removing page:', error);
+      logError('removePage', error);
     }
   }
   
@@ -642,7 +650,7 @@ class DailyPanel {
         this.toggleSection();
       }
     } catch (error) {
-      console.error('Error restoring all completed:', error);
+      logError('restoreAllCompleted', error);
     }
   }
   
@@ -651,7 +659,7 @@ class DailyPanel {
       // Запускаем отработку всех задач через background
       await chrome.runtime.sendMessage({ action: 'openNextPage' });
     } catch (error) {
-      console.error('Error starting all tasks:', error);
+      logError('startAllTasks', error);
     }
   }
   
@@ -676,7 +684,7 @@ class DailyPanel {
         resetInterval: page.resetInterval || 24
       });
     } catch (error) {
-      console.error('Error setting reset type:', error);
+      logError('setResetType', error);
     }
   }
   
@@ -757,7 +765,7 @@ class DailyPanel {
       this.loadPages();
       
     } catch (error) {
-      console.error('Error reordering pages:', error);
+      logError('reorderPages', error);
     }
   }
 }

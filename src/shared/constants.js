@@ -1,5 +1,8 @@
 // Общие константы для всего расширения
 
+// Debug режим - установите true для включения логирования в консоль
+export const DEBUG = false;
+
 // Имя папки в закладках
 export const FOLDER_NAME = '00 UTC | Daily Task Tracker';
 

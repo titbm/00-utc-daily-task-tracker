@@ -5,6 +5,7 @@ import { movePageToCompleted, setPageInterval, startTasksCycle, openSinglePage, 
 import { checkAndRestoreOldPages } from './scheduler.js';
 import { parseActiveBookmarkTitle, parseCompletedBookmarkTitle } from '../shared/bookmarkParser.js';
 import { notifyPanelUpdate } from '../shared/notifications.js';
+import { logError } from '../shared/errorHandler.js';
 
 export function initMessageHandler() {
   chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
@@ -83,7 +84,7 @@ export function initMessageHandler() {
           }
           sendResponse({ success: true });
         } catch (error) {
-          console.error('Error setting reset type:', error);
+          logError('setResetType', error);
           sendResponse({ success: false });
         }
       })();
@@ -183,7 +184,7 @@ export function initMessageHandler() {
             sendResponse({ success: false, message: 'Invalid tab' });
           }
         } catch (error) {
-          console.error('Error adding current tab:', error);
+          logError('addCurrentTab', error);
           sendResponse({ success: false, error: error.message });
         }
       })();

@@ -22,12 +22,12 @@ A Chrome extension for tracking and managing your daily internet tasks with auto
 2. Open `chrome://extensions/` in Chrome
 3. Enable "Developer mode" (top right toggle)
 4. Click "Load unpacked"
-5. Select the `Daily panel` folder
+5. Select the extension folder
 
 ## Usage
 
 ### Adding Tasks
-- **Right-click** on any webpage → "Add to Daily Panel"
+- **Right-click** on any webpage → "Add to 00 UTC | Daily Task Tracker"
 - Click extension icon → **"Add current page"** button
 - Tasks are added to the "Active" section
 
@@ -57,7 +57,7 @@ A Chrome extension for tracking and managing your daily internet tasks with auto
 ### Code Structure (Refactored)
 
 ```
-Daily panel/
+/
 ├── background.js (80 lines)           # Service worker coordinator
 ├── src/
 │   ├── shared/                        # Shared utilities

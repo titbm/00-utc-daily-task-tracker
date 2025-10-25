@@ -4,6 +4,7 @@ import { addPageToActive } from './src/background/bookmarkOperations.js';
 import { startTimeChecker, initAlarmListener } from './src/background/scheduler.js';
 import { restoreCycleState, handleTabRemove } from './src/background/cycle.js';
 import { initMessageHandler } from './src/background/messageHandler.js';
+import { logError } from './src/shared/errorHandler.js';
 
 chrome.runtime.onInstalled.addListener(async () => {
   // Создаем контекстное меню для добавления страниц в панель
@@ -84,7 +85,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
         });
       }
     } catch (error) {
-      console.error('Error adding page from context menu:', error);
+      logError('contextMenuHandler', error);
     }
   }
 });
