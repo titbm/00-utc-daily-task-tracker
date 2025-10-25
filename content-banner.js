@@ -255,50 +255,102 @@ async function createBanner() {
   
   banner = document.createElement('div');
   banner.id = 'daily-panel-banner';
-  banner.innerHTML = `
-    <div style="
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      background: #ffffff;
-      border-bottom: 1px solid #e5e5e5;
-      padding: 12px 20px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 16px;
-      z-index: 999999;
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    ">
-      <div style="display: flex; align-items: center; gap: 8px;">
-        ${bannerIcon}
-        <span style="font-weight: ${bannerType === 'cycle' ? '500' : '400'}; color: ${bannerColor}; font-size: 14px;">
-          ${bannerText}
-        </span>
-      </div>
-      <button id="daily-panel-start-btn" style="
-        background: ${bannerColor};
-        color: #ffffff;
-        border: 1px solid ${bannerColor};
-        padding: 6px 16px;
-        border-radius: 6px;
-        font-size: 13px;
-        font-weight: 500;
+  
+  if (bannerType === 'cycle') {
+    // Минималистичный индикатор цикла в правом нижнем углу
+    banner.innerHTML = `
+      <div style="
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background: #ffffff;
+        border: 1px solid #e5e5e5;
+        border-radius: 50%;
+        width: 56px;
+        height: 56px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 999999;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
         cursor: pointer;
-        transition: all 0.2s;
-        font-family: 'Inter', sans-serif;
-        ${bannerType === 'cycle' ? 'display: none;' : ''}
+        transition: all 0.3s ease;
+      " id="cycle-indicator">
+        <span class="material-symbols-outlined" style="
+          font-size: 28px;
+          color: #8B00FF;
+          font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 28;
+        ">sync</span>
+      </div>
+    `;
+    
+    document.body.appendChild(banner);
+    
+    // Анимация вращения иконки
+    const icon = banner.querySelector('.material-symbols-outlined');
+    if (icon) {
+      icon.style.animation = 'rotate 2s linear infinite';
+    }
+    
+    // Hover эффект
+    const indicator = banner.querySelector('#cycle-indicator');
+    indicator.addEventListener('mouseenter', () => {
+      indicator.style.transform = 'scale(1.1)';
+      indicator.style.boxShadow = '0 6px 20px rgba(139, 0, 255, 0.3)';
+    });
+    indicator.addEventListener('mouseleave', () => {
+      indicator.style.transform = 'scale(1)';
+      indicator.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+    });
+    
+    // Tooltip при наведении
+    indicator.title = 'Task cycle is running';
+    
+  } else {
+    // Обычный баннер сверху для normal режима
+    banner.innerHTML = `
+      <div style="
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        background: #ffffff;
+        border-bottom: 1px solid #e5e5e5;
+        padding: 12px 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 16px;
+        z-index: 999999;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       ">
-        Start
-      </button>
-    </div>
-  `;
-  
-  document.body.prepend(banner);
-  
-  // Добавляем отступ для body чтобы контент не перекрывался
-  document.body.style.paddingTop = '36px';
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="font-weight: 400; color: ${bannerColor}; font-size: 14px;">
+            ${bannerText}
+          </span>
+        </div>
+        <button id="daily-panel-start-btn" style="
+          background: ${bannerColor};
+          color: #ffffff;
+          border: 1px solid ${bannerColor};
+          padding: 6px 16px;
+          border-radius: 6px;
+          font-size: 13px;
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.2s;
+          font-family: 'Inter', sans-serif;
+        ">
+          Start
+        </button>
+      </div>
+    `;
+    
+    document.body.prepend(banner);
+    
+    // Добавляем отступ для body чтобы контент не перекрывался
+    document.body.style.paddingTop = '36px';
+  }
   
   // Обработчик кнопки (только для normal баннера)
   if (bannerType === 'normal') {
@@ -317,25 +369,17 @@ async function createBanner() {
     });
   }
   
-  // Для cycle баннера добавляем анимацию иконки
-  if (bannerType === 'cycle') {
-    const icon = banner.querySelector('.material-symbols-outlined');
-    if (icon) {
-      icon.style.animation = 'rotate 2s linear infinite';
-      
-      // Добавляем keyframes если ещё нет
-      if (!document.getElementById('daily-panel-banner-animations')) {
-        const style = document.createElement('style');
-        style.id = 'daily-panel-banner-animations';
-        style.textContent = `
-          @keyframes rotate {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-          }
-        `;
-        document.head.appendChild(style);
+  // Добавляем keyframes для анимации
+  if (!document.getElementById('daily-panel-banner-animations')) {
+    const style = document.createElement('style');
+    style.id = 'daily-panel-banner-animations';
+    style.textContent = `
+      @keyframes rotate {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
       }
-    }
+    `;
+    document.head.appendChild(style);
   }
 }
 
@@ -344,6 +388,7 @@ function removeBanner() {
   if (banner) {
     banner.remove();
     banner = null;
+    // Убираем отступ только если это был баннер сверху
     document.body.style.paddingTop = '';
   }
 }
