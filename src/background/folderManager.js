@@ -1,11 +1,9 @@
 // Модуль управления папками закладок
-import { log } from '../shared/debug.js';
 
 // Функция инициализации папки закладок (с двумя подпапками)
 export async function initializeBookmarksFolder() {
   const lockStatus = await chrome.storage.session.get('isInitializing');
   if (lockStatus.isInitializing) {
-    log('⏳ Already initializing, skipping...');
     return;
   }
   
@@ -40,9 +38,6 @@ export async function initializeBookmarksFolder() {
         parentId: parentId,
         title: FOLDER_NAME
       });
-      log('✅ Created folder:', FOLDER_NAME);
-    } else {
-      log('📁 Found existing folder:', FOLDER_NAME);
     }
     
     const dailyPanelChildren = await chrome.bookmarks.getChildren(dailyPanelFolder.id);
@@ -55,7 +50,6 @@ export async function initializeBookmarksFolder() {
         parentId: dailyPanelFolder.id,
         title: 'Active'
       });
-      log('✅ Created Active folder');
     }
     
     if (!completedFolder) {
@@ -63,7 +57,6 @@ export async function initializeBookmarksFolder() {
         parentId: dailyPanelFolder.id,
         title: 'Completed'
       });
-      log('✅ Created Completed folder');
     }
     
     const folderIds = {
@@ -72,7 +65,6 @@ export async function initializeBookmarksFolder() {
     };
     
     await chrome.storage.session.set({ FOLDER_IDS: folderIds });
-    log('💾 Saved FOLDER_IDS to session storage:', folderIds);
     
   } catch (error) {
     console.error('❌ Error initializing bookmarks folder:', error);
@@ -89,15 +81,12 @@ export async function getFolderIds() {
     try {
       await chrome.bookmarks.get(cached.FOLDER_IDS.active);
       await chrome.bookmarks.get(cached.FOLDER_IDS.completed);
-      log('📦 Loaded FOLDER_IDS from session storage:', cached.FOLDER_IDS);
       return cached.FOLDER_IDS;
     } catch (error) {
-      log('⚠️ Cached folders not found, reinitializing...');
       await chrome.storage.session.remove('FOLDER_IDS');
     }
   }
   
-  log('🔄 FOLDER_IDS not in cache, initializing...');
   await initializeBookmarksFolder();
   
   const result = await chrome.storage.session.get('FOLDER_IDS');

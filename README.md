@@ -46,11 +46,56 @@ A Chrome extension for tracking and managing your daily internet tasks with auto
 
 ## Architecture
 
-- **Manifest V3** service worker architecture
+### Technology Stack
+- **Manifest V3** service worker with ES6 modules
+- **Modular Architecture** - 8 separate modules for maintainability
 - **chrome.storage.session** for persistent state across service worker restarts
-- **Bookmarks API** as primary data storage
+- **Bookmarks API** as primary data storage (no external database)
 - **Content scripts** for in-page notifications (http/https only)
 - **Alarms API** for scheduled task restoration
+
+### Code Structure (Refactored)
+
+```
+Daily panel/
+├── background.js (80 lines)           # Service worker coordinator
+├── src/
+│   ├── shared/                        # Shared utilities
+│   │   ├── notifications.js           # Panel update notifications
+│   │   ├── bookmarkParser.js          # Metadata parsing/creation
+│   │   ├── dateUtils.js               # Date/time utilities
+│   │   └── constants.js               # App constants
+│   ├── background/                    # Service worker modules
+│   │   ├── folderManager.js           # Bookmark folder management
+│   │   ├── bookmarkOperations.js      # CRUD operations
+│   │   ├── scheduler.js               # Time-based restoration
+│   │   ├── cycle.js                   # Task cycle management
+│   │   └── messageHandler.js          # Runtime message routing
+│   ├── sidepanel/                     # Side panel UI (Chrome Side Panel API)
+│   │   └── sidepanel.html/js
+│   ├── pages/                         # Full-page tabs
+│   │   ├── intervalDialog.html/js     # Interval selection dialog
+│   │   └── completed.html/js          # Success page
+│   ├── popup/                         # Browser action popup
+│   │   └── popup.html/js
+│   └── content/                       # Content scripts
+│       └── content.js
+├── styles/                            # External CSS files
+│   ├── sidepanel.css                  # Side panel styles
+│   ├── popup.css                      # Popup styles
+│   ├── intervalDialog.css             # Interval dialog styles
+│   └── completed.css                  # Completed page styles
+├── manifest.json                      # Extension configuration
+└── assets/                            # Icons and resources
+```
+
+### Modular Design Benefits
+- ✅ **91.7% reduction** in main file size (967 → 80 lines)
+- ✅ **Separation of concerns** - each module has single responsibility
+- ✅ **Easier testing** - modules can be tested independently
+- ✅ **Better maintainability** - changes are isolated to specific modules
+- ✅ **Code reusability** - shared utilities in `src/shared/`
+- ✅ **CSS organization** - external stylesheets for all UI components
 
 ## Privacy
 
@@ -64,26 +109,59 @@ See [PRIVACY_POLICY.md](PRIVACY_POLICY.md) for details.
 
 ## Development
 
-### File Structure
-```
-Daily panel/
-├── background.js          # Service worker, core logic
-├── sidepanel.html/js/css  # Side panel UI
-├── popup.html/js          # Browser action popup
-├── content-banner.js      # In-page notifications
-├── interval-dialog.html/js # Interval selection dialog
-├── completed.html/js      # Success page
-├── manifest.json          # Extension configuration
-└── icons/                 # Extension icons
+### Prerequisites
+- Chrome/Chromium browser (version 116+)
+- Basic knowledge of Chrome Extension APIs
+- ES6 JavaScript modules understanding
+
+### Local Development
+1. Clone the repository
+2. Open `chrome://extensions/`
+3. Enable "Developer mode"
+4. Click "Load unpacked" → select project folder
+5. Make changes → click Reload button on extension card
+
+### Module System
+All background scripts use **ES6 import/export**:
+```javascript
+// Import from modules
+import { getActivePages } from './src/background/bookmarkOperations.js';
+import { startTasksCycle } from './src/background/cycle.js';
+
+// Export from modules
+export async function myFunction() { ... }
 ```
 
-### Key Technologies
-- Vanilla JavaScript (no frameworks)
-- Chrome Extension APIs (Manifest V3)
-- Google Fonts (Outfit, Inter)
-- Custom RoughNotation highlight animation
+**Important:** Manifest V3 requires `"type": "module"` in manifest.json background configuration.
+
+### Debugging
+- **Service Worker:** chrome://extensions → click "service worker" link
+- **Side Panel:** Open panel → right-click → Inspect
+- **Popup:** Right-click extension icon → Inspect popup
+- **Content Script:** Open webpage → F12 → check Console for banners
 
 ## Changelog
+
+### Version 1.0.2 (2025-10-26)
+- 🎯 **Major Refactoring** - Extracted 8 modular components
+- 📉 **91.7% code reduction** in background.js (967 → 80 lines)
+- 🏗️ **ES6 modules** - All background scripts use import/export
+- 📦 **Better organization** - Separated shared utilities and business logic
+- ✅ **No functionality changes** - All features work as before
+- 🧪 **Improved testability** - Each module can be tested independently
+
+### Version 1.0.3 (2025-10-26)
+- 🗂️ **Reorganized folder structure** - Moved `completed.html/js` and `intervalDialog.html/js` from `src/sidepanel/` to `src/pages/`
+- 📁 **Logical separation** - Side Panel API files vs. full-page tabs now in separate folders
+- 🎨 **CSS extraction** - Moved all inline styles to external CSS files in `styles/` folder
+
+### Version 1.0.2 (2025-10-26)
+- 🔧 **Modular refactoring** - Split background.js into 8 ES6 modules
+- 📦 **Better organization** - Separated shared utilities and business logic
+- ✅ **No functionality changes** - All features work as before
+
+### Version 1.0.1 (2025-10-26)
+- 🐛 Chrome extension reload compatibility fix
 
 ### Version 1.0.0 (2025-01-25)
 - 🎉 Initial release

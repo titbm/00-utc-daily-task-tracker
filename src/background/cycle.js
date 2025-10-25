@@ -156,11 +156,11 @@ async function openNextInCycle() {
       await saveCycleState();
       
       if (currentWindowId) {
-        const completedUrl = chrome.runtime.getURL('src/sidepanel/completed.html');
+        const completedUrl = chrome.runtime.getURL('src/pages/completed.html');
         chrome.tabs.create({ url: completedUrl, windowId: currentWindowId });
         currentWindowId = null;
       } else {
-        chrome.tabs.create({ url: chrome.runtime.getURL('src/sidepanel/completed.html') });
+        chrome.tabs.create({ url: chrome.runtime.getURL('src/pages/completed.html') });
       }
       return;
     }
@@ -244,7 +244,7 @@ export async function handleTabRemove(tabId, removeInfo) {
         
         const faviconUrl = `https://www.google.com/s2/favicons?domain=${new URL(page.url).hostname}&sz=32`;
         
-        const dialogUrl = chrome.runtime.getURL('src/sidepanel/intervalDialog.html') + 
+        const dialogUrl = chrome.runtime.getURL('src/pages/intervalDialog.html') + 
           `?bookmarkId=${bookmarkId}` +
           `&title=${encodeURIComponent(parsed.title)}` +
           `&url=${encodeURIComponent(page.url)}` +

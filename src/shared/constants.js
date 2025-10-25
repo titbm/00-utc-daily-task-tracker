@@ -53,7 +53,3 @@ export const ACTIONS = {
   CLOSE_SIDE_PANEL: 'closeSidePanel',
   GET_TAB_STATUS: 'getMyTabStatus'
 };
-
-// Debug режим
-export const DEBUG = false;
-export const log = DEBUG ? console.log.bind(console) : () => {};
