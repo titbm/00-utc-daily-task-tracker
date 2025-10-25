@@ -2,6 +2,15 @@
 
 let banner = null;
 
+// Загружаем Material Symbols если ещё нет
+if (!document.getElementById('daily-panel-material-symbols')) {
+  const link = document.createElement('link');
+  link.id = 'daily-panel-material-symbols';
+  link.rel = 'stylesheet';
+  link.href = 'https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined';
+  document.head.appendChild(link);
+}
+
 // Минимальная реализация RoughNotation underline (извлечено из rough-notation.iife.js)
 // Только необходимый функционал для анимированного подчёркивания
 
@@ -204,19 +213,45 @@ function createHighlightAnimation(element, options = {}) {
   };
 }
 
-// Проверка, является ли текущая вкладка задачей (по URL параметру)
-function isTaskTab() {
-  const urlParams = new URLSearchParams(window.location.search);
-  return urlParams.has('daily_panel_task');
+// Проверка статуса текущей вкладки (задача из цикла, задача из панели, или обычная страница)
+async function getTabStatus() {
+  try {
+    const response = await chrome.runtime.sendMessage({ 
+      action: 'getMyTabStatus'
+    });
+    return response || { isTask: false, fromCycle: false };
+  } catch (error) {
+    return { isTask: false, fromCycle: false };
+  }
 }
 
 // Создание баннера
 async function createBanner() {
-  if (banner || isTaskTab()) return; // Не показываем баннер во вкладках с отработкой
+  if (banner) return;
   
   // Проверяем настройку баннера
   const { bannerEnabled = true } = await chrome.storage.local.get('bannerEnabled');
   if (!bannerEnabled) return; // Баннер отключен в настройках
+  
+  // Получаем статус вкладки
+  const tabStatus = await getTabStatus();
+  
+  // Определяем тип баннера
+  let bannerType = 'normal'; // normal | cycle
+  let bannerText = 'Daily tasks are not completed';
+  let bannerIcon = '';
+  let bannerColor = '#000000';
+  
+  if (tabStatus.isTask && tabStatus.fromCycle) {
+    // Вкладка из цикла
+    bannerType = 'cycle';
+    bannerText = 'Task cycle is running';
+    bannerIcon = '<span class="material-symbols-outlined" style="font-size: 18px;">sync</span>';
+    bannerColor = '#8B00FF'; // Фиолетовый для цикла
+  } else if (tabStatus.isTask) {
+    // Вкладка открыта вручную из панели - не показываем баннер
+    return;
+  }
   
   banner = document.createElement('div');
   banner.id = 'daily-panel-banner';
@@ -236,13 +271,16 @@ async function createBanner() {
       z-index: 999999;
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     ">
-      <span style="font-weight: 400; color: #000000; font-size: 14px;">
-        Daily tasks are not completed
-      </span>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        ${bannerIcon}
+        <span style="font-weight: ${bannerType === 'cycle' ? '500' : '400'}; color: ${bannerColor}; font-size: 14px;">
+          ${bannerText}
+        </span>
+      </div>
       <button id="daily-panel-start-btn" style="
-        background: #000000;
+        background: ${bannerColor};
         color: #ffffff;
-        border: 1px solid #000000;
+        border: 1px solid ${bannerColor};
         padding: 6px 16px;
         border-radius: 6px;
         font-size: 13px;
@@ -250,6 +288,7 @@ async function createBanner() {
         cursor: pointer;
         transition: all 0.2s;
         font-family: 'Inter', sans-serif;
+        ${bannerType === 'cycle' ? 'display: none;' : ''}
       ">
         Start
       </button>
@@ -261,18 +300,43 @@ async function createBanner() {
   // Добавляем отступ для body чтобы контент не перекрывался
   document.body.style.paddingTop = '36px';
   
-  // Обработчик кнопки
-  const startBtn = banner.querySelector('#daily-panel-start-btn');
-  startBtn.addEventListener('mouseenter', () => {
-    startBtn.style.background = '#333333';
-  });
-  startBtn.addEventListener('mouseleave', () => {
-    startBtn.style.background = '#000000';
-  });
-  startBtn.addEventListener('click', () => {
-    // Отправляем сообщение background script для запуска цикла
-    chrome.runtime.sendMessage({ action: 'startDailyTasks' });
-  });
+  // Обработчик кнопки (только для normal баннера)
+  if (bannerType === 'normal') {
+    const startBtn = banner.querySelector('#daily-panel-start-btn');
+    startBtn.addEventListener('mouseenter', () => {
+      startBtn.style.background = '#333333';
+      startBtn.style.borderColor = '#333333';
+    });
+    startBtn.addEventListener('mouseleave', () => {
+      startBtn.style.background = bannerColor;
+      startBtn.style.borderColor = bannerColor;
+    });
+    startBtn.addEventListener('click', () => {
+      // Отправляем сообщение background script для запуска цикла
+      chrome.runtime.sendMessage({ action: 'startDailyTasks' });
+    });
+  }
+  
+  // Для cycle баннера добавляем анимацию иконки
+  if (bannerType === 'cycle') {
+    const icon = banner.querySelector('.material-symbols-outlined');
+    if (icon) {
+      icon.style.animation = 'rotate 2s linear infinite';
+      
+      // Добавляем keyframes если ещё нет
+      if (!document.getElementById('daily-panel-banner-animations')) {
+        const style = document.createElement('style');
+        style.id = 'daily-panel-banner-animations';
+        style.textContent = `
+          @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+          }
+        `;
+        document.head.appendChild(style);
+      }
+    }
+  }
 }
 
 // Удаление баннера
@@ -286,12 +350,6 @@ function removeBanner() {
 
 // Проверка наличия активных страниц
 async function checkActiveTasks() {
-  // Если это вкладка с задачей (проверяем URL) - не показываем баннер
-  if (isTaskTab()) {
-    removeBanner();
-    return;
-  }
-  
   try {
     const response = await chrome.runtime.sendMessage({ action: 'getActivePages' });
     const activePages = response.pages || [];

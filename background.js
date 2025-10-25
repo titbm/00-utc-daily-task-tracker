@@ -960,6 +960,24 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   } else if (request.action === 'startDailyTasks') {
     startTasksCycle();
     sendResponse({ success: true });
+  } else if (request.action === 'getMyTabStatus') {
+    // Content script спрашивает: "Я задача? Я из цикла?"
+    const tabId = sender.tab?.id;
+    if (tabId) {
+      const tabInfo = openedTabs.get(tabId);
+      if (tabInfo) {
+        sendResponse({ 
+          isTask: true, 
+          fromCycle: tabInfo.fromCycle,
+          isIntervalDialog: tabInfo.isIntervalDialog
+        });
+      } else {
+        sendResponse({ isTask: false, fromCycle: false });
+      }
+    } else {
+      sendResponse({ isTask: false, fromCycle: false });
+    }
+    return true;
   } else if (request.action === 'toggleBanner') {
     // Уведомляем все вкладки об изменении настройки баннера
     chrome.tabs.query({}, (tabs) => {
