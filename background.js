@@ -506,6 +506,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
 const openedTabs = new Map(); // tabId -> bookmarkId (ВСЕ вкладки Daily Panel)
 const cycleOpenedTabs = new Set(); // tabId вкладок из цикла (для различения от одиночных)
 const intervalDialogTabs = new Set(); // tabId диалога (только для отслеживания)
+const intervalDialogFromCycle = new Set(); // tabId диалогов, открытых ДЛЯ вкладок из цикла
 let isCycleMode = false; // Флаг режима автоматической отработки цикла
 let currentWindowId = null; // Сохраняем windowId для открытия панели в конце
 let cycleQueue = []; // Очередь страниц для цикла
@@ -542,6 +543,13 @@ let isProcessingNext = false; // Флаг блокировки параллел�
         intervalDialogTabs.add(Number(tabId));
       });
     }
+    
+    // Восстанавливаем intervalDialogFromCycle
+    if (cycleState.intervalDialogFromCycle) {
+      cycleState.intervalDialogFromCycle.forEach(tabId => {
+        intervalDialogFromCycle.add(Number(tabId));
+      });
+    }
   }
 })();
 
@@ -556,7 +564,8 @@ async function saveCycleState() {
       isProcessingNext,
       openedTabs: Object.fromEntries(openedTabs),
       cycleOpenedTabs: Array.from(cycleOpenedTabs),
-      intervalDialogTabs: Array.from(intervalDialogTabs)
+      intervalDialogTabs: Array.from(intervalDialogTabs),
+      intervalDialogFromCycle: Array.from(intervalDialogFromCycle)
     }
   });
 }
@@ -565,13 +574,19 @@ chrome.tabs.onRemoved.addListener(async (tabId, removeInfo) => {
   // Проверяем, не диалог ли интервала закрылся
   if (intervalDialogTabs.has(tabId)) {
     intervalDialogTabs.delete(tabId);
+    
+    // Проверяем: этот диалог был для вкладки из цикла?
+    const wasFromCycle = intervalDialogFromCycle.has(tabId);
+    if (wasFromCycle) {
+      intervalDialogFromCycle.delete(tabId);
+    }
+    
     await saveCycleState();
     
-    // Продолжаем цикл - переходим к следующей странице
-    if (isCycleMode) {
+    // Продолжаем цикл ТОЛЬКО если диалог был для вкладки из цикла
+    if (wasFromCycle && isCycleMode) {
       currentCycleIndex++;
       await saveCycleState();
-      // Используем немедленный вызов вместо setTimeout для быстрого закрытия
       openNextInCycle();
     }
     return;
@@ -618,10 +633,16 @@ chrome.tabs.onRemoved.addListener(async (tabId, removeInfo) => {
         chrome.tabs.create({ url: dialogUrl }, async (dialogTab) => {
           if (dialogTab) {
             intervalDialogTabs.add(dialogTab.id);
+            
+            // Помечаем если диалог открыт для вкладки из цикла
+            if (cycleOpenedTabs.has(tabId)) {
+              intervalDialogFromCycle.add(dialogTab.id);
+            }
+            
             await saveCycleState();
           }
         });
-        // Цикл продолжится когда диалог закроется
+        // Цикл продолжится когда диалог закроется (если был из цикла)
         
       } else {
         // Тип midnight - сразу перемещаем в Completed
