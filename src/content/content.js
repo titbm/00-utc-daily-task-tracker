@@ -277,8 +277,8 @@ async function createBanner() {
         cursor: default;
         animation: cycleBounce 0.6s ease-out;
       " id="cycle-indicator">
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-2.98 0-5.4-2.42-5.4-5.4 0-1.81.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1z" fill="#000000"/>
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="animation: moonRotate 3s linear infinite;">
+          <path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-2.98 0-5.4-2.42-5.4-5.4 0-1.81.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1z" stroke="#000000" stroke-width="1.5" fill="none"/>
         </svg>
       </div>
       <style>
@@ -286,6 +286,10 @@ async function createBanner() {
           0% { transform: scale(0); opacity: 0; }
           50% { transform: scale(1.1); }
           100% { transform: scale(1); opacity: 1; }
+        }
+        @keyframes moonRotate {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
         }
       </style>
     `;
