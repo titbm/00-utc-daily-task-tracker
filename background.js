@@ -793,15 +793,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       sendResponse({ success: true });
     });
     return true; // Асинхронный ответ
-  } else if (request.action === 'openPage') {
-    chrome.tabs.create({ url: request.url }, async (tab) => {
-      if (tab && request.bookmarkId) {
-        openedTabs.set(tab.id, request.bookmarkId);
-        await saveCycleState();
-      }
-      sendResponse({ success: true });
-    });
-    return true;
   } else if (request.action === 'getActivePages') {
     getActivePages().then(pages => sendResponse({ pages }));
     return true; // Асинхронный ответ
