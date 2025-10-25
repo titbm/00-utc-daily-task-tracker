@@ -273,7 +273,7 @@ async function createBanner() {
         align-items: center;
         justify-content: center;
         z-index: 999999;
-        cursor: pointer;
+        cursor: default;
         transition: transform 0.2s ease;
       " id="cycle-indicator">
         <span class="material-symbols-outlined" style="

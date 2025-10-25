@@ -917,7 +917,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         sendResponse({ 
           isTask: true, 
           fromCycle: tabInfo.fromCycle,
-          isIntervalDialog: tabInfo.isIntervalDialog
+          isIntervalDialog: tabInfo.isIntervalDialog,
+          dialogFromCycle: tabInfo.dialogFromCycle
         });
       } else {
         sendResponse({ isTask: false, fromCycle: false });

@@ -8,7 +8,7 @@ const defaultInterval = parseInt(urlParams.get('interval') || '24');
 
 // Проверяем открыт ли диалог из цикла и показываем индикатор
 chrome.runtime.sendMessage({ action: 'getMyTabStatus' }, (response) => {
-  if (response && response.fromCycle) {
+  if (response && response.dialogFromCycle) {
     // Показываем индикатор цикла
     const cycleIndicator = document.getElementById('cycle-indicator');
     if (cycleIndicator) {
