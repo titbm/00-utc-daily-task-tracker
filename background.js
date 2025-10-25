@@ -492,6 +492,21 @@ chrome.tabs.onRemoved.addListener(async (tabId, removeInfo) => {
   
   // Проверяем, не диалог ли интервала закрылся
   if (tabInfo.isIntervalDialog) {
+    // Проверяем, есть ли сохраненный интервал в session storage
+    const storageKey = `intervalDialog_${tabInfo.bookmarkId}`;
+    chrome.storage.session.get(storageKey, async (result) => {
+      if (result[storageKey]) {
+        const { intervalHours } = result[storageKey];
+        
+        // Обновляем только интервал (страница уже в Completed)
+        await setPageInterval(tabInfo.bookmarkId, intervalHours);
+        notifyPanelUpdate();
+        
+        // Очищаем из storage
+        chrome.storage.session.remove(storageKey);
+      }
+    });
+    
     openedTabs.delete(tabId);
     await saveCycleState();
     
