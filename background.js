@@ -334,7 +334,6 @@ function notifyPanelUpdate() {
 }
 
 // Функция запуска периодической проверки
-let fastCheckInterval = null;
 let sidePanelConnections = 0;
 
 async function startTimeChecker() {
@@ -355,33 +354,15 @@ chrome.alarms.onAlarm.addListener((alarm) => {
   }
 });
 
-// Функция для быстрых проверок когда панель открыта
-function startFastChecks() {
-  if (fastCheckInterval) return; // Уже запущен
-  
-  fastCheckInterval = setInterval(() => {
-    checkAndRestoreOldPages();
-  }, 5000); // Каждые 5 секунд
-}
-
-function stopFastChecks() {
-  if (fastCheckInterval) {
-    clearInterval(fastCheckInterval);
-    fastCheckInterval = null;
-  }
-}
-
-// Слушаем подключения от sidepanel
+// Слушаем подключения от sidepanel (для отслеживания активных соединений)
 chrome.runtime.onConnect.addListener((port) => {
   if (port.name === 'sidepanel') {
     sidePanelConnections++;
-    startFastChecks();
     
     port.onDisconnect.addListener(() => {
       sidePanelConnections--;
       if (sidePanelConnections <= 0) {
         sidePanelConnections = 0;
-        stopFastChecks();
       }
     });
   }
