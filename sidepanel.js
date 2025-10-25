@@ -19,7 +19,6 @@ class DailyPanel {
     // Кнопки и элементы управления
     this.restoreCompletedBtn = document.getElementById('restoreAllCompleted');
     this.startTasksBtn = document.getElementById('startAllTasks');
-    this.sectionTitle = document.getElementById('sectionTitle');
     
     // Счетчики
     this.activeCount = document.getElementById('activeCount');
@@ -77,13 +76,6 @@ class DailyPanel {
         if (this.currentSection !== 'completed') {
           this.toggleSection();
         }
-      });
-    }
-    
-    // Старые обработчики для совместимости
-    if (this.sectionTitle) {
-      this.sectionTitle.addEventListener('click', () => {
-        this.toggleSection();
       });
     }
     
@@ -200,10 +192,6 @@ class DailyPanel {
   }
   
   toggleSection() {
-    const titleText = this.sectionTitle ? this.sectionTitle.querySelector('.title-text') : null;
-    const startAllBtn = document.getElementById('startAllTasks');
-    const restoreAllBtn = document.getElementById('restoreAllCompleted');
-    
     if (this.currentSection === 'active') {
       this.currentSection = 'completed';
       this.activeSection.classList.remove('active');
@@ -213,11 +201,9 @@ class DailyPanel {
       if (this.activeTab) this.activeTab.classList.remove('active');
       if (this.completedTab) this.completedTab.classList.add('active');
       
-      if (titleText) titleText.textContent = 'Завершенные';
-      
       // Показываем кнопку Reset, скрываем кнопку Start в шапке
-      if (startAllBtn) startAllBtn.style.display = 'none';
-      if (restoreAllBtn) restoreAllBtn.style.display = 'flex';
+      if (this.startTasksBtn) this.startTasksBtn.style.display = 'none';
+      if (this.restoreCompletedBtn) this.restoreCompletedBtn.style.display = 'flex';
     } else {
       this.currentSection = 'active';
       this.completedSection.classList.remove('active');
@@ -227,11 +213,9 @@ class DailyPanel {
       if (this.completedTab) this.completedTab.classList.remove('active');
       if (this.activeTab) this.activeTab.classList.add('active');
       
-      if (titleText) titleText.textContent = 'Активные';
-      
       // Показываем кнопку Start, скрываем кнопку Reset в шапке
-      if (startAllBtn) startAllBtn.style.display = 'flex';
-      if (restoreAllBtn) restoreAllBtn.style.display = 'none';
+      if (this.startTasksBtn) this.startTasksBtn.style.display = 'flex';
+      if (this.restoreCompletedBtn) this.restoreCompletedBtn.style.display = 'none';
     }
     
     // Обновляем подчеркивание
