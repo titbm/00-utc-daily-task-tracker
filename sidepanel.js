@@ -435,6 +435,14 @@ class DailyPanel {
           const minutes = Math.floor((t % 3600000) / 60000);
           const seconds = Math.floor((t % 60000) / 1000);
           timerBadge.textContent = `${String(hours).padStart(2,'0')}:${String(minutes).padStart(2,'0')}:${String(seconds).padStart(2,'0')}`;
+          
+          // Если время вышло, запрашиваем проверку восстановления
+          if (t <= 0 && restoreAtMs) {
+            clearInterval(this._completedTimers[page.id]);
+            delete this._completedTimers[page.id];
+            // Запрашиваем background проверить и восстановить страницы
+            chrome.runtime.sendMessage({ action: 'checkRestore' });
+          }
         };
         
         updateBadge();

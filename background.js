@@ -940,6 +940,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       });
     });
     sendResponse({ success: true });
+  } else if (request.action === 'checkRestore') {
+    // Sidepanel запрашивает немедленную проверку восстановления (когда таймер достиг нуля)
+    checkAndRestoreOldPages();
+    sendResponse({ status: 'checking' });
   } else if (request.action === 'addCurrentTab') {
     // Добавление текущей вкладки в активные задачи
     (async () => {
