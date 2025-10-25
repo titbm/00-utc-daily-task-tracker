@@ -31,6 +31,9 @@ class DailyPanel {
     this._timerElements = {}; // pageId -> { element, restoreAtMs }
     this._globalTimerInterval = null;
     
+    // Таймер для проверки midnight задач в полночь UTC
+    this._midnightCheckTimeout = null;
+    
     // Кеш для оптимизации перерисовки
     this._cachedActivePages = null;
     this._cachedCompletedPages = null;
@@ -57,6 +60,9 @@ class DailyPanel {
     this.loadPages();
     this.setupEventListeners();
     this.initTabHighlighter();
+    
+    // Планируем проверку midnight задач в полночь UTC
+    this.scheduleMidnightCheck();
     
     // Подключаемся к background для включения быстрых проверок
     this.port = chrome.runtime.connect({ name: 'sidepanel' });
@@ -365,6 +371,31 @@ class DailyPanel {
     }
   }
   
+  // Проверка midnight задач - вызывается в полночь UTC
+  scheduleMidnightCheck() {
+    // Очищаем предыдущий таймер если был
+    if (this._midnightCheckTimeout) {
+      clearTimeout(this._midnightCheckTimeout);
+    }
+    
+    // Вычисляем время до следующей полуночи UTC
+    const now = new Date();
+    const tomorrow = new Date(Date.UTC(
+      now.getUTCFullYear(),
+      now.getUTCMonth(),
+      now.getUTCDate() + 1,
+      0, 0, 0, 0
+    ));
+    const msUntilMidnight = tomorrow.getTime() - now.getTime();
+    
+    // Планируем проверку на полночь
+    this._midnightCheckTimeout = setTimeout(() => {
+      this.requestRestoreCheck();
+      // Планируем следующую проверку на следующую полночь
+      this.scheduleMidnightCheck();
+    }, msUntilMidnight);
+  }
+
   createPageElement(page, index, isCompleted = false) {
     const div = document.createElement('div');
     div.className = 'page-item';
