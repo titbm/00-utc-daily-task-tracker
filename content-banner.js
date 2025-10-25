@@ -2,62 +2,201 @@
 
 let banner = null;
 
-// Минимальная реализация highlight анимации (вместо 52KB RoughNotation)
+// Минимальная реализация RoughNotation underline (извлечено из rough-notation.iife.js)
+// Только необходимый функционал для анимированного подчёркивания
+
+// Random number generator с seed для консистентности
+class RoughRandomizer {
+  constructor(seed) {
+    this.seed = seed;
+  }
+  next() {
+    return this.seed
+      ? (2 ** 31 - 1 & (this.seed = Math.imul(48271, this.seed))) / 2 ** 31
+      : Math.random();
+  }
+}
+
+// Получить случайное число из randomizer'а
+function getRandomNumber(config) {
+  if (!config.randomizer) {
+    config.randomizer = new RoughRandomizer(config.seed || 0);
+  }
+  return config.randomizer.next();
+}
+
+// Случайное смещение в диапазоне
+function offsetValue(min, max, config, roughnessGain = 1) {
+  return config.roughness * roughnessGain * (getRandomNumber(config) * (max - min) + min);
+}
+
+// Случайное смещение от 0
+function offset(x, config, roughnessGain = 1) {
+  return offsetValue(-x, x, config, roughnessGain);
+}
+
+// Рисование линии с roughness эффектом
+function drawRoughLine(x1, y1, x2, y2, config) {
+  const lengthSq = Math.pow(x1 - x2, 2) + Math.pow(y1 - y2, 2);
+  const length = Math.sqrt(lengthSq);
+  
+  let roughnessGain = 1;
+  if (length < 200) roughnessGain = 1;
+  else if (length > 500) roughnessGain = 0.4;
+  else roughnessGain = -0.0016668 * length + 1.233334;
+  
+  let maxOffset = config.maxRandomnessOffset || 0;
+  if (maxOffset * maxOffset * 100 > lengthSq) {
+    maxOffset = length / 10;
+  }
+  
+  const divergePoint = 0.2 + 0.2 * getRandomNumber(config);
+  
+  let controlPoint1X = config.bowing * config.maxRandomnessOffset * (y2 - y1) / 200;
+  let controlPoint1Y = config.bowing * config.maxRandomnessOffset * (x1 - x2) / 200;
+  controlPoint1X = offset(controlPoint1X, config, roughnessGain);
+  controlPoint1Y = offset(controlPoint1Y, config, roughnessGain);
+  
+  const ops = [];
+  
+  // Move to start
+  ops.push({
+    op: 'move',
+    data: [x1 + offset(maxOffset, config, roughnessGain), y1 + offset(maxOffset, config, roughnessGain)]
+  });
+  
+  // Bezier curve to end
+  ops.push({
+    op: 'bcurveTo',
+    data: [
+      controlPoint1X + x1 + (x2 - x1) * divergePoint + offset(maxOffset, config, roughnessGain),
+      controlPoint1Y + y1 + (y2 - y1) * divergePoint + offset(maxOffset, config, roughnessGain),
+      controlPoint1X + x1 + 2 * (x2 - x1) * divergePoint + offset(maxOffset, config, roughnessGain),
+      controlPoint1Y + y1 + 2 * (y2 - y1) * divergePoint + offset(maxOffset, config, roughnessGain),
+      x2 + offset(maxOffset, config, roughnessGain),
+      y2 + offset(maxOffset, config, roughnessGain)
+    ]
+  });
+  
+  return ops;
+}
+
+// Конвертация операций в SVG path
+function opsToPath(ops) {
+  let path = '';
+  for (const op of ops) {
+    const data = op.data;
+    switch (op.op) {
+      case 'move':
+        path += `M${data[0]} ${data[1]} `;
+        break;
+      case 'bcurveTo':
+        path += `C${data[0]} ${data[1]}, ${data[2]} ${data[3]}, ${data[4]} ${data[5]} `;
+        break;
+      case 'lineTo':
+        path += `L${data[0]} ${data[1]} `;
+        break;
+    }
+  }
+  return path.trim();
+}
+
+// Создание highlight анимации (как в RoughNotation) - эффект маркера-выделителя
 function createHighlightAnimation(element, options = {}) {
   const color = options.color || '#FFC107';
   const duration = options.animationDuration || 600;
-  const padding = options.padding || 2;
+  const iterations = 2; // Количество линий
+  const padding = [5, 5, 5, 5]; // top, right, bottom, left
   
-  // Создаём SVG для рисованного эффекта
+  // Получаем размеры элемента
   const rect = element.getBoundingClientRect();
-  const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-  const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
   
+  // Для highlight используется особый конфиг с roughness: 3
+  const config = {
+    maxRandomnessOffset: 2,
+    roughness: 3, // Больше roughness для эффекта маркера
+    bowing: 1,
+    stroke: color,
+    strokeWidth: 0.95 * rect.height, // Толстая линия = 95% высоты
+    seed: Math.floor(Math.random() * 2 ** 31)
+  };
+  
+  const strokeWidth = 0.95 * rect.height; // Толстая линия для заполнения фона
+  
+  // Создаём SVG контейнер
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  svg.style.position = 'absolute';
-  svg.style.top = (rect.top + scrollTop - padding) + 'px';
-  svg.style.left = (rect.left + scrollLeft - padding) + 'px';
-  svg.style.width = (rect.width + padding * 2) + 'px';
-  svg.style.height = (rect.height + padding * 2) + 'px';
-  svg.style.pointerEvents = 'none';
-  svg.style.zIndex = '9998';
-  
-  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-  const w = rect.width + padding * 2;
-  const h = rect.height + padding * 2;
-  
-  // Рисованный прямоугольник (имитация от руки)
-  const roughPath = `
-    M ${padding},${padding} 
-    L ${w-padding},${padding+1} 
-    L ${w-padding+1},${h-padding} 
-    L ${padding+1},${h-padding-1} 
-    Z
+  svg.setAttribute('class', 'rough-annotation');
+  svg.style.cssText = `
+    position: absolute;
+    top: 0;
+    left: 0;
+    overflow: visible;
+    pointer-events: none;
+    width: 100px;
+    height: 100px;
+    z-index: -1;
   `;
   
-  path.setAttribute('d', roughPath);
-  path.setAttribute('fill', color);
-  path.setAttribute('fill-opacity', '0.4');
-  path.setAttribute('stroke', color);
-  path.setAttribute('stroke-width', '1');
-  path.style.opacity = '0';
+  // Вставляем SVG перед элементом (как в оригинале для highlight)
+  element.insertAdjacentElement('beforebegin', svg);
   
-  svg.appendChild(path);
-  document.body.appendChild(svg);
+  // Позиция линии highlight (посередине высоты элемента)
+  const svgRect = svg.getBoundingClientRect();
+  const lineY = (rect.top || rect.y) + rect.height / 2 - (svgRect.top || svgRect.y);
+  const lineX1 = (rect.left || rect.x) - (svgRect.left || svgRect.x);
+  const lineX2 = lineX1 + rect.width;
+  
+  // Генерируем несколько линий (iterations)
+  const paths = [];
+  for (let i = 0; i < iterations; i++) {
+    const ops = i % 2 
+      ? drawRoughLine(lineX2, lineY, lineX1, lineY, config) // справа налево
+      : drawRoughLine(lineX1, lineY, lineX2, lineY, config); // слева направо
+    
+    const pathString = opsToPath(ops);
+    paths.push(pathString);
+  }
+  
+  // Создаём path элементы с анимацией
+  const pathElements = [];
+  let totalLength = 0;
+  
+  for (const pathString of paths) {
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', pathString);
+    path.setAttribute('fill', 'none');
+    path.setAttribute('stroke', color);
+    path.setAttribute('stroke-width', String(strokeWidth));
+    
+    svg.appendChild(path);
+    
+    const length = path.getTotalLength();
+    totalLength += length;
+    
+    pathElements.push({ path, length });
+  }
   
   return {
     show: () => {
-      // Плавное появление
-      let opacity = 0;
-      const step = 1000 / duration / 60; // 60 FPS
-      const interval = setInterval(() => {
-        opacity += step;
-        if (opacity >= 1) {
-          opacity = 1;
-          clearInterval(interval);
-        }
-        path.style.opacity = opacity;
-      }, 1000 / 60);
+      // Добавляем keyframe анимацию если ещё нет
+      if (!window.__rno_kf_s) {
+        const style = document.createElement('style');
+        style.textContent = '@keyframes rough-notation-dash { to { stroke-dashoffset: 0; } }';
+        document.head.appendChild(style);
+        window.__rno_kf_s = true;
+      }
+      
+      // Анимируем каждый path
+      let delay = 0;
+      for (const { path, length } of pathElements) {
+        const animDuration = totalLength ? duration * (length / totalLength) : 0;
+        
+        path.style.strokeDashoffset = String(length);
+        path.style.strokeDasharray = String(length);
+        path.style.animation = `rough-notation-dash ${animDuration}ms ease-out ${delay}ms forwards`;
+        
+        delay += animDuration;
+      }
     },
     remove: () => {
       svg.remove();
@@ -227,7 +366,7 @@ function showNotification(text, title, type) {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 16px;
+    gap: 8px;
     margin-bottom: 24px;
   `;
 
@@ -257,7 +396,8 @@ function showNotification(text, title, type) {
   `;
   
   if (type === 'success') {
-    header.innerHTML = 'Task <span id="notification-highlight">added</span>';
+    header.textContent = 'Task added';
+    header.id = 'notification-highlight'; // ID на весь заголовок
   } else {
     header.textContent = 'Task already added';
   }
