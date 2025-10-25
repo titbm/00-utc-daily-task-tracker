@@ -27,8 +27,9 @@ class DailyPanel {
     // Текущая активная секция
     this.currentSection = 'active'; // 'active' или 'completed'
     
-    // Словарь таймеров для отработанных элементов (по id)
-    this._completedTimers = {};
+    // Один глобальный таймер для всех completed задач
+    this._timerElements = {}; // pageId -> { element, restoreAtMs }
+    this._globalTimerInterval = null;
     
     // Кеш для оптимизации перерисовки
     this._cachedActivePages = null;
@@ -299,10 +300,11 @@ class DailyPanel {
   }
   
   renderPages(pages, listElement, emptyStateElement, isCompleted = false) {
-    // Очищаем любые таймеры перед перерендером списка
-    if (isCompleted) {
-      Object.values(this._completedTimers).forEach(t => clearInterval(t));
-      this._completedTimers = {};
+    // Останавливаем глобальный таймер если был
+    if (isCompleted && this._globalTimerInterval) {
+      clearInterval(this._globalTimerInterval);
+      this._globalTimerInterval = null;
+      this._timerElements = {};
     }
 
     listElement.innerHTML = '';
@@ -318,6 +320,49 @@ class DailyPanel {
       const pageElement = this.createPageElement(page, index, isCompleted);
       listElement.appendChild(pageElement);
     });
+    
+    // Запускаем глобальный таймер для всех completed задач
+    if (isCompleted && Object.keys(this._timerElements).length > 0) {
+      this.startGlobalTimer();
+    }
+  }
+  
+  // Один setInterval для всех таймеров
+  startGlobalTimer() {
+    // Сначала обновляем все таймеры сразу
+    this.updateAllTimers();
+    
+    // Затем запускаем интервал
+    this._globalTimerInterval = setInterval(() => {
+      this.updateAllTimers();
+    }, 1000);
+  }
+  
+  updateAllTimers() {
+    const nowMs = Date.now();
+    let hasExpired = false;
+    
+    for (const [pageId, data] of Object.entries(this._timerElements)) {
+      const { element, restoreAtMs } = data;
+      const t = Math.max(0, restoreAtMs - nowMs);
+      
+      const hours = Math.floor(t / 3600000);
+      const minutes = Math.floor((t % 3600000) / 60000);
+      const seconds = Math.floor((t % 60000) / 1000);
+      
+      element.textContent = `${String(hours).padStart(2,'0')}:${String(minutes).padStart(2,'0')}:${String(seconds).padStart(2,'0')}`;
+      
+      // Если время истекло, помечаем для восстановления
+      if (t <= 0) {
+        delete this._timerElements[pageId];
+        hasExpired = true;
+      }
+    }
+    
+    // Если хотя бы один таймер истек, запрашиваем проверку (debounced)
+    if (hasExpired) {
+      this.requestRestoreCheck();
+    }
   }
   
   createPageElement(page, index, isCompleted = false) {
@@ -443,25 +488,10 @@ class DailyPanel {
           }
         }
         
-        const updateBadge = () => {
-          const nowMs = Date.now();
-          const t = restoreAtMs ? Math.max(0, restoreAtMs - nowMs) : 0;
-          const hours = Math.floor(t / 3600000);
-          const minutes = Math.floor((t % 3600000) / 60000);
-          const seconds = Math.floor((t % 60000) / 1000);
-          timerBadge.textContent = `${String(hours).padStart(2,'0')}:${String(minutes).padStart(2,'0')}:${String(seconds).padStart(2,'0')}`;
-          
-          // Если время вышло, запрашиваем проверку восстановления
-          if (t <= 0 && restoreAtMs) {
-            clearInterval(this._completedTimers[page.id]);
-            delete this._completedTimers[page.id];
-            // Запрашиваем проверку с debounce (собираем множественные запросы в один)
-            this.requestRestoreCheck();
-          }
-        };
-        
-        updateBadge();
-        this._completedTimers[page.id] = setInterval(updateBadge, 1000);
+        // Сохраняем элемент и время восстановления для глобального таймера
+        if (restoreAtMs) {
+          this._timerElements[page.id] = { element: timerBadge, restoreAtMs };
+        }
         
         indicator.appendChild(timerBadge);
       }
