@@ -333,6 +333,16 @@ chrome.runtime.onMessage.addListener((message) => {
 
 // Функция для показа уведомления
 function showNotification(text, title, type) {
+  // Загружаем Outfit шрифт если ещё не загружен
+  if (!document.getElementById('daily-panel-outfit-font')) {
+    const style = document.createElement('style');
+    style.id = 'daily-panel-outfit-font';
+    style.textContent = `
+      @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600&display=swap');
+    `;
+    document.head.appendChild(style);
+  }
+  
   // Удаляем предыдущее уведомление если есть
   const existing = document.getElementById('daily-panel-notification');
   if (existing) {
@@ -349,7 +359,7 @@ function showNotification(text, title, type) {
     transform: translate(-50%, -50%);
     background: #ffffff;
     color: #000000;
-    padding: 20px;
+    padding: 24px 20px 20px 20px;
     border-radius: 16px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
     z-index: 1000000;
@@ -366,9 +376,20 @@ function showNotification(text, title, type) {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
-    margin-bottom: 24px;
+    margin-bottom: 16px;
   `;
+  
+  // Внутренний контейнер для иконки и текста (только они подсвечиваются)
+  const highlightWrapper = document.createElement('div');
+  highlightWrapper.style.cssText = `
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  `;
+  
+  if (type === 'success') {
+    highlightWrapper.id = 'notification-highlight'; // ID только на иконку + текст
+  }
 
   // Иконка schedule (без фона)
   const icon = document.createElement('div');
@@ -389,7 +410,7 @@ function showNotification(text, title, type) {
   header.style.cssText = `
     font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     font-size: 20px;
-    font-weight: 500;
+    font-weight: 400;
     color: #000000;
     margin: 0;
     line-height: 1.2;
@@ -397,13 +418,13 @@ function showNotification(text, title, type) {
   
   if (type === 'success') {
     header.textContent = 'Task added';
-    header.id = 'notification-highlight'; // ID на весь заголовок
   } else {
     header.textContent = 'Task already added';
   }
 
-  headerContainer.appendChild(icon);
-  headerContainer.appendChild(header);
+  highlightWrapper.appendChild(icon);
+  highlightWrapper.appendChild(header);
+  headerContainer.appendChild(highlightWrapper);
 
   // Контейнер для страницы (стиль как .page-item)
   const pageContainer = document.createElement('div');
@@ -477,7 +498,7 @@ function showNotification(text, title, type) {
   requestAnimationFrame(() => {
     notification.style.opacity = '1';
     
-    // Применяем минимальную highlight анимацию
+    // Применяем минимальную highlight анимацию на весь контейнер (иконка + заголовок)
     if (type === 'success') {
       const highlightElement = document.getElementById('notification-highlight');
       if (highlightElement) {
