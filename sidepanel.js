@@ -50,7 +50,7 @@ class DailyPanel {
     this._restoreCheckTimeout = setTimeout(() => {
       chrome.runtime.sendMessage({ action: 'checkRestore' });
       this._restoreCheckTimeout = null;
-    }, 500); // Подождем 500мс, соберем все истекшие таймеры
+    }, 2000); // 2 секунды - собираем все истекшие таймеры за это время
   }
   
   init() {
