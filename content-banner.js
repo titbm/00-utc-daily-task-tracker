@@ -229,10 +229,6 @@ async function getTabStatus() {
 async function createBanner() {
   if (banner) return;
   
-  // Проверяем настройку баннера
-  const { bannerEnabled = true } = await chrome.storage.local.get('bannerEnabled');
-  if (!bannerEnabled) return; // Баннер отключен в настройках
-  
   // Получаем статус вкладки
   const tabStatus = await getTabStatus();
   
@@ -254,6 +250,12 @@ async function createBanner() {
     bannerColor = '#FFA500'; // Оранжевый для панели
   }
   // else - обычная страница, показываем normal баннер
+  
+  // Проверяем настройку баннера ТОЛЬКО для обычного баннера
+  if (bannerType === 'normal') {
+    const { bannerEnabled = true } = await chrome.storage.local.get('bannerEnabled');
+    if (!bannerEnabled) return; // Баннер отключен в настройках
+  }
   
   banner = document.createElement('div');
   banner.id = 'daily-panel-banner';
