@@ -1,3 +1,7 @@
+// Debug mode - set to false for production
+const DEBUG = false;
+const log = DEBUG ? console.log.bind(console) : () => {};
+
 chrome.runtime.onInstalled.addListener(async () => {
   // Создаем контекстное меню для добавления страниц в панель
   chrome.contextMenus.create({
@@ -31,7 +35,7 @@ async function initializeBookmarksFolder() {
   // Проверяем блокировку через session storage
   const lockStatus = await chrome.storage.session.get('isInitializing');
   if (lockStatus.isInitializing) {
-    console.log('⏳ Already initializing, skipping...');
+    log('⏳ Already initializing, skipping...');
     return;
   }
   
@@ -71,9 +75,9 @@ async function initializeBookmarksFolder() {
         parentId: parentId,
         title: FOLDER_NAME
       });
-      console.log('✅ Created folder:', FOLDER_NAME);
+      log('✅ Created folder:', FOLDER_NAME);
     } else {
-      console.log('📁 Found existing folder:', FOLDER_NAME);
+      log('📁 Found existing folder:', FOLDER_NAME);
     }
     
     // Получаем подпапки (или создаём их)
@@ -87,7 +91,7 @@ async function initializeBookmarksFolder() {
         parentId: dailyPanelFolder.id,
         title: 'Active'
       });
-      console.log('✅ Created Active folder');
+      log('✅ Created Active folder');
     }
     
     if (!completedFolder) {
@@ -95,7 +99,7 @@ async function initializeBookmarksFolder() {
         parentId: dailyPanelFolder.id,
         title: 'Completed'
       });
-      console.log('✅ Created Completed folder');
+      log('✅ Created Completed folder');
     }
     
     // Сохраняем ID папок в session storage
@@ -105,7 +109,7 @@ async function initializeBookmarksFolder() {
     };
     
     await chrome.storage.session.set({ FOLDER_IDS: folderIds });
-    console.log('💾 Saved FOLDER_IDS to session storage:', folderIds);
+    log('💾 Saved FOLDER_IDS to session storage:', folderIds);
     
   } catch (error) {
     console.error('❌ Error initializing bookmarks folder:', error);
@@ -125,17 +129,17 @@ async function getFolderIds() {
     try {
       await chrome.bookmarks.get(cached.FOLDER_IDS.active);
       await chrome.bookmarks.get(cached.FOLDER_IDS.completed);
-      console.log('📦 Loaded FOLDER_IDS from session storage:', cached.FOLDER_IDS);
+      log('📦 Loaded FOLDER_IDS from session storage:', cached.FOLDER_IDS);
       return cached.FOLDER_IDS;
     } catch (error) {
       // Папки удалены пользователем - очищаем кеш и переинициализируем
-      console.log('⚠️ Cached folders not found, reinitializing...');
+      log('⚠️ Cached folders not found, reinitializing...');
       await chrome.storage.session.remove('FOLDER_IDS');
     }
   }
   
   // Если нет в кеше или папки удалены - инициализируем
-  console.log('🔄 FOLDER_IDS not in cache, initializing...');
+  log('🔄 FOLDER_IDS not in cache, initializing...');
   await initializeBookmarksFolder();
   
   // Читаем еще раз после инициализации
@@ -506,14 +510,55 @@ let currentWindowId = null; // Сохраняем windowId для открыти
 let cycleQueue = []; // Очередь страниц для цикла
 let currentCycleIndex = 0; // Текущий индекс в очереди
 
+// Восстановление состояния из session storage при старте SW
+(async function restoreCycleState() {
+  const { cycleState } = await chrome.storage.session.get('cycleState');
+  if (cycleState) {
+    isCycleMode = cycleState.isCycleMode || false;
+    currentWindowId = cycleState.currentWindowId || null;
+    cycleQueue = cycleState.cycleQueue || [];
+    currentCycleIndex = cycleState.currentCycleIndex || 0;
+    
+    // Восстанавливаем openedTabs
+    if (cycleState.openedTabs) {
+      Object.entries(cycleState.openedTabs).forEach(([tabId, bookmarkId]) => {
+        openedTabs.set(Number(tabId), bookmarkId);
+      });
+    }
+    
+    // Восстанавливаем intervalDialogTabs
+    if (cycleState.intervalDialogTabs) {
+      cycleState.intervalDialogTabs.forEach(tabId => {
+        intervalDialogTabs.add(Number(tabId));
+      });
+    }
+  }
+})();
+
+// Сохранение состояния в session storage
+async function saveCycleState() {
+  await chrome.storage.session.set({
+    cycleState: {
+      isCycleMode,
+      currentWindowId,
+      cycleQueue,
+      currentCycleIndex,
+      openedTabs: Object.fromEntries(openedTabs),
+      intervalDialogTabs: Array.from(intervalDialogTabs)
+    }
+  });
+}
+
 chrome.tabs.onRemoved.addListener(async (tabId, removeInfo) => {
   // Проверяем, не диалог ли интервала закрылся
   if (intervalDialogTabs.has(tabId)) {
     intervalDialogTabs.delete(tabId);
+    await saveCycleState();
     
     // Продолжаем цикл - переходим к следующей странице
     if (isCycleMode) {
       currentCycleIndex++;
+      await saveCycleState();
       setTimeout(() => openNextInCycle(), 100);
     }
     return;
@@ -522,6 +567,7 @@ chrome.tabs.onRemoved.addListener(async (tabId, removeInfo) => {
   if (!removeInfo.isWindowClosing && openedTabs.has(tabId)) {
     const bookmarkId = openedTabs.get(tabId);
     openedTabs.delete(tabId);
+    await saveCycleState();
     
     try {
       // Проверяем, что закладка всё ещё существует
@@ -555,9 +601,10 @@ chrome.tabs.onRemoved.addListener(async (tabId, removeInfo) => {
           `&favicon=${encodeURIComponent(faviconUrl)}` +
           `&interval=24`;
         
-        chrome.tabs.create({ url: dialogUrl }, (dialogTab) => {
+        chrome.tabs.create({ url: dialogUrl }, async (dialogTab) => {
           if (dialogTab) {
             intervalDialogTabs.add(dialogTab.id);
+            await saveCycleState();
           }
         });
         // Цикл продолжится когда диалог закроется
@@ -569,6 +616,7 @@ chrome.tabs.onRemoved.addListener(async (tabId, removeInfo) => {
         // Продолжаем цикл
         if (isCycleMode) {
           currentCycleIndex++;
+          await saveCycleState();
           setTimeout(() => openNextInCycle(), 100);
         }
       }
@@ -648,40 +696,6 @@ async function setPageInterval(bookmarkId, intervalHours) {
   }
 }
 
-// Механизм поддержания активности service worker во время цикла
-let keepAliveInterval = null;
-let cycleStartTime = null;
-const MAX_CYCLE_DURATION = 10 * 60 * 1000; // 10 минут
-
-function startKeepAlive() {
-  if (keepAliveInterval) return;
-  
-  cycleStartTime = Date.now();
-  
-  // Отправляем сообщение самому себе каждые 20 секунд
-  keepAliveInterval = setInterval(() => {
-    const elapsed = Date.now() - cycleStartTime;
-    
-    if (elapsed >= MAX_CYCLE_DURATION) {
-      // Прошло 10 минут - останавливаем цикл
-      isCycleMode = false;
-      stopKeepAlive();
-    } else if (isCycleMode) {
-      chrome.runtime.sendMessage({ action: 'keepAlive' }).catch(() => {});
-    } else {
-      stopKeepAlive();
-    }
-  }, 20000);
-}
-
-function stopKeepAlive() {
-  if (keepAliveInterval) {
-    clearInterval(keepAliveInterval);
-    keepAliveInterval = null;
-    cycleStartTime = null;
-  }
-}
-
 // Универсальная функция запуска цикла задач
 async function startTasksCycle() {
   // Получаем все активные страницы
@@ -692,16 +706,14 @@ async function startTasksCycle() {
   cycleQueue = pages;
   currentCycleIndex = 0;
   isCycleMode = true;
-  
-  // Запускаем механизм поддержания активности
-  startKeepAlive();
+  await saveCycleState();
   
   // Открываем первую страницу
   openNextInCycle();
 }
 
 // Функция открытия следующей страницы из очереди
-function openNextInCycle() {
+async function openNextInCycle() {
   if (!isCycleMode) return;
   
   if (currentCycleIndex >= cycleQueue.length) {
@@ -709,9 +721,7 @@ function openNextInCycle() {
     isCycleMode = false;
     cycleQueue = [];
     currentCycleIndex = 0;
-    
-    // Останавливаем механизм поддержания активности
-    stopKeepAlive();
+    await saveCycleState();
     
     // Открываем страницу завершения
     if (currentWindowId) {
@@ -737,12 +747,13 @@ function openNextInCycle() {
     // Ignore URL parse errors
   }
   
-  chrome.tabs.create({ url: taskUrl }, (tab) => {
+  chrome.tabs.create({ url: taskUrl }, async (tab) => {
     if (tab) {
       openedTabs.set(tab.id, page.id);
       if (!currentWindowId) {
         currentWindowId = tab.windowId;
       }
+      await saveCycleState();
     }
   });
 }
@@ -752,17 +763,19 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'openSinglePage') {
     // Открытие ОДНОЙ страницы без запуска цикла
     isCycleMode = false;
-    chrome.tabs.create({ url: request.url }, (tab) => {
+    chrome.tabs.create({ url: request.url }, async (tab) => {
       if (tab && request.bookmarkId) {
         openedTabs.set(tab.id, request.bookmarkId);
+        await saveCycleState();
       }
       sendResponse({ success: true });
     });
     return true; // Асинхронный ответ
   } else if (request.action === 'openPage') {
-    chrome.tabs.create({ url: request.url }, (tab) => {
+    chrome.tabs.create({ url: request.url }, async (tab) => {
       if (tab && request.bookmarkId) {
         openedTabs.set(tab.id, request.bookmarkId);
+        await saveCycleState();
       }
       sendResponse({ success: true });
     });
@@ -911,9 +924,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         });
       });
     });
-    sendResponse({ success: true });
-  } else if (request.action === 'keepAlive') {
-    // Простое подтверждение для поддержания активности
     sendResponse({ success: true });
   } else if (request.action === 'addCurrentTab') {
     // Добавление текущей вкладки в активные задачи
