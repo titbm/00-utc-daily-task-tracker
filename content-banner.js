@@ -319,7 +319,7 @@ async function createBanner() {
   } else {
     // Обычный баннер сверху для normal режима
     banner.innerHTML = `
-      <div style="
+      <div id="normal-banner-content" style="
         position: fixed;
         top: 0;
         left: 0;
@@ -333,6 +333,7 @@ async function createBanner() {
         gap: 16px;
         z-index: 999999;
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        transition: transform 0.3s ease, opacity 0.3s ease;
       ">
         <div style="display: flex; align-items: center; gap: 8px;">
           <span style="font-weight: 400; color: ${bannerColor}; font-size: 14px;">
@@ -360,10 +361,26 @@ async function createBanner() {
     
     // Добавляем отступ для body чтобы контент не перекрывался
     document.body.style.paddingTop = '36px';
-  }
-  
-  // Обработчик кнопки (только для normal баннера)
-  if (bannerType === 'normal') {
+    
+    // Скрытие баннера при наведении мыши в верхнюю часть экрана
+    const bannerContent = banner.querySelector('#normal-banner-content');
+    let hideTimeout = null;
+    
+    bannerContent.addEventListener('mouseenter', () => {
+      clearTimeout(hideTimeout);
+      hideTimeout = setTimeout(() => {
+        bannerContent.style.transform = 'translateY(-100%)';
+        bannerContent.style.opacity = '0';
+      }, 500); // Задержка 500мс перед скрытием
+    });
+    
+    bannerContent.addEventListener('mouseleave', () => {
+      clearTimeout(hideTimeout);
+      bannerContent.style.transform = 'translateY(0)';
+      bannerContent.style.opacity = '1';
+    });
+    
+    // Обработчик кнопки Start
     const startBtn = banner.querySelector('#daily-panel-start-btn');
     startBtn.addEventListener('mouseenter', () => {
       startBtn.style.background = '#333333';
