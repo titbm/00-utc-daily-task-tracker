@@ -1,3 +1,9 @@
+// Константы для таймингов
+const DEBOUNCE_DELAY = 500; // мс - задержка для батчинга restore запросов
+const TIMER_INTERVAL = 1000; // мс - обновление таймеров каждую секунду
+const RESIZE_DEBOUNCE = 400; // мс - задержка для обработки resize
+const ROUGH_NOTATION_RETRY = 100; // мс - повтор инициализации RoughNotation
+
 class DailyPanel {
   constructor() {
     // Секции
@@ -53,7 +59,7 @@ class DailyPanel {
     this._restoreCheckTimeout = setTimeout(() => {
       chrome.runtime.sendMessage({ action: 'checkRestore' });
       this._restoreCheckTimeout = null;
-    }, 500); // 500мс - баланс между отзывчивостью и батчингом
+    }, DEBOUNCE_DELAY);
   }
   
   init() {
@@ -185,8 +191,8 @@ class DailyPanel {
         // Показываем подчеркивание для активной вкладки
         this.activeTabAnnotation.show();
       } else {
-        // Если библиотека еще не загружена, попробуем через 100мс
-        setTimeout(tryInit, 100);
+        // Если библиотека еще не загружена, попробуем позже
+        setTimeout(tryInit, ROUGH_NOTATION_RETRY);
       }
     };
     
@@ -253,12 +259,12 @@ class DailyPanel {
       // Рендерим только если есть изменения
       if (activePagesChanged) {
         this.renderPages(activePages, this.activePagesList, this.emptyStateActive);
-        this._cachedActivePages = JSON.parse(JSON.stringify(activePages)); // Deep copy
+        this._cachedActivePages = structuredClone(activePages);
       }
       
       if (completedPagesChanged) {
         this.renderPages(completedPages, this.completedPagesList, this.emptyStateCompleted, true);
-        this._cachedCompletedPages = JSON.parse(JSON.stringify(completedPages)); // Deep copy
+        this._cachedCompletedPages = structuredClone(completedPages);
       }
       
       // Обновляем счетчики и кнопки только если что-то изменилось
@@ -266,27 +272,9 @@ class DailyPanel {
         this.updateCounters(activePages.length, completedPages.length);
       }
       
-      // Управляем состоянием кнопки запуска
-      if (activePages.length === 0) {
-        this.startTasksBtn.disabled = true;
-        this.startTasksBtn.style.opacity = '0.5';
-        this.startTasksBtn.style.cursor = 'not-allowed';
-      } else {
-        this.startTasksBtn.disabled = false;
-        this.startTasksBtn.style.opacity = '1';
-        this.startTasksBtn.style.cursor = 'pointer';
-      }
-      
-      // Управляем состоянием кнопки восстановления
-      if (completedPages.length === 0) {
-        this.restoreCompletedBtn.disabled = true;
-        this.restoreCompletedBtn.style.opacity = '0.5';
-        this.restoreCompletedBtn.style.cursor = 'not-allowed';
-      } else {
-        this.restoreCompletedBtn.disabled = false;
-        this.restoreCompletedBtn.style.opacity = '1';
-        this.restoreCompletedBtn.style.cursor = 'pointer';
-      }
+      // Управляем состоянием кнопок
+      this.setButtonState(this.startTasksBtn, activePages.length > 0);
+      this.setButtonState(this.restoreCompletedBtn, completedPages.length > 0);
     } catch (error) {
       console.error('Error loading pages:', error);
     }
@@ -298,6 +286,15 @@ class DailyPanel {
     
     // Сравниваем JSON-представление для простоты
     return JSON.stringify(pages1) === JSON.stringify(pages2);
+  }
+  
+  // Утилита для управления состоянием кнопок
+  setButtonState(button, enabled) {
+    if (!button) return;
+    
+    button.disabled = !enabled;
+    button.style.opacity = enabled ? '1' : '0.5';
+    button.style.cursor = enabled ? 'pointer' : 'not-allowed';
   }
   
   updateCounters(activeCount, completedCount) {
@@ -341,7 +338,7 @@ class DailyPanel {
     // Затем запускаем интервал
     this._globalTimerInterval = setInterval(() => {
       this.updateAllTimers();
-    }, 1000);
+    }, TIMER_INTERVAL);
   }
   
   updateAllTimers() {
