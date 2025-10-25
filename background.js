@@ -509,6 +509,7 @@ let isCycleMode = false; // Флаг режима автоматической �
 let currentWindowId = null; // Сохраняем windowId для открытия панели в конце
 let cycleQueue = []; // Очередь страниц для цикла
 let currentCycleIndex = 0; // Текущий индекс в очереди
+let isProcessingNext = false; // Флаг блокировки параллельного открытия следующей страницы
 
 // Восстановление состояния из session storage при старте SW
 (async function restoreCycleState() {
@@ -518,6 +519,7 @@ let currentCycleIndex = 0; // Текущий индекс в очереди
     currentWindowId = cycleState.currentWindowId || null;
     cycleQueue = cycleState.cycleQueue || [];
     currentCycleIndex = cycleState.currentCycleIndex || 0;
+    isProcessingNext = cycleState.isProcessingNext || false;
     
     // Восстанавливаем openedTabs
     if (cycleState.openedTabs) {
@@ -543,6 +545,7 @@ async function saveCycleState() {
       currentWindowId,
       cycleQueue,
       currentCycleIndex,
+      isProcessingNext,
       openedTabs: Object.fromEntries(openedTabs),
       intervalDialogTabs: Array.from(intervalDialogTabs)
     }
@@ -559,7 +562,8 @@ chrome.tabs.onRemoved.addListener(async (tabId, removeInfo) => {
     if (isCycleMode) {
       currentCycleIndex++;
       await saveCycleState();
-      setTimeout(() => openNextInCycle(), 100);
+      // Используем немедленный вызов вместо setTimeout для быстрого закрытия
+      openNextInCycle();
     }
     return;
   }
@@ -617,7 +621,8 @@ chrome.tabs.onRemoved.addListener(async (tabId, removeInfo) => {
         if (isCycleMode) {
           currentCycleIndex++;
           await saveCycleState();
-          setTimeout(() => openNextInCycle(), 100);
+          // Используем немедленный вызов вместо setTimeout для быстрого закрытия
+          openNextInCycle();
         }
       }
     } catch (error) {
@@ -716,46 +721,63 @@ async function startTasksCycle() {
 async function openNextInCycle() {
   if (!isCycleMode) return;
   
-  if (currentCycleIndex >= cycleQueue.length) {
-    // Все страницы завершены
-    isCycleMode = false;
-    cycleQueue = [];
-    currentCycleIndex = 0;
-    await saveCycleState();
-    
-    // Открываем страницу завершения
-    if (currentWindowId) {
-      const completedUrl = chrome.runtime.getURL('completed.html');
-      chrome.tabs.create({ url: completedUrl, windowId: currentWindowId });
-      currentWindowId = null;
-    } else {
-      chrome.tabs.create({ url: chrome.runtime.getURL('completed.html') });
-    }
+  // Блокировка параллельных вызовов при быстром закрытии вкладок
+  if (isProcessingNext) {
     return;
   }
   
-  const page = cycleQueue[currentCycleIndex];
+  isProcessingNext = true;
+  await saveCycleState();
   
-  // Добавляем параметр в URL
-  let taskUrl = page.url;
   try {
-    const url = new URL(page.url);
-    url.searchParams.set('daily_panel_task', '1');
-    taskUrl = url.toString();
-    chrome.bookmarks.update(page.id, { url: taskUrl });
-  } catch (e) {
-    // Ignore URL parse errors
-  }
-  
-  chrome.tabs.create({ url: taskUrl }, async (tab) => {
-    if (tab) {
-      openedTabs.set(tab.id, page.id);
-      if (!currentWindowId) {
-        currentWindowId = tab.windowId;
-      }
+    if (currentCycleIndex >= cycleQueue.length) {
+      // Все страницы завершены
+      isCycleMode = false;
+      cycleQueue = [];
+      currentCycleIndex = 0;
+      isProcessingNext = false;
       await saveCycleState();
+      
+      // Открываем страницу завершения
+      if (currentWindowId) {
+        const completedUrl = chrome.runtime.getURL('completed.html');
+        chrome.tabs.create({ url: completedUrl, windowId: currentWindowId });
+        currentWindowId = null;
+      } else {
+        chrome.tabs.create({ url: chrome.runtime.getURL('completed.html') });
+      }
+      return;
     }
-  });
+    
+    const page = cycleQueue[currentCycleIndex];
+    
+    // Добавляем параметр в URL
+    let taskUrl = page.url;
+    try {
+      const url = new URL(page.url);
+      url.searchParams.set('daily_panel_task', '1');
+      taskUrl = url.toString();
+      chrome.bookmarks.update(page.id, { url: taskUrl });
+    } catch (e) {
+      // Ignore URL parse errors
+    }
+    
+    chrome.tabs.create({ url: taskUrl }, async (tab) => {
+      if (tab) {
+        openedTabs.set(tab.id, page.id);
+        if (!currentWindowId) {
+          currentWindowId = tab.windowId;
+        }
+        // Разблокируем после успешного открытия вкладки
+        isProcessingNext = false;
+        await saveCycleState();
+      }
+    });
+  } catch (error) {
+    console.error('Error in openNextInCycle:', error);
+    isProcessingNext = false;
+    await saveCycleState();
+  }
 }
 
 // Обработчик сообщений от popup, боковой панели и content scripts
