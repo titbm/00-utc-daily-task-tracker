@@ -542,7 +542,6 @@ async function movePageToCompleted(bookmarkId) {
     
     // Парсим метаданные из Active
     const parsed = parseActiveBookmarkTitle(page.title);
-    console.log('Moving to Completed:', parsed.title, 'resetType from Active:', parsed.resetType);
     
     // Создаём метаданные для Completed
     const completedAt = new Date().toISOString();
@@ -560,7 +559,6 @@ async function movePageToCompleted(bookmarkId) {
     await chrome.bookmarks.move(bookmarkId, { parentId: ids.completed });
     await chrome.bookmarks.update(bookmarkId, { title: newTitle });
     
-    console.log('Moved to Completed with title:', newTitle);
     notifyPanelUpdate();
     
     // Если interval - откроем диалог (сейчас всегда midnight из Active)
@@ -615,7 +613,6 @@ function startKeepAlive() {
     
     if (elapsed >= MAX_CYCLE_DURATION) {
       // Прошло 10 минут - останавливаем цикл
-      console.log('Cycle timeout: 10 minutes elapsed');
       isCycleMode = false;
       stopKeepAlive();
     } else if (isCycleMode) {

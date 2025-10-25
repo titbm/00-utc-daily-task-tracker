@@ -137,10 +137,6 @@ class DailyPanel {
     // Ждем загрузки библиотеки
     const tryInit = () => {
       if (window.RoughNotation) {
-        console.log('RoughNotation loaded, initializing...');
-        console.log('Active tab:', this.activeTab);
-        console.log('Completed tab:', this.completedTab);
-        
         if (!this.activeTab || !this.completedTab) {
           console.error('Tab elements not found!');
           return;
@@ -164,13 +160,10 @@ class DailyPanel {
           animationDuration: 600
         });
         
-        console.log('Annotations created, showing active tab annotation...');
         // Показываем подчеркивание для активной вкладки
         this.activeTabAnnotation.show();
-        console.log('Active tab annotation shown');
       } else {
         // Если библиотека еще не загружена, попробуем через 100мс
-        console.log('RoughNotation not loaded yet, retrying...');
         setTimeout(tryInit, 100);
       }
     };
