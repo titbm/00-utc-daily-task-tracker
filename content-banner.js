@@ -239,15 +239,13 @@ async function createBanner() {
   let bannerColor = '#000000';
   
   if (tabStatus.isTask && tabStatus.fromCycle) {
-    // Вкладка из цикла - крутящаяся иконка
+    // Вкладка из цикла - черная луна на белом фоне
     bannerType = 'cycle';
-    bannerIcon = 'sync';
-    bannerColor = '#8B00FF'; // Фиолетовый для цикла
-  } else if (tabStatus.isTask && !tabStatus.fromCycle) {
-    // Вкладка открыта вручную из панели - крутящаяся луна
-    bannerType = 'panel';
     bannerIcon = 'bedtime';
-    bannerColor = '#FFA500'; // Оранжевый для панели
+    bannerColor = '#000000'; // Черный цвет
+  } else if (tabStatus.isTask && !tabStatus.fromCycle) {
+    // Вкладка открыта вручную из панели - не показываем иконку
+    return;
   }
   // else - обычная страница, показываем normal баннер
   
@@ -260,64 +258,56 @@ async function createBanner() {
   banner = document.createElement('div');
   banner.id = 'daily-panel-banner';
   
-  if (bannerType === 'cycle' || bannerType === 'panel') {
-    // Минималистичный индикатор в правом нижнем углу
-    const iconColor = bannerType === 'cycle' ? '#8B00FF' : '#FFA500';
-    const tooltipText = bannerType === 'cycle' ? 'Task cycle is running' : 'Opened from panel';
-    const animationType = bannerType === 'cycle' ? 'rotate 2s linear infinite' : 'rotate 4s linear infinite';
-    
+  if (bannerType === 'cycle') {
+    // Квадратная иконка с закругленными углами для цикла
     banner.innerHTML = `
       <div style="
         position: fixed;
         bottom: 20px;
         right: 20px;
         background: #ffffff;
-        border: 1px solid #e5e5e5;
-        border-radius: 50%;
+        border-radius: 8px;
         width: 56px;
         height: 56px;
         display: flex;
         align-items: center;
         justify-content: center;
         z-index: 999999;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
         cursor: pointer;
-        transition: all 0.3s ease;
+        transition: transform 0.2s ease;
       " id="cycle-indicator">
         <span class="material-symbols-outlined" style="
           font-size: 28px;
-          color: ${iconColor};
+          color: #000000;
           font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 28;
-        ">${bannerIcon}</span>
+          animation: rotate 2s linear infinite;
+        ">bedtime</span>
       </div>
+      <style>
+        @keyframes rotate {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      </style>
     `;
     
     document.body.appendChild(banner);
     
-    // Анимация вращения иконки
-    const icon = banner.querySelector('.material-symbols-outlined');
-    if (icon) {
-      icon.style.animation = animationType;
-    }
-    
-    // Hover эффект
+    // Hover эффект (только увеличение)
     const indicator = banner.querySelector('#cycle-indicator');
-    const hoverShadowColor = bannerType === 'cycle' ? 'rgba(139, 0, 255, 0.3)' : 'rgba(255, 165, 0, 0.3)';
     
     indicator.addEventListener('mouseenter', () => {
       indicator.style.transform = 'scale(1.1)';
-      indicator.style.boxShadow = `0 6px 20px ${hoverShadowColor}`;
     });
     indicator.addEventListener('mouseleave', () => {
       indicator.style.transform = 'scale(1)';
-      indicator.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
     });
     
     // Tooltip при наведении
-    indicator.title = tooltipText;
+    indicator.title = 'Task cycle is running';
     
   } else {
-    // Обычный баннер сверху для normal режима
+    // Обычный баннер сверху для normal режима (без кнопки)
     banner.innerHTML = `
       <div id="normal-banner-content" style="
         position: fixed;
@@ -335,25 +325,9 @@ async function createBanner() {
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         transition: transform 0.3s ease, opacity 0.3s ease;
       ">
-        <div style="display: flex; align-items: center; gap: 8px;">
-          <span style="font-weight: 400; color: ${bannerColor}; font-size: 14px;">
-            ${bannerText}
-          </span>
-        </div>
-        <button id="daily-panel-start-btn" style="
-          background: ${bannerColor};
-          color: #ffffff;
-          border: 1px solid ${bannerColor};
-          padding: 6px 16px;
-          border-radius: 6px;
-          font-size: 13px;
-          font-weight: 500;
-          cursor: pointer;
-          transition: all 0.2s;
-          font-family: 'Inter', sans-serif;
-        ">
-          Start
-        </button>
+        <span style="font-weight: 400; color: ${bannerColor}; font-size: 14px;">
+          ${bannerText}
+        </span>
       </div>
     `;
     
@@ -362,39 +336,23 @@ async function createBanner() {
     // Добавляем отступ для body чтобы контент не перекрывался
     document.body.style.paddingTop = '36px';
     
-    // Скрытие баннера при движении мыши в верхней части экрана
+    // Скрытие баннера когда курсор в верхней зоне (0-80px)
     const bannerContent = banner.querySelector('#normal-banner-content');
     let isHidden = false;
     
-    // Слушаем движение мыши по всей странице
     document.addEventListener('mousemove', (e) => {
-      // Если курсор в верхних 100px экрана - скрываем баннер
-      if (e.clientY < 100 && !isHidden) {
+      // Если курсор в верхних 80px - скрываем баннер
+      if (e.clientY < 80 && !isHidden) {
         isHidden = true;
         bannerContent.style.transform = 'translateY(-100%)';
         bannerContent.style.opacity = '0';
       }
-      // Если курсор ниже 100px - показываем баннер
-      else if (e.clientY >= 100 && isHidden) {
+      // Если курсор ниже 80px - показываем баннер
+      else if (e.clientY >= 80 && isHidden) {
         isHidden = false;
         bannerContent.style.transform = 'translateY(0)';
         bannerContent.style.opacity = '1';
       }
-    });
-    
-    // Обработчик кнопки Start
-    const startBtn = banner.querySelector('#daily-panel-start-btn');
-    startBtn.addEventListener('mouseenter', () => {
-      startBtn.style.background = '#333333';
-      startBtn.style.borderColor = '#333333';
-    });
-    startBtn.addEventListener('mouseleave', () => {
-      startBtn.style.background = bannerColor;
-      startBtn.style.borderColor = bannerColor;
-    });
-    startBtn.addEventListener('click', () => {
-      // Отправляем сообщение background script для запуска цикла
-      chrome.runtime.sendMessage({ action: 'startDailyTasks' });
     });
   }
   

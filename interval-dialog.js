@@ -6,6 +6,17 @@ const pageUrl = decodeURIComponent(urlParams.get('url') || '');
 const pageFavicon = decodeURIComponent(urlParams.get('favicon') || '');
 const defaultInterval = parseInt(urlParams.get('interval') || '24');
 
+// Проверяем открыт ли диалог из цикла и показываем индикатор
+chrome.runtime.sendMessage({ action: 'getMyTabStatus' }, (response) => {
+  if (response && response.fromCycle) {
+    // Показываем индикатор цикла
+    const cycleIndicator = document.getElementById('cycle-indicator');
+    if (cycleIndicator) {
+      cycleIndicator.classList.add('visible');
+    }
+  }
+});
+
 // Отображаем информацию о странице
 document.getElementById('pageTitle').textContent = pageTitle;
 document.getElementById('pageUrl').textContent = pageUrl;
