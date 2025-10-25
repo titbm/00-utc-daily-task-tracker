@@ -336,19 +336,19 @@ async function createBanner() {
     // Добавляем отступ для body чтобы контент не перекрывался
     document.body.style.paddingTop = '36px';
     
-    // Скрытие баннера когда курсор в верхней зоне (0-80px)
+    // Скрытие баннера когда курсор на баннере (0-36px)
     const bannerContent = banner.querySelector('#normal-banner-content');
     let isHidden = false;
     
     document.addEventListener('mousemove', (e) => {
-      // Если курсор в верхних 80px - скрываем баннер
-      if (e.clientY < 80 && !isHidden) {
+      // Если курсор на баннере (0-36px) - скрываем
+      if (e.clientY < 36 && !isHidden) {
         isHidden = true;
         bannerContent.style.transform = 'translateY(-100%)';
         bannerContent.style.opacity = '0';
       }
-      // Если курсор ниже 80px - показываем баннер
-      else if (e.clientY >= 80 && isHidden) {
+      // Если курсор ниже баннера (36px+) - показываем
+      else if (e.clientY >= 36 && isHidden) {
         isHidden = false;
         bannerContent.style.transform = 'translateY(0)';
         bannerContent.style.opacity = '1';
