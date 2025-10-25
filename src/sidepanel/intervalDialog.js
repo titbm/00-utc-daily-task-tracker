@@ -98,6 +98,31 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
+// Автоматическое сохранение при закрытии окна
+window.addEventListener('beforeunload', () => {
+  const hours = parseInt(document.getElementById('hoursInput').value) || 0;
+  const minutes = parseInt(document.getElementById('minutesInput').value) || 0;
+  
+  // Если указан хоть какой-то интервал, сохраняем его
+  if (hours > 0 || minutes > 0) {
+    const intervalHours = hours + (minutes / 60);
+    
+    // Отправляем сообщение синхронно (без callback)
+    chrome.runtime.sendMessage({
+      action: 'setPageInterval',
+      bookmarkId: bookmarkId,
+      intervalHours: intervalHours
+    });
+  } else {
+    // Если ничего не указано, используем дефолтный интервал
+    chrome.runtime.sendMessage({
+      action: 'setPageInterval',
+      bookmarkId: bookmarkId,
+      intervalHours: defaultInterval
+    });
+  }
+});
+
 // RoughNotation эффект для заголовка
 if (typeof RoughNotation !== 'undefined') {
   const highlightElement = document.getElementById('highlight');
