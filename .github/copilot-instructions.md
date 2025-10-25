@@ -14,7 +14,7 @@ This is a **Chrome Manifest V3 extension** that tracks daily internet tasks usin
 - `Daily Panel/Active/` - Tasks to complete, titled: `"PageTitle [resetType]"` where `resetType` = `midnight` | `interval`
 - `Daily Panel/Completed/` - Finished tasks, titled: `"PageTitle [completedAt|restoreAt|resetType|resetInterval|addedAt]"`
 
-**URL Modification Pattern**: Active tasks have `?daily_panel_task=1` parameter added to their URLs. This marker prevents content-banner.js from showing banners on task tabs.
+**Tab Tracking**: Active tasks are tracked via `openedTabs` Map in session storage. When a task tab is opened (from cycle or panel), its tabId is stored with metadata (`fromCycle`, `isIntervalDialog`, `dialogFromCycle`). Content scripts query this via `getMyTabStatus` message to determine whether to show cycle indicator.
 
 ### Task Lifecycle (The "Cycle")
 
@@ -27,12 +27,16 @@ This is a **Chrome Manifest V3 extension** that tracks daily internet tasks usin
    - For `midnight` tasks: Restores if `completedAt < today's 00:00 UTC`
    - For `interval` tasks: Restores if `now >= restoreAt` timestamp
 
-### Service Worker Keep-Alive Mechanism
+### Cycle Persistence
 
-Chrome kills service workers after 30s of inactivity. During multi-page task cycles:
-- `startKeepAlive()` sends `chrome.runtime.sendMessage({ action: 'keepAlive' })` every 20s
-- Tracks cycle duration, auto-stops after 10 minutes (`MAX_CYCLE_DURATION`)
-- Side panel connection (`port = chrome.runtime.connect()`) triggers faster checks (5s vs 1min alarms)
+Cycle runs indefinitely without time limits. State is persisted to `chrome.storage.session`:
+- `isCycleMode`: Whether cycle is currently running
+- `currentWindowId`: Window where cycle tabs open
+- `cycleQueue`: Array of bookmarkIds to process
+- `currentCycleIndex`: Current position in queue
+- `openedTabs`: Map of tabId → {bookmarkId, fromCycle, isIntervalDialog, dialogFromCycle}
+
+On service worker restart, state is restored from session storage. No keep-alive mechanism needed - cycle continues naturally as user closes tabs.
 
 ## Key Development Patterns
 
