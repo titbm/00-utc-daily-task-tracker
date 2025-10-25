@@ -98,30 +98,31 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
-// Автоматическое сохранение при закрытии окна
-window.addEventListener('beforeunload', () => {
+// Сохраняем текущие значения в storage при любом изменении
+function updateCurrentInterval() {
   const hours = parseInt(document.getElementById('hoursInput').value) || 0;
   const minutes = parseInt(document.getElementById('minutesInput').value) || 0;
+  const intervalHours = (hours > 0 || minutes > 0) ? hours + (minutes / 60) : defaultInterval;
   
-  // Если указан хоть какой-то интервал, сохраняем его
-  if (hours > 0 || minutes > 0) {
-    const intervalHours = hours + (minutes / 60);
-    
-    // Отправляем сообщение синхронно (без callback)
-    chrome.runtime.sendMessage({
-      action: 'setPageInterval',
-      bookmarkId: bookmarkId,
-      intervalHours: intervalHours
-    });
-  } else {
-    // Если ничего не указано, используем дефолтный интервал
-    chrome.runtime.sendMessage({
-      action: 'setPageInterval',
-      bookmarkId: bookmarkId,
-      intervalHours: defaultInterval
-    });
-  }
+  chrome.storage.session.set({
+    [`intervalDialog_${bookmarkId}`]: {
+      intervalHours: intervalHours,
+      timestamp: Date.now()
+    }
+  });
+}
+
+// Обновляем при изменении
+document.getElementById('hoursInput').addEventListener('input', updateCurrentInterval);
+document.getElementById('minutesInput').addEventListener('input', updateCurrentInterval);
+document.querySelectorAll('.quick-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    setTimeout(updateCurrentInterval, 10);
+  });
 });
+
+// Инициализация начального значения
+updateCurrentInterval();
 
 // RoughNotation эффект для заголовка
 if (typeof RoughNotation !== 'undefined') {

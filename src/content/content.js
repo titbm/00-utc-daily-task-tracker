@@ -277,8 +277,8 @@ async function createBanner() {
         cursor: default;
         animation: cycleBounce 0.6s ease-out;
       " id="cycle-indicator">
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="animation: moonRotate 3s linear infinite;">
-          <path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-2.98 0-5.4-2.42-5.4-5.4 0-1.81.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1z" stroke="#000000" stroke-width="1.5" fill="none"/>
+        <svg xmlns="http://www.w3.org/2000/svg" height="32px" viewBox="0 -960 960 960" width="32px" fill="#000000" style="animation: moonRotate 3s linear infinite;">
+          <path d="M376-140q140.07 0 238.53-98Q713-336 713-480t-99.5-242Q514-820 374-820q-20 0-41 2t-32 5q64 72 98 157t34 176q0 91-34 176.5T302-148q11 3 31 5.5t43 2.5Zm5 60q-54.38 0-106.19-13Q223-106 188-126q88-66 136.5-158T373-479.5Q373-583 324-676T187-833q35-20 87.47-33.5T382-880q80.83 0 151.91 30.5Q605-819 658.5-765.5t84 126.5Q773-566 773-481t-30.95 158.29q-30.94 73.28-84 127.5Q605-141 533.59-110.5 462.19-80 381-80Zm52-399Z"/>
         </svg>
       </div>
       <style>
