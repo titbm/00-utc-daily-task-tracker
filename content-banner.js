@@ -2,6 +2,69 @@
 
 let banner = null;
 
+// Минимальная реализация highlight анимации (вместо 52KB RoughNotation)
+function createHighlightAnimation(element, options = {}) {
+  const color = options.color || '#FFC107';
+  const duration = options.animationDuration || 600;
+  const padding = options.padding || 2;
+  
+  // Создаём SVG для рисованного эффекта
+  const rect = element.getBoundingClientRect();
+  const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+  const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
+  
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.style.position = 'absolute';
+  svg.style.top = (rect.top + scrollTop - padding) + 'px';
+  svg.style.left = (rect.left + scrollLeft - padding) + 'px';
+  svg.style.width = (rect.width + padding * 2) + 'px';
+  svg.style.height = (rect.height + padding * 2) + 'px';
+  svg.style.pointerEvents = 'none';
+  svg.style.zIndex = '9998';
+  
+  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  const w = rect.width + padding * 2;
+  const h = rect.height + padding * 2;
+  
+  // Рисованный прямоугольник (имитация от руки)
+  const roughPath = `
+    M ${padding},${padding} 
+    L ${w-padding},${padding+1} 
+    L ${w-padding+1},${h-padding} 
+    L ${padding+1},${h-padding-1} 
+    Z
+  `;
+  
+  path.setAttribute('d', roughPath);
+  path.setAttribute('fill', color);
+  path.setAttribute('fill-opacity', '0.4');
+  path.setAttribute('stroke', color);
+  path.setAttribute('stroke-width', '1');
+  path.style.opacity = '0';
+  
+  svg.appendChild(path);
+  document.body.appendChild(svg);
+  
+  return {
+    show: () => {
+      // Плавное появление
+      let opacity = 0;
+      const step = 1000 / duration / 60; // 60 FPS
+      const interval = setInterval(() => {
+        opacity += step;
+        if (opacity >= 1) {
+          opacity = 1;
+          clearInterval(interval);
+        }
+        path.style.opacity = opacity;
+      }, 1000 / 60);
+    },
+    remove: () => {
+      svg.remove();
+    }
+  };
+}
+
 // Проверка, является ли текущая вкладка задачей (по URL параметру)
 function isTaskTab() {
   const urlParams = new URLSearchParams(window.location.search);
@@ -274,14 +337,12 @@ function showNotification(text, title, type) {
   requestAnimationFrame(() => {
     notification.style.opacity = '1';
     
-    // Применяем RoughNotation подчёркивание на "added"
-    if (type === 'success' && typeof RoughNotation !== 'undefined') {
+    // Применяем минимальную highlight анимацию
+    if (type === 'success') {
       const highlightElement = document.getElementById('notification-highlight');
       if (highlightElement) {
-        const annotation = RoughNotation.annotate(highlightElement, {
-          type: 'highlight',
+        const annotation = createHighlightAnimation(highlightElement, {
           color: '#FFC107',
-          iterations: 2,
           animationDuration: 600,
           padding: 2
         });
