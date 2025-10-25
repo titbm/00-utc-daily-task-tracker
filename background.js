@@ -22,34 +22,58 @@ chrome.runtime.onStartup.addListener(async () => {
   await startTimeChecker();
 });
 
-// Глобальные переменные для хранения ID папок (только ID, не данные)
-let FOLDER_IDS = {
-  active: null,
-  completed: null
-};
-
-// Флаг для предотвращения параллельной инициализации
-let isInitializing = false;
+// ВАЖНО: В Manifest V3 глобальные переменные НЕ персистентны!
+// Service worker засыпает через 30 секунд → все let/const обнуляются
+// Используем chrome.storage.session для хранения данных между пробуждениями
 
 // Функция инициализации папки закладок (с двумя подпапками)
 async function initializeBookmarksFolder() {
-  if (isInitializing) return;
+  // Проверяем блокировку через session storage
+  const lockStatus = await chrome.storage.session.get('isInitializing');
+  if (lockStatus.isInitializing) {
+    console.log('⏳ Already initializing, skipping...');
+    return;
+  }
   
-  isInitializing = true;
+  // Устанавливаем блокировку
+  await chrome.storage.session.set({ isInitializing: true });
+  
   try {
     const bookmarkTreeNodes = await chrome.bookmarks.getTree();
-    const bookmarksBar = bookmarkTreeNodes[0].children.find(node => node.id === '1');
+    const rootNode = bookmarkTreeNodes[0]; // "Bookmarks Bar" и "Other Bookmarks"
     
-    if (!bookmarksBar) return;
+    // Ищем папку в корне всех закладок (не только в Bookmarks Bar)
+    const FOLDER_NAME = '00 UTC | Daily Task Tracker';
+    let dailyPanelFolder = null;
     
-    // Ищем или создаём главную папку Daily Panel
-    let dailyPanelFolder = bookmarksBar.children.find(node => node.title === 'Daily Panel');
+    // Поиск в корневых папках
+    for (const child of rootNode.children) {
+      if (child.title === FOLDER_NAME && !child.url) {
+        dailyPanelFolder = child;
+        break;
+      }
+      // Также проверяем детей (на случай если папка внутри другой папки)
+      if (child.children) {
+        const found = child.children.find(node => node.title === FOLDER_NAME && !node.url);
+        if (found) {
+          dailyPanelFolder = found;
+          break;
+        }
+      }
+    }
     
+    // Если не нашли - создаём в корне (Other Bookmarks, ID='2')
     if (!dailyPanelFolder) {
+      const otherBookmarks = rootNode.children.find(node => node.id === '2');
+      const parentId = otherBookmarks ? otherBookmarks.id : rootNode.id;
+      
       dailyPanelFolder = await chrome.bookmarks.create({
-        parentId: bookmarksBar.id,
-        title: 'Daily Panel'
+        parentId: parentId,
+        title: FOLDER_NAME
       });
+      console.log('✅ Created folder:', FOLDER_NAME);
+    } else {
+      console.log('📁 Found existing folder:', FOLDER_NAME);
     }
     
     // Получаем подпапки (или создаём их)
@@ -63,6 +87,7 @@ async function initializeBookmarksFolder() {
         parentId: dailyPanelFolder.id,
         title: 'Active'
       });
+      console.log('✅ Created Active folder');
     }
     
     if (!completedFolder) {
@@ -70,26 +95,52 @@ async function initializeBookmarksFolder() {
         parentId: dailyPanelFolder.id,
         title: 'Completed'
       });
+      console.log('✅ Created Completed folder');
     }
     
-    // Сохраняем ID папок в глобальную переменную
-    FOLDER_IDS = {
+    // Сохраняем ID папок в session storage
+    const folderIds = {
       active: activeFolder.id,
       completed: completedFolder.id
     };
+    
+    await chrome.storage.session.set({ FOLDER_IDS: folderIds });
+    console.log('💾 Saved FOLDER_IDS to session storage:', folderIds);
+    
   } catch (error) {
-    console.error('Error initializing bookmarks folder:', error);
+    console.error('❌ Error initializing bookmarks folder:', error);
   } finally {
-    isInitializing = false;
+    // Снимаем блокировку
+    await chrome.storage.session.set({ isInitializing: false });
   }
 }
 
 // Функция получения ID папок (с инициализацией если нужно)
 async function getFolderIds() {
-  if (!FOLDER_IDS.active || !FOLDER_IDS.completed) {
-    await initializeBookmarksFolder();
+  // Пробуем получить из session storage
+  const cached = await chrome.storage.session.get('FOLDER_IDS');
+  
+  if (cached.FOLDER_IDS && cached.FOLDER_IDS.active && cached.FOLDER_IDS.completed) {
+    // Проверяем, что папки реально существуют
+    try {
+      await chrome.bookmarks.get(cached.FOLDER_IDS.active);
+      await chrome.bookmarks.get(cached.FOLDER_IDS.completed);
+      console.log('📦 Loaded FOLDER_IDS from session storage:', cached.FOLDER_IDS);
+      return cached.FOLDER_IDS;
+    } catch (error) {
+      // Папки удалены пользователем - очищаем кеш и переинициализируем
+      console.log('⚠️ Cached folders not found, reinitializing...');
+      await chrome.storage.session.remove('FOLDER_IDS');
+    }
   }
-  return FOLDER_IDS;
+  
+  // Если нет в кеше или папки удалены - инициализируем
+  console.log('🔄 FOLDER_IDS not in cache, initializing...');
+  await initializeBookmarksFolder();
+  
+  // Читаем еще раз после инициализации
+  const result = await chrome.storage.session.get('FOLDER_IDS');
+  return result.FOLDER_IDS || { active: null, completed: null };
 }
 
 // Функция чтения активных страниц из закладок
