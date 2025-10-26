@@ -3,6 +3,7 @@ import { ACTIONS, RESET_TYPES, TIMINGS, BUTTON_STATES } from '../shared/constant
 import { logInfo, logWarning } from '../shared/errorHandler.js';
 import { TimerScheduler } from './timerScheduler.js';
 import { UIState } from './uiState.js';
+import { PageOperations } from './pageOperations.js';
 
 class DailyPanel {
   constructor() {
@@ -46,6 +47,9 @@ class DailyPanel {
     activeCount: this.activeCount,
     completedCount: this.completedCount
   });
+
+  // Page Operations for managing pages
+  this.pageOperations = new PageOperations(this.uiState);
     
   // Cache for render optimization
     this._cachedActivePages = null;
@@ -138,7 +142,7 @@ class DailyPanel {
     if (this.restoreCompletedBtn) {
       this.restoreCompletedBtn.addEventListener('click', () => {
         if (!this.restoreCompletedBtn.disabled) {
-          this.restoreAllCompleted();
+          this.pageOperations.restoreAllCompleted();
         }
       });
     }
@@ -147,7 +151,7 @@ class DailyPanel {
     if (this.startTasksBtn) {
       this.startTasksBtn.addEventListener('click', () => {
         if (!this.startTasksBtn.disabled) {
-          this.startAllTasks();
+          this.pageOperations.startAllTasks();
         }
       });
     }
@@ -292,7 +296,7 @@ class DailyPanel {
     
     const url = document.createElement('div');
     url.className = 'page-url';
-    url.textContent = this.shortenUrl(page.url);
+    url.textContent = this.pageOperations.shortenUrl(page.url);
     url.title = page.url;
     
     info.appendChild(title);
@@ -334,13 +338,13 @@ class DailyPanel {
   // Handler for switching type
       resetTypeBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        this.toggleResetType(page, resetIcon);
+        this.pageOperations.toggleResetType(page, resetIcon);
       });
       
   // Handler for deleting page
       removeBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        this.removePage(page.id);
+        this.pageOperations.removePage(page.id);
       });
     } else {
   // For completed tabs - indicator and restore button in one place
@@ -409,144 +413,24 @@ class DailyPanel {
       
       restoreBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        this.restoreCompletedPage(page.id);
+        this.pageOperations.restoreCompletedPage(page.id);
       });
     }
     
     div.appendChild(actionsDiv);
     
-  // Handler for clicking on page
+    // Handler for clicking on page
     div.addEventListener('click', (e) => {
       if (!e.target.closest('.page-actions')) {
         if (isCompleted) {
-          this.restoreCompletedPage(page.id);
+          this.pageOperations.restoreCompletedPage(page.id);
         } else {
-          this.openPage(page.url, page.id);
+          this.pageOperations.openPage(page.url, page.id);
         }
       }
     });
-    
+
     return div;
-  }
-  
-  shortenUrl(url) {
-    try {
-      const urlObj = new URL(url);
-      let shortened = urlObj.hostname;
-      if (urlObj.pathname !== '/') {
-        shortened += urlObj.pathname;
-      }
-      if (shortened.length > 50) {
-        shortened = shortened.substring(0, 47) + '...';
-      }
-      return shortened;
-    } catch {
-      return url.length > 50 ? url.substring(0, 47) + '...' : url;
-    }
-  }
-  
-  async openPage(url, bookmarkId) {
-    try {
-  // Use openSinglePage to open ONLY this page without cycle
-      await chrome.runtime.sendMessage({
-        action: ACTIONS.OPEN_SINGLE_PAGE,
-        url: url,
-        bookmarkId: bookmarkId
-      });
-    } catch (error) {
-      console.error('Error opening page:', error);
-    }
-  }
-  
-  async restoreCompletedPage(bookmarkId) {
-    try {
-      await chrome.runtime.sendMessage({
-        action: ACTIONS.RESTORE_PAGE,
-        bookmarkId: bookmarkId
-      });
-      
-  // Check if anything remains in completed
-      const completedResponse = await chrome.runtime.sendMessage({ action: ACTIONS.GET_COMPLETED_PAGES });
-      const completedPages = completedResponse.pages || [];
-      
-  // Switch to active section only if it was the last completed
-      if (this.uiState.getCurrentSection() === 'completed' && completedPages.length === 0) {
-        this.uiState.toggleSection();
-      }
-    } catch (error) {
-      console.error('Error restoring page:', error);
-    }
-  }
-  
-  async removePage(bookmarkId) {
-    try {
-      await chrome.runtime.sendMessage({
-        action: ACTIONS.REMOVE_PAGE,
-        bookmarkId: bookmarkId
-      });
-    } catch (error) {
-      console.error('Error removing page:', error);
-    }
-  }
-  
-  async restoreAllCompleted() {
-    try {
-      const completedResponse = await chrome.runtime.sendMessage({ action: ACTIONS.GET_COMPLETED_PAGES });
-      const completedPages = completedResponse.pages || [];
-      
-      if (completedPages.length === 0) {
-        return;
-      }
-      
-  // Restore all pages
-      for (const page of completedPages) {
-        await chrome.runtime.sendMessage({
-          action: ACTIONS.RESTORE_PAGE,
-          bookmarkId: page.id
-        });
-      }
-      
-  // Switch to active section
-      if (this.uiState.getCurrentSection() === 'completed') {
-        this.uiState.toggleSection();
-      }
-    } catch (error) {
-      console.error('Error restoring all completed:', error);
-    }
-  }
-  
-  async startAllTasks() {
-    try {
-  // Start processing all tasks via background
-      await chrome.runtime.sendMessage({ action: ACTIONS.OPEN_NEXT_PAGE });
-    } catch (error) {
-      console.error('Error starting all tasks:', error);
-    }
-  }
-  
-  async toggleResetType(page, iconElement) {
-    const currentType = page.resetType || RESET_TYPES.MIDNIGHT;
-    const newType = currentType === RESET_TYPES.MIDNIGHT ? RESET_TYPES.INTERVAL : RESET_TYPES.MIDNIGHT;
-    
-  // Update icon
-    iconElement.textContent = newType === RESET_TYPES.MIDNIGHT ? 'bedtime' : 'schedule';
-    const button = iconElement.parentElement;
-    button.title = newType === RESET_TYPES.MIDNIGHT ? 'At midnight (click to change)' : 'After interval (click to change)';
-    
-  // Update locally in object
-    page.resetType = newType;
-    
-  // Send to background for saving
-    try {
-      await chrome.runtime.sendMessage({
-        action: ACTIONS.SET_RESET_TYPE,
-        bookmarkId: page.id,
-        resetType: newType,
-        resetInterval: page.resetInterval || 24
-      });
-    } catch (error) {
-      console.error('Error setting reset type:', error);
-    }
   }
   
   setupDragHandlers(element) {
