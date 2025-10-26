@@ -1,16 +1,16 @@
-// Централизованная система обработки ошибок
-// Позволяет легко переключаться между debug и production режимами
+// Centralized error handling system
+// Allows easy switching between debug and production modes
 
 import { DEBUG } from './constants.js';
 
-// Переменная для runtime переключения DEBUG режима
+// Variable for runtime switching of DEBUG mode
 let runtimeDebug = DEBUG;
 
 /**
- * Универсальный переключатель DEBUG режима
- * debug() - переключить
- * debug(true/false) - установить
- * debug('?') - показать статус
+ * Universal DEBUG mode switcher
+ * debug() - toggle
+ * debug(true/false) - set
+ * debug('?') - show status
  */
 export function debug(state) {
   if (state === '?') {
@@ -29,16 +29,16 @@ export function debug(state) {
   return runtimeDebug;
 }
 
-// Делаем только debug() доступной глобально
+// Make only debug() available globally
 if (typeof globalThis !== 'undefined') {
-  globalThis.debug = debug; // Единственный глобальный переключатель
+  globalThis.debug = debug; // The only global switcher
 }
 
 /**
- * Логирует ошибку с контекстом
- * @param {string} context - Контекст/место возникновения ошибки (например, 'getActivePages')
- * @param {Error|string} error - Объект ошибки или сообщение
- * @param {Object} additionalData - Дополнительные данные для отладки (опционально)
+ * Logs an error with context
+ * @param {string} context - Context/location of the error (e.g., 'getActivePages')
+ * @param {Error|string} error - Error object or message
+ * @param {Object} additionalData - Additional debug data (optional)
  */
 export function logError(context, error, additionalData = null) {
   if (runtimeDebug) {
@@ -48,16 +48,16 @@ export function logError(context, error, additionalData = null) {
     }
   }
   
-  // В будущем здесь можно добавить отправку в Sentry/Google Analytics
+  // In the future, error reporting to Sentry/Google Analytics can be added here
   // if (ENABLE_REPORTING) {
   //   sendErrorToAnalytics(context, error, additionalData);
   // }
 }
 
 /**
- * Логирует предупреждение с контекстом
- * @param {string} context - Контекст предупреждения
- * @param {string} message - Сообщение предупреждения
+ * Logs a warning with context
+ * @param {string} context - Warning context
+ * @param {string} message - Warning message
  */
 export function logWarning(context, message) {
   if (runtimeDebug) {
@@ -66,9 +66,9 @@ export function logWarning(context, message) {
 }
 
 /**
- * Логирует информационное сообщение (только в debug режиме)
- * @param {string} context - Контекст
- * @param {string} message - Сообщение
+ * Logs an informational message (only in debug mode)
+ * @param {string} context - Context
+ * @param {string} message - Message
  */
 export function logInfo(context, message) {
   if (runtimeDebug) {
