@@ -4,6 +4,7 @@ import { logInfo, logWarning } from '../shared/errorHandler.js';
 import { TimerScheduler } from './timerScheduler.js';
 import { UIState } from './uiState.js';
 import { PageOperations } from './pageOperations.js';
+import { EventManager } from './eventManager.js';
 
 class DailyPanel {
   constructor() {
@@ -50,6 +51,16 @@ class DailyPanel {
 
   // Page Operations for managing pages
   this.pageOperations = new PageOperations(this.uiState);
+
+  // Event Manager for handling user interactions
+  this.eventManager = new EventManager({
+    activeTab: this.activeTab,
+    completedTab: this.completedTab,
+    restoreCompletedBtn: this.restoreCompletedBtn,
+    startTasksBtn: this.startTasksBtn,
+    activeCount: this.activeCount,
+    completedCount: this.completedCount
+  }, this.uiState, this.pageOperations, this.timerScheduler);
     
   // Cache for render optimization
     this._cachedActivePages = null;
@@ -86,7 +97,7 @@ class DailyPanel {
   
   init() {
     this.loadPages();
-    this.setupEventListeners();
+    this.eventManager.setupEventListeners();
     this.uiState.initTabHighlighter();
     
   // Schedule midnight task check at UTC midnight
@@ -117,77 +128,6 @@ class DailyPanel {
       } else if (message.action === ACTIONS.CLOSE_SIDE_PANEL) {
   // Close the side panel
         window.close();
-      }
-    });
-  }
-  
-  setupEventListeners() {
-  // Tabs for switching sections
-    if (this.activeTab) {
-      this.activeTab.addEventListener('click', () => {
-        if (this.uiState.getCurrentSection() !== 'active') {
-          this.uiState.toggleSection();
-        }
-      });
-    }
-    
-    if (this.completedTab) {
-      this.completedTab.addEventListener('click', () => {
-        if (this.uiState.getCurrentSection() !== 'completed') {
-          this.uiState.toggleSection();
-        }
-      });
-    }
-    
-    if (this.restoreCompletedBtn) {
-      this.restoreCompletedBtn.addEventListener('click', () => {
-        if (!this.restoreCompletedBtn.disabled) {
-          this.pageOperations.restoreAllCompleted();
-        }
-      });
-    }
-    
-  // "Start All Tasks" button
-    if (this.startTasksBtn) {
-      this.startTasksBtn.addEventListener('click', () => {
-        if (!this.startTasksBtn.disabled) {
-          this.pageOperations.startAllTasks();
-        }
-      });
-    }
-    
-  // Link "Go to Completed section"
-    const goToCompletedLink = document.getElementById('goToCompleted');
-    if (goToCompletedLink) {
-      goToCompletedLink.addEventListener('click', (e) => {
-        e.preventDefault();
-        if (this.uiState.getCurrentSection() === 'active') {
-          this.uiState.toggleSection();
-        }
-      });
-    }
-    
-  // Link "Go to Active section"
-    const goToActiveLink = document.getElementById('goToActive');
-    if (goToActiveLink) {
-      goToActiveLink.addEventListener('click', (e) => {
-        e.preventDefault();
-        if (this.uiState.getCurrentSection() === 'completed') {
-          this.uiState.toggleSection();
-        }
-      });
-    }
-    
-  // Clicks on counters to switch sections
-    this.activeCount.addEventListener('click', () => {
-      if (this.uiState.getCurrentSection() !== 'active') {
-        this.uiState.toggleSection();
-      }
-    });
-    
-    this.completedCount.addEventListener('click', () => {
-      if (this.uiState.getCurrentSection() !== 'completed') {
-        this.uiState.toggleSection();
       }
     });
   }
@@ -275,7 +215,7 @@ class DailyPanel {
   // Add drag & drop only for active tasks
     if (!isCompleted) {
       div.draggable = true;
-      this.setupDragHandlers(div);
+      this.eventManager.setupDragHandlers(div);
     }
     
     const favicon = document.createElement('img');
@@ -431,87 +371,6 @@ class DailyPanel {
     });
 
     return div;
-  }
-  
-  setupDragHandlers(element) {
-    let draggedElement = null;
-    
-    element.addEventListener('dragstart', (e) => {
-      draggedElement = element;
-      element.classList.add('dragging');
-      e.dataTransfer.effectAllowed = 'move';
-      e.dataTransfer.setData('text/html', element.innerHTML);
-    });
-    
-    element.addEventListener('dragend', (e) => {
-      element.classList.remove('dragging');
-  // Remove all drag-over indicators
-      document.querySelectorAll('.page-item.drag-over').forEach(el => {
-        el.classList.remove('drag-over');
-      });
-    });
-    
-    element.addEventListener('dragover', (e) => {
-      e.preventDefault();
-      e.dataTransfer.dropEffect = 'move';
-      
-      const dragging = document.querySelector('.dragging');
-      if (dragging && dragging !== element) {
-        element.classList.add('drag-over');
-      }
-    });
-    
-    element.addEventListener('dragleave', (e) => {
-      element.classList.remove('drag-over');
-    });
-    
-    element.addEventListener('drop', async (e) => {
-      e.preventDefault();
-      element.classList.remove('drag-over');
-      
-      const dragging = document.querySelector('.dragging');
-      if (dragging && dragging !== element) {
-        await this.reorderPages(dragging, element);
-      }
-    });
-  }
-  
-  async reorderPages(draggedElement, targetElement) {
-    const draggedId = draggedElement.dataset.pageId;
-    const targetId = targetElement.dataset.pageId;
-    
-    if (draggedId === targetId) return;
-    
-    try {
-  // Get current list of active pages
-      const response = await chrome.runtime.sendMessage({ action: ACTIONS.GET_ACTIVE_PAGES });
-      const pages = response.pages || [];
-      
-  // Find indexes
-      const draggedIndex = pages.findIndex(p => p.id === draggedId);
-      const targetIndex = pages.findIndex(p => p.id === targetId);
-      
-      if (draggedIndex === -1 || targetIndex === -1) return;
-      
-  // Move bookmark in Chrome Bookmarks
-      const targetPage = pages[targetIndex];
-      
-  // Get parent folder
-      const draggedBookmark = await chrome.bookmarks.get(draggedId);
-      const parentId = draggedBookmark[0].parentId;
-      
-  // Move bookmark
-      await chrome.bookmarks.move(draggedId, {
-        parentId: parentId,
-        index: targetIndex
-      });
-      
-  // Update UI
-      this.loadPages();
-      
-    } catch (error) {
-      console.error('Error reordering pages:', error);
-    }
   }
 }
 

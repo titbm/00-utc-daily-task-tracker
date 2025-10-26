@@ -154,4 +154,44 @@ export class PageOperations {
       console.error('Error setting reset type:', error);
     }
   }
+
+  /**
+   * Reorder pages via drag-and-drop
+   */
+  async reorderPages(draggedElement, targetElement) {
+    const draggedId = draggedElement.dataset.pageId;
+    const targetId = targetElement.dataset.pageId;
+
+    if (draggedId === targetId) return;
+
+    try {
+      // Get current list of active pages
+      const response = await chrome.runtime.sendMessage({ action: ACTIONS.GET_ACTIVE_PAGES });
+      const pages = response.pages || [];
+
+      // Find indexes
+      const draggedIndex = pages.findIndex(p => p.id === draggedId);
+      const targetIndex = pages.findIndex(p => p.id === targetId);
+
+      if (draggedIndex === -1 || targetIndex === -1) return;
+
+      // Move bookmark in Chrome Bookmarks
+      const targetPage = pages[targetIndex];
+
+      // Get parent folder
+      const draggedBookmark = await chrome.bookmarks.get(draggedId);
+      const parentId = draggedBookmark[0].parentId;
+
+      // Move bookmark
+      await chrome.bookmarks.move(draggedId, {
+        parentId: parentId,
+        index: targetIndex
+      });
+
+      // Reload pages via background check
+      await chrome.runtime.sendMessage({ action: ACTIONS.CHECK_RESTORE });
+    } catch (error) {
+      console.error('Error reordering pages:', error);
+    }
+  }
 }
