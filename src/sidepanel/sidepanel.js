@@ -1,55 +1,55 @@
-// Импорт констант
+// Import constants
 import { ACTIONS, RESET_TYPES, TIMINGS, BUTTON_STATES } from '../shared/constants.js';
 import { logInfo, logWarning } from '../shared/errorHandler.js';
 
 class DailyPanel {
   constructor() {
-    // Секции
+  // Sections
     this.activeSection = document.getElementById('activeSection');
     this.completedSection = document.getElementById('completedSection');
     
-    // Списки страниц
+  // Page lists
     this.activePagesList = document.getElementById('activePagesList');
     this.completedPagesList = document.getElementById('completedPagesList');
     
-    // Пустые состояния
+  // Empty states
     this.emptyStateActive = document.getElementById('emptyStateActive');
     this.emptyStateCompleted = document.getElementById('emptyStateCompleted');
     
-    // Табы
+  // Tabs
     this.activeTab = document.getElementById('activeTab');
     this.completedTab = document.getElementById('completedTab');
     
-    // Кнопки и элементы управления
+  // Buttons and controls
     this.restoreCompletedBtn = document.getElementById('restoreAllCompleted');
     this.startTasksBtn = document.getElementById('startAllTasks');
     
-    // Счетчики
+  // Counters
     this.activeCount = document.getElementById('activeCount');
     this.completedCount = document.getElementById('completedCount');
     
-    // Текущая активная секция
-    this.currentSection = 'active'; // 'active' или 'completed'
+  // Current active section
+  this.currentSection = 'active'; // 'active' or 'completed'
     
-    // Один глобальный таймер для всех completed задач
-    this._timerElements = {}; // pageId -> { element, restoreAtMs }
+  // One global timer for all completed tasks
+  this._timerElements = {}; // pageId -> { element, restoreAtMs }
     this._globalTimerInterval = null;
     
-    // Таймер для проверки midnight задач в полночь UTC
+  // Timer for checking midnight tasks at UTC midnight
     this._midnightCheckTimeout = null;
     
-    // Кеш для оптимизации перерисовки
+  // Cache for render optimization
     this._cachedActivePages = null;
     this._cachedCompletedPages = null;
     
-    // Debounce для checkRestore - чтобы не спамить при множественных таймерах
+  // Debounce for checkRestore - to avoid spamming with multiple timers
     this._restoreCheckTimeout = null;
 
     this.init();
     this.setupCleanup();
   }
   
-  // Очистка ресурсов при закрытии панели
+  // Cleanup resources when closing the panel
   setupCleanup() {
     window.addEventListener('beforeunload', () => {
       this.cleanup();
@@ -59,35 +59,35 @@ class DailyPanel {
   cleanup() {
     logInfo('sidepanel:cleanup', 'Starting cleanup...');
     
-    // Останавливаем глобальный таймер для обновления счетчиков
+  // Stop the global timer for updating counters
     if (this._globalTimerInterval) {
       clearInterval(this._globalTimerInterval);
       this._globalTimerInterval = null;
       logInfo('sidepanel:cleanup', 'Global timer cleared');
     }
     
-    // Останавливаем проверку полуночи
+  // Stop the midnight check
     if (this._midnightCheckTimeout) {
       clearTimeout(this._midnightCheckTimeout);
       this._midnightCheckTimeout = null;
       logInfo('sidepanel:cleanup', 'Midnight check timeout cleared');
     }
     
-    // Останавливаем debounce таймер
+  // Stop the debounce timer
     if (this._restoreCheckTimeout) {
       clearTimeout(this._restoreCheckTimeout);
       this._restoreCheckTimeout = null;
       logInfo('sidepanel:cleanup', 'Restore check timeout cleared');
     }
     
-    // Закрываем соединение с background script
+  // Close the connection to the background script
     if (this.port) {
       this.port.disconnect();
       this.port = null;
       logInfo('sidepanel:cleanup', 'Port connection closed');
     }
     
-    // Очищаем кеш таймеров
+  // Clear the timer cache
     const timerCount = Object.keys(this._timerElements).length;
     this._timerElements = {};
     logInfo('sidepanel:cleanup', `Cleared ${timerCount} timer elements`);
@@ -95,7 +95,7 @@ class DailyPanel {
     logInfo('sidepanel:cleanup', 'Cleanup completed successfully');
   }
   
-  // Debounced запрос проверки восстановления (собирает множественные вызовы в один)
+  // Debounced restore check request (combines multiple calls into one)
   requestRestoreCheck() {
     if (this._restoreCheckTimeout) {
       clearTimeout(this._restoreCheckTimeout);
@@ -112,22 +112,22 @@ class DailyPanel {
     this.setupEventListeners();
     this.initTabHighlighter();
     
-    // Планируем проверку midnight задач в полночь UTC
+  // Schedule midnight task check at UTC midnight
     this.scheduleMidnightCheck();
     
-    // Запускаем глобальный таймер сразу при открытии панели
-    // (он будет обновлять таймеры completed задач независимо от секции)
+  // Start the global timer immediately when the panel opens
+  // (it will update completed task timers regardless of section)
     if (Object.keys(this._timerElements).length > 0) {
       this.startGlobalTimer();
     }
     
-    // Подключаемся к background для включения быстрых проверок
+  // Connect to background for fast checks
     this.port = chrome.runtime.connect({ name: 'sidepanel' });
     
-    // Слушаем сообщения от background script
+  // Listen for messages from the background script
     chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       if (message.action === ACTIONS.PAGES_UPDATED) {
-        // Проверяем флаг открытия на Completed (для уже открытой панели)
+  // Check the openOnCompleted flag (for already opened panel)
         chrome.storage.session.get('openOnCompleted', async ({ openOnCompleted }) => {
           await this.loadPages();
           
@@ -139,14 +139,14 @@ class DailyPanel {
           }
         });
       } else if (message.action === ACTIONS.CLOSE_SIDE_PANEL) {
-        // Закрываем боковую панель
+  // Close the side panel
         window.close();
       }
     });
   }
   
   setupEventListeners() {
-    // Табы переключения разделов
+  // Tabs for switching sections
     if (this.activeTab) {
       this.activeTab.addEventListener('click', () => {
         if (this.currentSection !== 'active') {
@@ -171,7 +171,7 @@ class DailyPanel {
       });
     }
     
-    // Кнопка "Start All Tasks"
+  // "Start All Tasks" button
     if (this.startTasksBtn) {
       this.startTasksBtn.addEventListener('click', () => {
         if (!this.startTasksBtn.disabled) {
@@ -180,7 +180,7 @@ class DailyPanel {
       });
     }
     
-    // Ссылка "Перейти в раздел Завершенные"
+  // Link "Go to Completed section"
     const goToCompletedLink = document.getElementById('goToCompleted');
     if (goToCompletedLink) {
       goToCompletedLink.addEventListener('click', (e) => {
@@ -191,7 +191,7 @@ class DailyPanel {
       });
     }
     
-    // Ссылка "Перейти в раздел Активные"
+  // Link "Go to Active section"
     const goToActiveLink = document.getElementById('goToActive');
     if (goToActiveLink) {
       goToActiveLink.addEventListener('click', (e) => {
@@ -202,7 +202,7 @@ class DailyPanel {
       });
     }
     
-    // Клики по счётчикам для переключения разделов
+  // Clicks on counters to switch sections
     this.activeCount.addEventListener('click', () => {
       if (this.currentSection !== 'active') {
         this.toggleSection();
@@ -217,8 +217,8 @@ class DailyPanel {
   }
   
   initTabHighlighter() {
-    // Инициализация подчеркивания с помощью RoughNotation
-    // Ждем загрузки библиотеки
+  // Initialize underline with RoughNotation
+  // Wait for the library to load
     const tryInit = () => {
       if (window.RoughNotation) {
         if (!this.activeTab || !this.completedTab) {
@@ -244,10 +244,10 @@ class DailyPanel {
           animationDuration: 600
         });
         
-        // Показываем подчеркивание для активной вкладки
+  // Show underline for active tab
         this.activeTabAnnotation.show();
       } else {
-        // Если библиотека еще не загружена, попробуем позже
+  // If the library is not loaded yet, try again later
         setTimeout(tryInit, TIMINGS.ROUGH_NOTATION_RETRY);
       }
     };
@@ -257,6 +257,7 @@ class DailyPanel {
   
   updateTabHighlighter() {
     // Обновляем подчеркивание при переключении вкладок
+      // Update underline when switching tabs
     if (this.activeTabAnnotation && this.completedTabAnnotation) {
       if (this.currentSection === 'active') {
         this.completedTabAnnotation.hide();
@@ -275,47 +276,54 @@ class DailyPanel {
       this.completedSection.classList.add('active');
       
       // Обновляем табы
+    // Update tabs
       if (this.activeTab) this.activeTab.classList.remove('active');
       if (this.completedTab) this.completedTab.classList.add('active');
       
       // Показываем кнопку Reset, скрываем кнопку Start в шапке
+    // Show Reset button, hide Start button in header
       if (this.startTasksBtn) this.startTasksBtn.style.display = 'none';
       if (this.restoreCompletedBtn) this.restoreCompletedBtn.style.display = 'flex';
       
       // Запускаем таймеры для Completed задач (если они не работают)
       // Таймер уже запущен глобально, ничего не делаем
+        // Start timers for Completed tasks (if not running)
+        // Timer already started globally, do nothing
     } else {
       this.currentSection = 'active';
       this.completedSection.classList.remove('active');
       this.activeSection.classList.add('active');
       
       // Обновляем табы
+    // Update tabs
       if (this.completedTab) this.completedTab.classList.remove('active');
       if (this.activeTab) this.activeTab.classList.add('active');
       
       // Показываем кнопку Start, скрываем кнопку Reset в шапке
+    // Show Start button, hide Reset button in header
       if (this.startTasksBtn) this.startTasksBtn.style.display = 'flex';
       if (this.restoreCompletedBtn) this.restoreCompletedBtn.style.display = 'none';
     }
     
     // Обновляем подчеркивание
+    // Update underline
     this.updateTabHighlighter();
   }
   
   async loadPages() {
     try {
-      // Запрашиваем данные у background
+  // Request data from background
       const activeResponse = await chrome.runtime.sendMessage({ action: ACTIONS.GET_ACTIVE_PAGES });
       const completedResponse = await chrome.runtime.sendMessage({ action: ACTIONS.GET_COMPLETED_PAGES });
       
       const activePages = activeResponse.pages || [];
       const completedPages = completedResponse.pages || [];
       
-      // Проверяем, изменились ли данные
+  // Check if data has changed
       const activePagesChanged = !this._arePagesEqual(this._cachedActivePages, activePages);
       const completedPagesChanged = !this._arePagesEqual(this._cachedCompletedPages, completedPages);
       
-      // Рендерим только если есть изменения
+  // Render only if there are changes
       if (activePagesChanged) {
         this.renderPages(activePages, this.activePagesList, this.emptyStateActive);
         this._cachedActivePages = structuredClone(activePages);
@@ -325,18 +333,18 @@ class DailyPanel {
         this.renderPages(completedPages, this.completedPagesList, this.emptyStateCompleted, true);
         this._cachedCompletedPages = structuredClone(completedPages);
         
-        // Запускаем таймер если есть completed задачи и он еще не запущен
+  // Start timer if there are completed tasks and it's not running yet
         if (Object.keys(this._timerElements).length > 0 && !this._globalTimerInterval) {
           this.startGlobalTimer();
         }
       }
       
-      // Обновляем счетчики и кнопки только если что-то изменилось
+  // Update counters and buttons only if something changed
       if (activePagesChanged || completedPagesChanged) {
         this.updateCounters(activePages.length, completedPages.length);
       }
       
-      // Управляем состоянием кнопок
+  // Manage button states
       this.setButtonState(this.startTasksBtn, activePages.length > 0);
       this.setButtonState(this.restoreCompletedBtn, completedPages.length > 0);
     } catch (error) {
@@ -348,11 +356,11 @@ class DailyPanel {
     if (!pages1 || !pages2) return false;
     if (pages1.length !== pages2.length) return false;
     
-    // Сравниваем JSON-представление для простоты
+  // Compare JSON representation for simplicity
     return JSON.stringify(pages1) === JSON.stringify(pages2);
   }
   
-  // Утилита для управления состоянием кнопок
+  // Utility for managing button state
   setButtonState(button, enabled) {
     if (!button) return;
     
@@ -368,7 +376,7 @@ class DailyPanel {
   }
   
   renderPages(pages, listElement, emptyStateElement, isCompleted = false) {
-    // Останавливаем глобальный таймер если был
+  // Stop global timer if it was running
     if (isCompleted && this._globalTimerInterval) {
       clearInterval(this._globalTimerInterval);
       this._globalTimerInterval = null;
@@ -390,19 +398,19 @@ class DailyPanel {
     });
   }
   
-  // Один setInterval для всех таймеров
+  // One setInterval for all timers
   startGlobalTimer() {
-    // Предотвращаем создание дублирующих таймеров
+  // Prevent creation of duplicate timers
     if (this._globalTimerInterval) {
       clearInterval(this._globalTimerInterval);
       this._globalTimerInterval = null;
       logWarning('sidepanel:timer', 'Cleared existing timer before starting new one');
     }
     
-    // Сначала обновляем все таймеры сразу
+  // First, update all timers immediately
     this.updateAllTimers();
     
-    // Затем запускаем интервал
+  // Then start the interval
     this._globalTimerInterval = setInterval(() => {
       this.updateAllTimers();
     }, TIMINGS.TIMER_INTERVAL);
@@ -424,27 +432,27 @@ class DailyPanel {
       
       element.textContent = `${String(hours).padStart(2,'0')}:${String(minutes).padStart(2,'0')}:${String(seconds).padStart(2,'0')}`;
       
-      // Если время истекло, помечаем для восстановления
+    // If time is up, mark for restore
       if (t <= 0) {
         delete this._timerElements[pageId];
         hasExpired = true;
       }
     }
     
-    // Если хотя бы один таймер истек, запрашиваем проверку (debounced)
+  // If at least one timer expired, request restore check (debounced)
     if (hasExpired) {
       this.requestRestoreCheck();
     }
   }
   
-  // Проверка midnight задач - вызывается в полночь UTC
+  // Midnight task check - called at UTC midnight
   scheduleMidnightCheck() {
-    // Очищаем предыдущий таймер если был
+  // Clear previous timer if it existed
     if (this._midnightCheckTimeout) {
       clearTimeout(this._midnightCheckTimeout);
     }
     
-    // Вычисляем время до следующей полуночи UTC
+  // Calculate time until next UTC midnight
     const now = new Date();
     const tomorrow = new Date(Date.UTC(
       now.getUTCFullYear(),
@@ -454,10 +462,10 @@ class DailyPanel {
     ));
     const msUntilMidnight = tomorrow.getTime() - now.getTime();
     
-    // Планируем проверку на полночь
+  // Schedule check at midnight
     this._midnightCheckTimeout = setTimeout(() => {
       this.requestRestoreCheck();
-      // Планируем следующую проверку на следующую полночь
+  // Schedule next check for the following midnight
       this.scheduleMidnightCheck();
     }, msUntilMidnight);
   }
@@ -468,7 +476,7 @@ class DailyPanel {
     div.dataset.pageId = page.id;
     div.dataset.index = index;
     
-    // Добавляем drag & drop только для активных задач
+  // Add drag & drop only for active tasks
     if (!isCompleted) {
       div.draggable = true;
       this.setupDragHandlers(div);
@@ -501,13 +509,13 @@ class DailyPanel {
     div.appendChild(favicon);
     div.appendChild(info);
     
-    // Контейнер для кнопок действий
+  // Container for action buttons
     const actionsDiv = document.createElement('div');
     actionsDiv.className = 'page-actions';
     
-    // Для активных вкладок - кнопка типа сброса и удаления
+  // For active tabs - reset type and delete buttons
     if (!isCompleted) {
-      // Кнопка типа сброса
+  // Reset type button
       const resetTypeBtn = document.createElement('button');
       resetTypeBtn.className = 'action-icon-btn reset-type-btn';
       const resetType = page.resetType || RESET_TYPES.MIDNIGHT;
@@ -518,7 +526,7 @@ class DailyPanel {
       resetIcon.textContent = resetType === RESET_TYPES.MIDNIGHT ? 'bedtime' : 'schedule';
       resetTypeBtn.appendChild(resetIcon);
       
-      // Кнопка удаления
+  // Delete button
       const removeBtn = document.createElement('button');
       removeBtn.className = 'action-icon-btn delete-btn';
       removeBtn.title = 'Delete';
@@ -531,31 +539,31 @@ class DailyPanel {
       actionsDiv.appendChild(resetTypeBtn);
       actionsDiv.appendChild(removeBtn);
       
-      // Обработчик переключения типа
+  // Handler for switching type
       resetTypeBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         this.toggleResetType(page, resetIcon);
       });
       
-      // Обработчик удаления страницы
+  // Handler for deleting page
       removeBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         this.removePage(page.id);
       });
     } else {
-      // Для завершенных вкладок - индикатор и кнопка восстановления в одном месте
+  // For completed tabs - indicator and restore button in one place
       const resetType = page.resetType || RESET_TYPES.MIDNIGHT;
       
-      // Контейнер-обертка для индикатора и кнопки (они будут в одном месте)
+  // Wrapper container for indicator and button (they will be in one place)
       const switchContainer = document.createElement('div');
       switchContainer.className = 'switch-container';
       
-      // Контейнер для индикатора (луна или таймер)
+  // Container for indicator (moon or timer)
       const indicator = document.createElement('div');
       indicator.className = 'completed-indicator';
       
       if (resetType === RESET_TYPES.MIDNIGHT) {
-        // Иконка луны
+  // Moon icon
         const moonBtn = document.createElement('button');
         moonBtn.className = 'action-icon-btn indicator-btn';
         moonBtn.disabled = true;
@@ -568,13 +576,13 @@ class DailyPanel {
         
         indicator.appendChild(moonBtn);
       } else {
-        // Таймер обратного отсчета
+  // Countdown timer
         const timerBadge = document.createElement('div');
         timerBadge.className = 'countdown-badge';
         timerBadge.textContent = '--:--:--';
         timerBadge.title = 'Time until restore';
         
-        // Вычисляем время следующего восстановления
+  // Calculate next restore time
         let restoreAtMs = null;
         if (page.restoreAt) {
           restoreAtMs = Date.parse(page.restoreAt);
@@ -585,7 +593,7 @@ class DailyPanel {
           }
         }
         
-        // Сохраняем элемент и время восстановления для глобального таймера
+  // Save element and restore time for global timer
         if (restoreAtMs) {
           this._timerElements[page.id] = { element: timerBadge, restoreAtMs };
         }
@@ -593,7 +601,7 @@ class DailyPanel {
         indicator.appendChild(timerBadge);
       }
       
-      // Кнопка восстановления (показывается при hover вместо индикатора)
+  // Restore button (shown on hover instead of indicator)
       const restoreBtn = document.createElement('button');
       restoreBtn.className = 'action-icon-btn restore-btn';
       restoreBtn.title = 'Return to active';
@@ -615,7 +623,7 @@ class DailyPanel {
     
     div.appendChild(actionsDiv);
     
-    // Обработчик клика по странице
+  // Handler for clicking on page
     div.addEventListener('click', (e) => {
       if (!e.target.closest('.page-actions')) {
         if (isCompleted) {
@@ -647,7 +655,7 @@ class DailyPanel {
   
   async openPage(url, bookmarkId) {
     try {
-      // Используем openSinglePage чтобы открыть ТОЛЬКО эту страницу без цикла
+  // Use openSinglePage to open ONLY this page without cycle
       await chrome.runtime.sendMessage({
         action: ACTIONS.OPEN_SINGLE_PAGE,
         url: url,
@@ -665,11 +673,11 @@ class DailyPanel {
         bookmarkId: bookmarkId
       });
       
-      // Проверяем, осталось ли что-то в отработанных
+  // Check if anything remains in completed
       const completedResponse = await chrome.runtime.sendMessage({ action: ACTIONS.GET_COMPLETED_PAGES });
       const completedPages = completedResponse.pages || [];
       
-      // Переключаемся на раздел активных только если это была последняя отработанная
+  // Switch to active section only if it was the last completed
       if (this.currentSection === 'completed' && completedPages.length === 0) {
         this.toggleSection();
       }
@@ -698,7 +706,7 @@ class DailyPanel {
         return;
       }
       
-      // Восстанавливаем все страницы
+  // Restore all pages
       for (const page of completedPages) {
         await chrome.runtime.sendMessage({
           action: ACTIONS.RESTORE_PAGE,
@@ -706,7 +714,7 @@ class DailyPanel {
         });
       }
       
-      // Переключаемся на раздел активных
+  // Switch to active section
       if (this.currentSection === 'completed') {
         this.toggleSection();
       }
@@ -717,7 +725,7 @@ class DailyPanel {
   
   async startAllTasks() {
     try {
-      // Запускаем отработку всех задач через background
+  // Start processing all tasks via background
       await chrome.runtime.sendMessage({ action: ACTIONS.OPEN_NEXT_PAGE });
     } catch (error) {
       console.error('Error starting all tasks:', error);
@@ -728,15 +736,15 @@ class DailyPanel {
     const currentType = page.resetType || RESET_TYPES.MIDNIGHT;
     const newType = currentType === RESET_TYPES.MIDNIGHT ? RESET_TYPES.INTERVAL : RESET_TYPES.MIDNIGHT;
     
-    // Обновляем иконку
+  // Update icon
     iconElement.textContent = newType === RESET_TYPES.MIDNIGHT ? 'bedtime' : 'schedule';
     const button = iconElement.parentElement;
     button.title = newType === RESET_TYPES.MIDNIGHT ? 'At midnight (click to change)' : 'After interval (click to change)';
     
-    // Обновляем локально в объекте
+  // Update locally in object
     page.resetType = newType;
     
-    // Отправляем в background для сохранения
+  // Send to background for saving
     try {
       await chrome.runtime.sendMessage({
         action: ACTIONS.SET_RESET_TYPE,
@@ -761,7 +769,7 @@ class DailyPanel {
     
     element.addEventListener('dragend', (e) => {
       element.classList.remove('dragging');
-      // Убираем все индикаторы drag-over
+  // Remove all drag-over indicators
       document.querySelectorAll('.page-item.drag-over').forEach(el => {
         el.classList.remove('drag-over');
       });
@@ -799,30 +807,30 @@ class DailyPanel {
     if (draggedId === targetId) return;
     
     try {
-      // Получаем текущий список активных страниц
+  // Get current list of active pages
       const response = await chrome.runtime.sendMessage({ action: ACTIONS.GET_ACTIVE_PAGES });
       const pages = response.pages || [];
       
-      // Находим индексы
+  // Find indexes
       const draggedIndex = pages.findIndex(p => p.id === draggedId);
       const targetIndex = pages.findIndex(p => p.id === targetId);
       
       if (draggedIndex === -1 || targetIndex === -1) return;
       
-      // Перемещаем закладку в Chrome Bookmarks
+  // Move bookmark in Chrome Bookmarks
       const targetPage = pages[targetIndex];
       
-      // Получаем родительскую папку
+  // Get parent folder
       const draggedBookmark = await chrome.bookmarks.get(draggedId);
       const parentId = draggedBookmark[0].parentId;
       
-      // Перемещаем закладку
+  // Move bookmark
       await chrome.bookmarks.move(draggedId, {
         parentId: parentId,
         index: targetIndex
       });
       
-      // Обновляем UI
+  // Update UI
       this.loadPages();
       
     } catch (error) {
@@ -831,7 +839,7 @@ class DailyPanel {
   }
 }
 
-// Инициализируем панель при загрузке
+// Initialize panel on load
 document.addEventListener('DOMContentLoaded', () => {
   new DailyPanel();
 });
