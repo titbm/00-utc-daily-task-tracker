@@ -1,6 +1,7 @@
 // Модуль управления циклом задач
 import { getFolderIds } from './folderManager.js';
 import { getActivePages } from './bookmarkOperations.js';
+import { scheduleNextCheck } from './scheduler.js';
 import { parseActiveBookmarkTitle, parseCompletedBookmarkTitle, createCompletedBookmarkTitle, getFaviconUrl } from '../shared/bookmarkParser.js';
 import { notifyPanelUpdate } from '../shared/notifications.js';
 import { RESET_TYPES } from '../shared/constants.js';
@@ -76,8 +77,38 @@ export async function movePageToCompleted(bookmarkId) {
     
     logInfo('movePageToCompleted', `Moved to completed: ${parsed.title}`);
     notifyPanelUpdate();
+    
+    // Пересчитываем следующую проверку
+    scheduleNextCheck();
   } catch (error) {
     logError('movePageToCompleted', error);
+  }
+}
+
+// Функция перемещения страницы из Completed в Active
+export async function movePageToActive(bookmarkId) {
+  try {
+    const ids = await getFolderIds();
+    const bookmark = await chrome.bookmarks.get(bookmarkId);
+    
+    if (!bookmark || !bookmark[0]) {
+      logError('movePageToActive', `Bookmark not found: ${bookmarkId}`);
+      return;
+    }
+    
+    const parsed = parseCompletedBookmarkTitle(bookmark[0].title);
+    const newTitle = `${parsed.title} [${parsed.resetType}]`;
+    
+    await chrome.bookmarks.move(bookmarkId, { parentId: ids.active });
+    await chrome.bookmarks.update(bookmarkId, { title: newTitle });
+    
+    logInfo('movePageToActive', `Restored to active: ${parsed.title}`);
+    notifyPanelUpdate();
+    
+    // Пересчитываем следующую проверку
+    scheduleNextCheck();
+  } catch (error) {
+    logError('movePageToActive', error);
   }
 }
 
@@ -107,6 +138,9 @@ export async function setPageInterval(bookmarkId, intervalHours) {
     
     logInfo('setPageInterval', `Set interval ${intervalHours}h for: ${parsed.title}`);
     notifyPanelUpdate();
+    
+    // Пересчитываем следующую проверку
+    scheduleNextCheck();
   } catch (error) {
     logError('setPageInterval', error);
   }

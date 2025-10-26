@@ -1,7 +1,7 @@
 // Модуль обработки сообщений от popup, sidepanel и content scripts
 import { getActivePages, getCompletedPages, addPageToActive, removePage } from './bookmarkOperations.js';
 import { getFolderIds } from './folderManager.js';
-import { movePageToCompleted, setPageInterval, startTasksCycle, openSinglePage, getTabStatus } from './cycle.js';
+import { movePageToCompleted, movePageToActive, setPageInterval, startTasksCycle, openSinglePage, getTabStatus } from './cycle.js';
 import { checkAndRestoreOldPages } from './scheduler.js';
 import { parseActiveBookmarkTitle, parseCompletedBookmarkTitle } from '../shared/bookmarkParser.js';
 import { notifyPanelUpdate } from '../shared/notifications.js';
@@ -60,24 +60,9 @@ export function initMessageHandler() {
       return true;
     } else if (request.action === ACTIONS.RESTORE_PAGE) {
       // Перемещаем из Completed в Active
-      (async () => {
-        const ids = await getFolderIds();
-        await chrome.bookmarks.move(request.bookmarkId, { parentId: ids.active });
-        // Парсим метаданные Completed и создаём метаданные Active
-        const bookmark = await chrome.bookmarks.get(request.bookmarkId);
-        const parsed = parseCompletedBookmarkTitle(bookmark[0].title);
-        // Восстанавливаем с тем же resetType, что был
-        const newTitle = `${parsed.title} [${parsed.resetType}]`;
-        
-        await chrome.bookmarks.update(request.bookmarkId, { 
-          title: newTitle,
-          url: bookmark[0].url
-        });
-        
-        logInfo('messageHandler', `Restored page: ${parsed.title}`);
-        notifyPanelUpdate();
+      movePageToActive(request.bookmarkId).then(() => {
         sendResponse({ success: true });
-      })();
+      });
       return true; // Асинхронный ответ
     } else if (request.action === ACTIONS.OPEN_NEXT_PAGE) {
       // Запуск цикла (используется кнопкой "Запустить задачи" в панели)

@@ -1,5 +1,6 @@
 // Импорт констант
 import { ACTIONS, RESET_TYPES, TIMINGS, BUTTON_STATES } from '../shared/constants.js';
+import { logInfo, logWarning } from '../shared/errorHandler.js';
 
 class DailyPanel {
   constructor() {
@@ -45,6 +46,53 @@ class DailyPanel {
     this._restoreCheckTimeout = null;
 
     this.init();
+    this.setupCleanup();
+  }
+  
+  // Очистка ресурсов при закрытии панели
+  setupCleanup() {
+    window.addEventListener('beforeunload', () => {
+      this.cleanup();
+    });
+  }
+  
+  cleanup() {
+    logInfo('sidepanel:cleanup', 'Starting cleanup...');
+    
+    // Останавливаем глобальный таймер для обновления счетчиков
+    if (this._globalTimerInterval) {
+      clearInterval(this._globalTimerInterval);
+      this._globalTimerInterval = null;
+      logInfo('sidepanel:cleanup', 'Global timer cleared');
+    }
+    
+    // Останавливаем проверку полуночи
+    if (this._midnightCheckTimeout) {
+      clearTimeout(this._midnightCheckTimeout);
+      this._midnightCheckTimeout = null;
+      logInfo('sidepanel:cleanup', 'Midnight check timeout cleared');
+    }
+    
+    // Останавливаем debounce таймер
+    if (this._restoreCheckTimeout) {
+      clearTimeout(this._restoreCheckTimeout);
+      this._restoreCheckTimeout = null;
+      logInfo('sidepanel:cleanup', 'Restore check timeout cleared');
+    }
+    
+    // Закрываем соединение с background script
+    if (this.port) {
+      this.port.disconnect();
+      this.port = null;
+      logInfo('sidepanel:cleanup', 'Port connection closed');
+    }
+    
+    // Очищаем кеш таймеров
+    const timerCount = Object.keys(this._timerElements).length;
+    this._timerElements = {};
+    logInfo('sidepanel:cleanup', `Cleared ${timerCount} timer elements`);
+    
+    logInfo('sidepanel:cleanup', 'Cleanup completed successfully');
   }
   
   // Debounced запрос проверки восстановления (собирает множественные вызовы в один)
@@ -227,6 +275,11 @@ class DailyPanel {
       // Показываем кнопку Reset, скрываем кнопку Start в шапке
       if (this.startTasksBtn) this.startTasksBtn.style.display = 'none';
       if (this.restoreCompletedBtn) this.restoreCompletedBtn.style.display = 'flex';
+      
+      // Запускаем таймеры для Completed задач (если они не работают)
+      if (Object.keys(this._timerElements).length > 0 && !this._globalTimerInterval) {
+        this.startGlobalTimer();
+      }
     } else {
       this.currentSection = 'active';
       this.completedSection.classList.remove('active');
@@ -239,6 +292,13 @@ class DailyPanel {
       // Показываем кнопку Start, скрываем кнопку Reset в шапке
       if (this.startTasksBtn) this.startTasksBtn.style.display = 'flex';
       if (this.restoreCompletedBtn) this.restoreCompletedBtn.style.display = 'none';
+      
+      // Останавливаем таймеры при переходе на Active (они не нужны)
+      if (this._globalTimerInterval) {
+        clearInterval(this._globalTimerInterval);
+        this._globalTimerInterval = null;
+        logInfo('sidepanel:timer', 'Timer stopped (switched to Active section)');
+      }
     }
     
     // Обновляем подчеркивание
@@ -335,6 +395,13 @@ class DailyPanel {
   
   // Один setInterval для всех таймеров
   startGlobalTimer() {
+    // Предотвращаем создание дублирующих таймеров
+    if (this._globalTimerInterval) {
+      clearInterval(this._globalTimerInterval);
+      this._globalTimerInterval = null;
+      logWarning('sidepanel:timer', 'Cleared existing timer before starting new one');
+    }
+    
     // Сначала обновляем все таймеры сразу
     this.updateAllTimers();
     
@@ -342,6 +409,8 @@ class DailyPanel {
     this._globalTimerInterval = setInterval(() => {
       this.updateAllTimers();
     }, TIMINGS.TIMER_INTERVAL);
+    
+    logInfo('sidepanel:timer', `Global timer started (${Object.keys(this._timerElements).length} active timers)`);
   }
   
   updateAllTimers() {
