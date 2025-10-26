@@ -3,6 +3,7 @@ import { getFolderIds } from './folderManager.js';
 import { getCompletedPages } from './bookmarkOperations.js';
 import { notifyPanelUpdate } from '../shared/notifications.js';
 import { logError, logInfo } from '../shared/errorHandler.js';
+import { RESET_TYPES, TIMINGS } from '../shared/constants.js';
 
 // Функция запуска периодической проверки
 export async function startTimeChecker() {
@@ -10,7 +11,7 @@ export async function startTimeChecker() {
   
   await chrome.alarms.clear('checkPages');
   
-  chrome.alarms.create('checkPages', { periodInMinutes: 1 });
+  chrome.alarms.create('checkPages', { periodInMinutes: TIMINGS.ALARM_INTERVAL });
 }
 
 // Инициализация слушателя alarm
@@ -45,7 +46,7 @@ export async function checkAndRestoreOldPages() {
     for (const page of completedPages) {
       let shouldRestore = false;
       
-      if (page.resetType === 'interval' && page.restoreAt) {
+      if (page.resetType === RESET_TYPES.INTERVAL && page.restoreAt) {
         const restoreDate = new Date(page.restoreAt);
         shouldRestore = now >= restoreDate;
       } else {

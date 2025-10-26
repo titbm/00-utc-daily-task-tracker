@@ -3,7 +3,7 @@ import { getFolderIds } from './folderManager.js';
 import { getActivePages } from './bookmarkOperations.js';
 import { parseActiveBookmarkTitle, parseCompletedBookmarkTitle, createCompletedBookmarkTitle } from '../shared/bookmarkParser.js';
 import { notifyPanelUpdate } from '../shared/notifications.js';
-
+import { RESET_TYPES } from '../shared/constants.js';
 import { logError, logInfo } from '../shared/errorHandler.js';
 
 // Глобальное состояние цикла
@@ -96,7 +96,7 @@ export async function setPageInterval(bookmarkId, intervalHours) {
     const metadata = [
       parsed.completedAt || now.toISOString(),
       restoreAt.toISOString(),
-      'interval',
+      RESET_TYPES.INTERVAL,
       intervalHours,
       parsed.addedAt
     ].join('|');
@@ -245,7 +245,7 @@ export async function handleTabRemove(tabId, removeInfo) {
         }
       }
       
-      if (parsed.resetType === 'interval') {
+      if (parsed.resetType === RESET_TYPES.INTERVAL) {
         await movePageToCompleted(bookmarkId);
         await setPageInterval(bookmarkId, 24);
         

@@ -22,7 +22,6 @@ export const RESET_TYPES = {
 export const TIMINGS = {
   DEBOUNCE_DELAY: 500,        // Задержка для батчинга restore запросов
   TIMER_INTERVAL: 1000,       // Обновление таймеров каждую секунду
-  RESIZE_DEBOUNCE: 400,       // Задержка для обработки resize
   ROUGH_NOTATION_RETRY: 100,  // Повтор инициализации RoughNotation
   ALARM_INTERVAL: 1           // Проверка через alarms API (минуты)
 };

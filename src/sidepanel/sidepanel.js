@@ -1,11 +1,5 @@
 // Импорт констант
-import { ACTIONS } from '../shared/constants.js';
-
-// Константы для таймингов
-const DEBOUNCE_DELAY = 500; // мс - задержка для батчинга restore запросов
-const TIMER_INTERVAL = 1000; // мс - обновление таймеров каждую секунду
-const RESIZE_DEBOUNCE = 400; // мс - задержка для обработки resize
-const ROUGH_NOTATION_RETRY = 100; // мс - повтор инициализации RoughNotation
+import { ACTIONS, RESET_TYPES, TIMINGS, BUTTON_STATES } from '../shared/constants.js';
 
 class DailyPanel {
   constructor() {
@@ -62,7 +56,7 @@ class DailyPanel {
     this._restoreCheckTimeout = setTimeout(() => {
       chrome.runtime.sendMessage({ action: ACTIONS.CHECK_RESTORE });
       this._restoreCheckTimeout = null;
-    }, DEBOUNCE_DELAY);
+    }, TIMINGS.DEBOUNCE_DELAY);
   }
   
   init() {
@@ -200,7 +194,7 @@ class DailyPanel {
         this.activeTabAnnotation.show();
       } else {
         // Если библиотека еще не загружена, попробуем позже
-        setTimeout(tryInit, ROUGH_NOTATION_RETRY);
+        setTimeout(tryInit, TIMINGS.ROUGH_NOTATION_RETRY);
       }
     };
     
@@ -301,8 +295,9 @@ class DailyPanel {
     if (!button) return;
     
     button.disabled = !enabled;
-    button.style.opacity = enabled ? '1' : '0.5';
-    button.style.cursor = enabled ? 'pointer' : 'not-allowed';
+    const state = enabled ? BUTTON_STATES.ENABLED : BUTTON_STATES.DISABLED;
+    button.style.opacity = state.opacity;
+    button.style.cursor = state.cursor;
   }
   
   updateCounters(activeCount, completedCount) {
@@ -346,7 +341,7 @@ class DailyPanel {
     // Затем запускаем интервал
     this._globalTimerInterval = setInterval(() => {
       this.updateAllTimers();
-    }, TIMER_INTERVAL);
+    }, TIMINGS.TIMER_INTERVAL);
   }
   
   updateAllTimers() {
@@ -449,12 +444,12 @@ class DailyPanel {
       // Кнопка типа сброса
       const resetTypeBtn = document.createElement('button');
       resetTypeBtn.className = 'action-icon-btn reset-type-btn';
-      const resetType = page.resetType || 'midnight';
-      resetTypeBtn.title = resetType === 'midnight' ? 'At midnight (click to change)' : 'After interval (click to change)';
+      const resetType = page.resetType || RESET_TYPES.MIDNIGHT;
+      resetTypeBtn.title = resetType === RESET_TYPES.MIDNIGHT ? 'At midnight (click to change)' : 'After interval (click to change)';
       
       const resetIcon = document.createElement('span');
       resetIcon.className = 'material-symbols-outlined';
-      resetIcon.textContent = resetType === 'midnight' ? 'bedtime' : 'schedule';
+      resetIcon.textContent = resetType === RESET_TYPES.MIDNIGHT ? 'bedtime' : 'schedule';
       resetTypeBtn.appendChild(resetIcon);
       
       // Кнопка удаления
@@ -483,7 +478,7 @@ class DailyPanel {
       });
     } else {
       // Для завершенных вкладок - индикатор и кнопка восстановления в одном месте
-      const resetType = page.resetType || 'midnight';
+      const resetType = page.resetType || RESET_TYPES.MIDNIGHT;
       
       // Контейнер-обертка для индикатора и кнопки (они будут в одном месте)
       const switchContainer = document.createElement('div');
@@ -493,7 +488,7 @@ class DailyPanel {
       const indicator = document.createElement('div');
       indicator.className = 'completed-indicator';
       
-      if (resetType === 'midnight') {
+      if (resetType === RESET_TYPES.MIDNIGHT) {
         // Иконка луны
         const moonBtn = document.createElement('button');
         moonBtn.className = 'action-icon-btn indicator-btn';
@@ -664,13 +659,13 @@ class DailyPanel {
   }
   
   async toggleResetType(page, iconElement) {
-    const currentType = page.resetType || 'midnight';
-    const newType = currentType === 'midnight' ? 'interval' : 'midnight';
+    const currentType = page.resetType || RESET_TYPES.MIDNIGHT;
+    const newType = currentType === RESET_TYPES.MIDNIGHT ? RESET_TYPES.INTERVAL : RESET_TYPES.MIDNIGHT;
     
     // Обновляем иконку
-    iconElement.textContent = newType === 'midnight' ? 'bedtime' : 'schedule';
+    iconElement.textContent = newType === RESET_TYPES.MIDNIGHT ? 'bedtime' : 'schedule';
     const button = iconElement.parentElement;
-    button.title = newType === 'midnight' ? 'At midnight (click to change)' : 'After interval (click to change)';
+    button.title = newType === RESET_TYPES.MIDNIGHT ? 'At midnight (click to change)' : 'After interval (click to change)';
     
     // Обновляем локально в объекте
     page.resetType = newType;

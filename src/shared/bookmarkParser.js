@@ -1,4 +1,5 @@
 // Утилиты для парсинга и создания заголовков закладок
+import { RESET_TYPES } from './constants.js';
 
 /**
  * Парсит заголовок активной закладки
@@ -14,7 +15,7 @@ export function parseActiveBookmarkTitle(title) {
   }
   return {
     title: title,
-    resetType: 'midnight'
+    resetType: RESET_TYPES.MIDNIGHT
   };
 }
 
@@ -30,7 +31,7 @@ export function parseCompletedBookmarkTitle(title) {
       title: match[1],
       completedAt: parts[0] || null,
       restoreAt: parts[1] || null,
-      resetType: parts[2] || 'midnight',
+      resetType: parts[2] || RESET_TYPES.MIDNIGHT,
       resetInterval: parts[3] ? parseInt(parts[3]) : null,
       addedAt: parts[4] || null
     };
@@ -39,7 +40,7 @@ export function parseCompletedBookmarkTitle(title) {
     title: title,
     completedAt: null,
     restoreAt: null,
-    resetType: 'midnight',
+    resetType: RESET_TYPES.MIDNIGHT,
     resetInterval: null,
     addedAt: null
   };
@@ -52,7 +53,7 @@ export function createCompletedBookmarkTitle(title, completedAt, restoreAt, rese
   const parts = [
     completedAt || '',
     restoreAt || '',
-    resetType || 'midnight',
+    resetType || RESET_TYPES.MIDNIGHT,
     resetInterval || '',
     addedAt || ''
   ];

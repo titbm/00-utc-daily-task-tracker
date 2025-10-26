@@ -1,5 +1,5 @@
 ﻿// Импорт констант
-import { ACTIONS } from '../shared/constants.js';
+import { ACTIONS, BUTTON_STATES } from '../shared/constants.js';
 
 // Загрузка счетчиков и состояния баннера
 (async () => {
@@ -31,8 +31,8 @@ import { ACTIONS } from '../shared/constants.js';
   } else if (activePages.length === 0 && completedPages.length === 0) {
     // Нет ни активных, ни completed задач - отключаем кнопку
     stealthBtn.disabled = true;
-    stealthBtn.style.opacity = '0.5';
-    stealthBtn.style.cursor = 'not-allowed';
+    stealthBtn.style.opacity = BUTTON_STATES.DISABLED.opacity;
+    stealthBtn.style.cursor = BUTTON_STATES.DISABLED.cursor;
   } else {
     // Есть активные задачи - кнопка START работает
     stealthBtn.addEventListener('click', async () => {
