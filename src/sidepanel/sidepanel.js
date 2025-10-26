@@ -1,8 +1,8 @@
 // Import constants
 import { ACTIONS, RESET_TYPES, TIMINGS, BUTTON_STATES } from '../shared/constants.js';
 import { logInfo, logWarning } from '../shared/errorHandler.js';
-import { TimerManager } from './TimerManager.js';
-import { UIManager } from './UIManager.js';
+import { TimerScheduler } from './timerScheduler.js';
+import { UIState } from './uiState.js';
 
 class DailyPanel {
   constructor() {
@@ -31,12 +31,12 @@ class DailyPanel {
     this.completedCount = document.getElementById('completedCount');
     
   // Timer Manager for handling countdown timers
-  this.timerManager = new TimerManager(() => {
+  this.timerScheduler = new TimerScheduler(() => {
     chrome.runtime.sendMessage({ action: ACTIONS.CHECK_RESTORE });
   });
 
   // UI Manager for handling UI state
-  this.uiManager = new UIManager({
+  this.uiState = new UIState({
     activeSection: this.activeSection,
     completedSection: this.completedSection,
     activeTab: this.activeTab,
@@ -65,9 +65,9 @@ class DailyPanel {
   cleanup() {
     logInfo('sidepanel:cleanup', 'Starting cleanup...');
     
-  // Clean up timer manager
-    if (this.timerManager) {
-      this.timerManager.cleanup();
+  // Clean up timer scheduler
+    if (this.timerScheduler) {
+      this.timerScheduler.cleanup();
     }
     
   // Close the connection to the background script
@@ -83,14 +83,14 @@ class DailyPanel {
   init() {
     this.loadPages();
     this.setupEventListeners();
-    this.uiManager.initTabHighlighter();
+    this.uiState.initTabHighlighter();
     
   // Schedule midnight task check at UTC midnight
-    this.timerManager.scheduleMidnightCheck();
+    this.timerScheduler.scheduleMidnightCheck();
     
   // Start the global timer immediately when the panel opens
-    if (this.timerManager.getTimerCount() > 0) {
-      this.timerManager.startGlobalTimer();
+    if (this.timerScheduler.getTimerCount() > 0) {
+      this.timerScheduler.startGlobalTimer();
     }
     
   // Connect to background for fast checks
@@ -104,8 +104,8 @@ class DailyPanel {
           await this.loadPages();
           
           if (openOnCompleted) {
-            if (this.uiManager.getCurrentSection() === 'active') {
-              this.uiManager.toggleSection();
+            if (this.uiState.getCurrentSection() === 'active') {
+              this.uiState.toggleSection();
             }
             chrome.storage.session.remove('openOnCompleted');
           }
@@ -121,16 +121,16 @@ class DailyPanel {
   // Tabs for switching sections
     if (this.activeTab) {
       this.activeTab.addEventListener('click', () => {
-        if (this.uiManager.getCurrentSection() !== 'active') {
-          this.uiManager.toggleSection();
+        if (this.uiState.getCurrentSection() !== 'active') {
+          this.uiState.toggleSection();
         }
       });
     }
     
     if (this.completedTab) {
       this.completedTab.addEventListener('click', () => {
-        if (this.uiManager.getCurrentSection() !== 'completed') {
-          this.uiManager.toggleSection();
+        if (this.uiState.getCurrentSection() !== 'completed') {
+          this.uiState.toggleSection();
         }
       });
     }
@@ -157,8 +157,8 @@ class DailyPanel {
     if (goToCompletedLink) {
       goToCompletedLink.addEventListener('click', (e) => {
         e.preventDefault();
-        if (this.uiManager.getCurrentSection() === 'active') {
-          this.uiManager.toggleSection();
+        if (this.uiState.getCurrentSection() === 'active') {
+          this.uiState.toggleSection();
         }
       });
     }
@@ -168,22 +168,22 @@ class DailyPanel {
     if (goToActiveLink) {
       goToActiveLink.addEventListener('click', (e) => {
         e.preventDefault();
-        if (this.uiManager.getCurrentSection() === 'completed') {
-          this.uiManager.toggleSection();
+        if (this.uiState.getCurrentSection() === 'completed') {
+          this.uiState.toggleSection();
         }
       });
     }
     
   // Clicks on counters to switch sections
     this.activeCount.addEventListener('click', () => {
-      if (this.uiManager.getCurrentSection() !== 'active') {
-        this.uiManager.toggleSection();
+      if (this.uiState.getCurrentSection() !== 'active') {
+        this.uiState.toggleSection();
       }
     });
     
     this.completedCount.addEventListener('click', () => {
-      if (this.uiManager.getCurrentSection() !== 'completed') {
-        this.uiManager.toggleSection();
+      if (this.uiState.getCurrentSection() !== 'completed') {
+        this.uiState.toggleSection();
       }
     });
   }
@@ -212,19 +212,19 @@ class DailyPanel {
         this._cachedCompletedPages = structuredClone(completedPages);
         
   // Start timer if there are completed tasks and it's not running yet
-        if (this.timerManager.getTimerCount() > 0 && !this._globalTimerInterval) {
-          this.timerManager.startGlobalTimer();
+        if (this.timerScheduler.getTimerCount() > 0 && !this._globalTimerInterval) {
+          this.timerScheduler.startGlobalTimer();
         }
       }
       
   // Update counters and buttons only if something changed
       if (activePagesChanged || completedPagesChanged) {
-        this.uiManager.updateCounters(activePages.length, completedPages.length);
+        this.uiState.updateCounters(activePages.length, completedPages.length);
       }
       
   // Manage button states
-      this.uiManager.setButtonState(this.startTasksBtn, activePages.length > 0);
-      this.uiManager.setButtonState(this.restoreCompletedBtn, completedPages.length > 0);
+      this.uiState.setButtonState(this.startTasksBtn, activePages.length > 0);
+      this.uiState.setButtonState(this.restoreCompletedBtn, completedPages.length > 0);
     } catch (error) {
       console.error('Error loading pages:', error);
     }
@@ -243,8 +243,8 @@ class DailyPanel {
   renderPages(pages, listElement, emptyStateElement, isCompleted = false) {
   // Stop global timer if it was running and rendering completed pages
     if (isCompleted) {
-      this.timerManager.stopGlobalTimer();
-      this.timerManager.clearAllTimers();
+      this.timerScheduler.stopGlobalTimer();
+      this.timerScheduler.clearAllTimers();
     }
 
     listElement.innerHTML = '';
@@ -387,7 +387,7 @@ class DailyPanel {
         
   // Save element and restore time for global timer
         if (restoreAtMs) {
-          this.timerManager.addTimerElement(page.id, timerBadge, restoreAtMs);
+          this.timerScheduler.addTimerElement(page.id, timerBadge, restoreAtMs);
         }
         
         indicator.appendChild(timerBadge);
@@ -470,8 +470,8 @@ class DailyPanel {
       const completedPages = completedResponse.pages || [];
       
   // Switch to active section only if it was the last completed
-      if (this.uiManager.getCurrentSection() === 'completed' && completedPages.length === 0) {
-        this.uiManager.toggleSection();
+      if (this.uiState.getCurrentSection() === 'completed' && completedPages.length === 0) {
+        this.uiState.toggleSection();
       }
     } catch (error) {
       console.error('Error restoring page:', error);
@@ -507,8 +507,8 @@ class DailyPanel {
       }
       
   // Switch to active section
-      if (this.uiManager.getCurrentSection() === 'completed') {
-        this.uiManager.toggleSection();
+      if (this.uiState.getCurrentSection() === 'completed') {
+        this.uiState.toggleSection();
       }
     } catch (error) {
       console.error('Error restoring all completed:', error);

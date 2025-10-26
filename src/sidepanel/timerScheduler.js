@@ -2,7 +2,7 @@ import { ACTIONS, TIMINGS } from '../shared/constants.js';
 import { logInfo, logWarning } from '../shared/errorHandler.js';
 
 /**
- * TimerManager - manages timers for restoring completed tasks
+ * TimerScheduler - manages timers for restoring completed tasks
  * 
  * Responsible for:
  * - Global interval for updating timers every N seconds
@@ -10,7 +10,7 @@ import { logInfo, logWarning } from '../shared/errorHandler.js';
  * - Debouncing restoration requests
  * - Cleanup of resources on close
  */
-export class TimerManager {
+export class TimerScheduler {
   constructor(onRestoreCheck) {
     this._globalTimerInterval = null;
     this._midnightCheckTimeout = null;

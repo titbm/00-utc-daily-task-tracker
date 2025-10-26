@@ -1,7 +1,7 @@
 import { BUTTON_STATES, TIMINGS } from '../shared/constants.js';
 
 /**
- * UIManager - manages UI state and interactions
+ * UIState - manages UI state and interactions
  * 
  * Responsible for:
  * - Toggling between Active and Completed sections
@@ -9,7 +9,7 @@ import { BUTTON_STATES, TIMINGS } from '../shared/constants.js';
  * - Button state management
  * - Counter updates
  */
-export class UIManager {
+export class UIState {
   constructor(uiElements) {
     // DOM elements
     this.activeSection = uiElements.activeSection;
