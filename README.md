@@ -35,8 +35,10 @@ A Chrome extension for tracking and managing your daily internet tasks with auto
 1. Click **"Start"** button to begin task cycle
 2. Each task opens in a new tab
 3. **Close the tab** when finished
-4. For midnight tasks: automatically restored next day at 00:00 UTC
-5. For interval tasks: choose custom restoration time (1-24 hours)
+4. For **midnight tasks**: automatically restored next day at 00:00 UTC
+5. For **interval tasks**: choose custom restoration time or switch to midnight reset
+   - Select interval (hours/minutes) and click **"Confirm"**
+   - Or click **"Reset at 00:00 UTC"** to switch to midnight reset
 
 ### Managing Tasks
 - Open **Side Panel** (click extension icon, then "Go to Side Panel")
@@ -142,13 +144,17 @@ export async function myFunction() { ... }
 
 ## Changelog
 
-### Version 1.0.2 (2025-10-26)
-- 🎯 **Major Refactoring** - Extracted 8 modular components
-- 📉 **91.7% code reduction** in background.js (967 → 80 lines)
-- 🏗️ **ES6 modules** - All background scripts use import/export
-- 📦 **Better organization** - Separated shared utilities and business logic
-- ✅ **No functionality changes** - All features work as before
-- 🧪 **Improved testability** - Each module can be tested independently
+### Version 1.0.4 (2025-10-26)
+- ✨ **New Feature**: "Reset at 00:00 UTC" button in interval dialog
+  - Allows switching interval tasks to midnight reset type after completion
+  - Storage-driven architecture - resetType determines processing
+- � **Code Refactoring**: Unified `updateCompletedPage()` function
+  - Replaced `setPageInterval()` and `switchPageToMidnight()` with single universal function
+  - Handles both 'midnight' and 'interval' reset types
+  - Eliminated code duplication and improved maintainability
+- 🐛 **Bug Fix**: Removed duplicate bookmark update call
+  - Fixed race condition when closing interval dialog
+  - Single update path ensures data consistency
 
 ### Version 1.0.3 (2025-10-26)
 - 🗂️ **Reorganized folder structure** - Moved `completed.html/js` and `intervalDialog.html/js` from `src/sidepanel/` to `src/pages/`
