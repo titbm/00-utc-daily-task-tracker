@@ -1,6 +1,7 @@
 // Import constants
 import { ACTIONS, RESET_TYPES, TIMINGS, BUTTON_STATES } from '../shared/constants.js';
 import { logInfo, logWarning } from '../shared/errorHandler.js';
+import { TimerManager } from './TimerManager.js';
 
 class DailyPanel {
   constructor() {
@@ -31,19 +32,14 @@ class DailyPanel {
   // Current active section
   this.currentSection = 'active'; // 'active' or 'completed'
     
-  // One global timer for all completed tasks
-  this._timerElements = {}; // pageId -> { element, restoreAtMs }
-    this._globalTimerInterval = null;
-    
-  // Timer for checking midnight tasks at UTC midnight
-    this._midnightCheckTimeout = null;
+  // Timer Manager for handling countdown timers
+  this.timerManager = new TimerManager(() => {
+    chrome.runtime.sendMessage({ action: ACTIONS.CHECK_RESTORE });
+  });
     
   // Cache for render optimization
     this._cachedActivePages = null;
     this._cachedCompletedPages = null;
-    
-  // Debounce for checkRestore - to avoid spamming with multiple timers
-    this._restoreCheckTimeout = null;
 
     this.init();
     this.setupCleanup();
@@ -59,25 +55,9 @@ class DailyPanel {
   cleanup() {
     logInfo('sidepanel:cleanup', 'Starting cleanup...');
     
-  // Stop the global timer for updating counters
-    if (this._globalTimerInterval) {
-      clearInterval(this._globalTimerInterval);
-      this._globalTimerInterval = null;
-      logInfo('sidepanel:cleanup', 'Global timer cleared');
-    }
-    
-  // Stop the midnight check
-    if (this._midnightCheckTimeout) {
-      clearTimeout(this._midnightCheckTimeout);
-      this._midnightCheckTimeout = null;
-      logInfo('sidepanel:cleanup', 'Midnight check timeout cleared');
-    }
-    
-  // Stop the debounce timer
-    if (this._restoreCheckTimeout) {
-      clearTimeout(this._restoreCheckTimeout);
-      this._restoreCheckTimeout = null;
-      logInfo('sidepanel:cleanup', 'Restore check timeout cleared');
+  // Clean up timer manager
+    if (this.timerManager) {
+      this.timerManager.cleanup();
     }
     
   // Close the connection to the background script
@@ -87,24 +67,7 @@ class DailyPanel {
       logInfo('sidepanel:cleanup', 'Port connection closed');
     }
     
-  // Clear the timer cache
-    const timerCount = Object.keys(this._timerElements).length;
-    this._timerElements = {};
-    logInfo('sidepanel:cleanup', `Cleared ${timerCount} timer elements`);
-    
     logInfo('sidepanel:cleanup', 'Cleanup completed successfully');
-  }
-  
-  // Debounced restore check request (combines multiple calls into one)
-  requestRestoreCheck() {
-    if (this._restoreCheckTimeout) {
-      clearTimeout(this._restoreCheckTimeout);
-    }
-    
-    this._restoreCheckTimeout = setTimeout(() => {
-      chrome.runtime.sendMessage({ action: ACTIONS.CHECK_RESTORE });
-      this._restoreCheckTimeout = null;
-    }, TIMINGS.DEBOUNCE_DELAY);
   }
   
   init() {
@@ -113,12 +76,11 @@ class DailyPanel {
     this.initTabHighlighter();
     
   // Schedule midnight task check at UTC midnight
-    this.scheduleMidnightCheck();
+    this.timerManager.scheduleMidnightCheck();
     
   // Start the global timer immediately when the panel opens
-  // (it will update completed task timers regardless of section)
-    if (Object.keys(this._timerElements).length > 0) {
-      this.startGlobalTimer();
+    if (this.timerManager.getTimerCount() > 0) {
+      this.timerManager.startGlobalTimer();
     }
     
   // Connect to background for fast checks
@@ -256,8 +218,7 @@ class DailyPanel {
   }
   
   updateTabHighlighter() {
-    // Обновляем подчеркивание при переключении вкладок
-      // Update underline when switching tabs
+    // Update underline when switching tabs
     if (this.activeTabAnnotation && this.completedTabAnnotation) {
       if (this.currentSection === 'active') {
         this.completedTabAnnotation.hide();
@@ -267,45 +228,36 @@ class DailyPanel {
         this.completedTabAnnotation.show();
       }
     }
-  }
-  
-  toggleSection() {
+  }  toggleSection() {
     if (this.currentSection === 'active') {
       this.currentSection = 'completed';
       this.activeSection.classList.remove('active');
       this.completedSection.classList.add('active');
       
-      // Обновляем табы
-    // Update tabs
+      // Update tabs
       if (this.activeTab) this.activeTab.classList.remove('active');
       if (this.completedTab) this.completedTab.classList.add('active');
       
-      // Показываем кнопку Reset, скрываем кнопку Start в шапке
-    // Show Reset button, hide Start button in header
+      // Show Reset button, hide Start button in header
       if (this.startTasksBtn) this.startTasksBtn.style.display = 'none';
       if (this.restoreCompletedBtn) this.restoreCompletedBtn.style.display = 'flex';
       
-      // Запускаем таймеры для Completed задач (если они не работают)
-      // Таймер уже запущен глобально, ничего не делаем
-        // Start timers for Completed tasks (if not running)
-        // Timer already started globally, do nothing
+      // Start timers for Completed tasks (if not running)
+      // Timer already started globally, do nothing
     } else {
       this.currentSection = 'active';
       this.completedSection.classList.remove('active');
       this.activeSection.classList.add('active');
       
-      // Обновляем табы
-    // Update tabs
+      // Update tabs
       if (this.completedTab) this.completedTab.classList.remove('active');
       if (this.activeTab) this.activeTab.classList.add('active');
       
-      // Показываем кнопку Start, скрываем кнопку Reset в шапке
-    // Show Start button, hide Reset button in header
+      // Show Start button, hide Reset button in header
       if (this.startTasksBtn) this.startTasksBtn.style.display = 'flex';
       if (this.restoreCompletedBtn) this.restoreCompletedBtn.style.display = 'none';
     }
     
-    // Обновляем подчеркивание
     // Update underline
     this.updateTabHighlighter();
   }
@@ -334,8 +286,8 @@ class DailyPanel {
         this._cachedCompletedPages = structuredClone(completedPages);
         
   // Start timer if there are completed tasks and it's not running yet
-        if (Object.keys(this._timerElements).length > 0 && !this._globalTimerInterval) {
-          this.startGlobalTimer();
+        if (this.timerManager.getTimerCount() > 0 && !this._globalTimerInterval) {
+          this.timerManager.startGlobalTimer();
         }
       }
       
@@ -376,11 +328,10 @@ class DailyPanel {
   }
   
   renderPages(pages, listElement, emptyStateElement, isCompleted = false) {
-  // Stop global timer if it was running
-    if (isCompleted && this._globalTimerInterval) {
-      clearInterval(this._globalTimerInterval);
-      this._globalTimerInterval = null;
-      this._timerElements = {};
+  // Stop global timer if it was running and rendering completed pages
+    if (isCompleted) {
+      this.timerManager.stopGlobalTimer();
+      this.timerManager.clearAllTimers();
     }
 
     listElement.innerHTML = '';
@@ -398,78 +349,6 @@ class DailyPanel {
     });
   }
   
-  // One setInterval for all timers
-  startGlobalTimer() {
-  // Prevent creation of duplicate timers
-    if (this._globalTimerInterval) {
-      clearInterval(this._globalTimerInterval);
-      this._globalTimerInterval = null;
-      logWarning('sidepanel:timer', 'Cleared existing timer before starting new one');
-    }
-    
-  // First, update all timers immediately
-    this.updateAllTimers();
-    
-  // Then start the interval
-    this._globalTimerInterval = setInterval(() => {
-      this.updateAllTimers();
-    }, TIMINGS.TIMER_INTERVAL);
-    
-    logInfo('sidepanel:timer', `Global timer started (${Object.keys(this._timerElements).length} active timers)`);
-  }
-  
-  updateAllTimers() {
-    const nowMs = Date.now();
-    let hasExpired = false;
-    
-    for (const [pageId, data] of Object.entries(this._timerElements)) {
-      const { element, restoreAtMs } = data;
-      const t = Math.max(0, restoreAtMs - nowMs);
-      
-      const hours = Math.floor(t / 3600000);
-      const minutes = Math.floor((t % 3600000) / 60000);
-      const seconds = Math.floor((t % 60000) / 1000);
-      
-      element.textContent = `${String(hours).padStart(2,'0')}:${String(minutes).padStart(2,'0')}:${String(seconds).padStart(2,'0')}`;
-      
-    // If time is up, mark for restore
-      if (t <= 0) {
-        delete this._timerElements[pageId];
-        hasExpired = true;
-      }
-    }
-    
-  // If at least one timer expired, request restore check (debounced)
-    if (hasExpired) {
-      this.requestRestoreCheck();
-    }
-  }
-  
-  // Midnight task check - called at UTC midnight
-  scheduleMidnightCheck() {
-  // Clear previous timer if it existed
-    if (this._midnightCheckTimeout) {
-      clearTimeout(this._midnightCheckTimeout);
-    }
-    
-  // Calculate time until next UTC midnight
-    const now = new Date();
-    const tomorrow = new Date(Date.UTC(
-      now.getUTCFullYear(),
-      now.getUTCMonth(),
-      now.getUTCDate() + 1,
-      0, 0, 0, 0
-    ));
-    const msUntilMidnight = tomorrow.getTime() - now.getTime();
-    
-  // Schedule check at midnight
-    this._midnightCheckTimeout = setTimeout(() => {
-      this.requestRestoreCheck();
-  // Schedule next check for the following midnight
-      this.scheduleMidnightCheck();
-    }, msUntilMidnight);
-  }
-
   createPageElement(page, index, isCompleted = false) {
     const div = document.createElement('div');
     div.className = 'page-item';
@@ -595,7 +474,7 @@ class DailyPanel {
         
   // Save element and restore time for global timer
         if (restoreAtMs) {
-          this._timerElements[page.id] = { element: timerBadge, restoreAtMs };
+          this.timerManager.addTimerElement(page.id, timerBadge, restoreAtMs);
         }
         
         indicator.appendChild(timerBadge);
