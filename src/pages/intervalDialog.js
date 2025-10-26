@@ -96,6 +96,7 @@ document.addEventListener('keydown', (e) => {
 // Кнопка "Reset at 00:00 UTC"
 document.getElementById('switchToMidnightBtn').addEventListener('click', () => {
   const storageKey = `intervalDialog_${bookmarkId}`;
+  
   chrome.storage.session.set({
     [storageKey]: {
       resetType: 'midnight'

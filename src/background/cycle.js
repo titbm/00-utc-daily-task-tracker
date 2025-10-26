@@ -116,7 +116,10 @@ export async function movePageToActive(bookmarkId) {
 export async function updateCompletedPage(bookmarkId, resetType, intervalHours = null) {
   try {
     const bookmark = await chrome.bookmarks.get(bookmarkId);
-    if (!bookmark || !bookmark[0]) return;
+    if (!bookmark || !bookmark[0]) {
+      logError('updateCompletedPage', `Bookmark not found: ${bookmarkId}`);
+      return;
+    }
     
     const page = bookmark[0];
     const parsed = parseCompletedBookmarkTitle(page.title);
@@ -259,6 +262,7 @@ export async function handleTabRemove(tabId, removeInfo) {
   
   if (tabInfo.isIntervalDialog) {
     const storageKey = `intervalDialog_${tabInfo.bookmarkId}`;
+    
     chrome.storage.session.get(storageKey, async (result) => {
       if (result[storageKey]) {
         const data = result[storageKey];
@@ -307,8 +311,8 @@ export async function handleTabRemove(tabId, removeInfo) {
       }
       
       if (parsed.resetType === RESET_TYPES.INTERVAL) {
+        // Перемещаем в Completed, но НЕ обновляем метаданные - это сделает dialog при закрытии
         await movePageToCompleted(bookmarkId);
-        await updateCompletedPage(bookmarkId, 'interval', 24);
         
         const faviconUrl = getFaviconUrl(page.url);
         
