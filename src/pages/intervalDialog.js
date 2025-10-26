@@ -93,24 +93,6 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
-// Кнопка переключения на midnight тип
-document.getElementById('switchToMidnightBtn').addEventListener('click', () => {
-  // Очищаем storage чтобы handleTabRemove не пытался установить интервал
-  const storageKey = `intervalDialog_${bookmarkId}`;
-  chrome.storage.session.remove(storageKey);
-  
-  // Отправляем запрос на изменение типа задачи на midnight
-  chrome.runtime.sendMessage({
-    action: ACTIONS.SWITCH_TO_MIDNIGHT,
-    bookmarkId: bookmarkId
-  }, () => {
-    // Даем Chrome время обновить bookmark перед закрытием
-    setTimeout(() => {
-      window.close();
-    }, 200);
-  });
-});
-
 // Сохраняем текущие значения в storage при любом изменении
 function updateCurrentInterval() {
   const hours = parseInt(document.getElementById('hoursInput').value) || 0;
