@@ -1,6 +1,6 @@
-// Content script для отображения баннера с активными задачами
+// Content script for displaying the banner with active tasks
 
-// Константы actions (дублируются из constants.js, т.к. content script не поддерживает ES6 modules)
+// Action constants (duplicated from constants.js, since content script does not support ES6 modules)
 const ACTIONS = {
   GET_ACTIVE_PAGES: 'getActivePages',
   GET_TAB_STATUS: 'getMyTabStatus',
@@ -12,7 +12,7 @@ const ACTIONS = {
 
 let banner = null;
 
-// Загружаем Material Symbols если ещё нет
+// Load Material Symbols if not already loaded
 if (!document.getElementById('daily-panel-material-symbols')) {
   const link = document.createElement('link');
   link.id = 'daily-panel-material-symbols';
@@ -21,7 +21,7 @@ if (!document.getElementById('daily-panel-material-symbols')) {
   document.head.appendChild(link);
 }
 
-// Загружаем Outfit шрифт для заголовков
+// Load Outfit font for headers
 if (!document.getElementById('daily-panel-outfit-font')) {
   const link = document.createElement('link');
   link.id = 'daily-panel-outfit-font';
@@ -30,10 +30,10 @@ if (!document.getElementById('daily-panel-outfit-font')) {
   document.head.appendChild(link);
 }
 
-// Минимальная реализация RoughNotation underline (извлечено из rough-notation.iife.js)
-// Только необходимый функционал для анимированного подчёркивания
+// Minimal implementation of RoughNotation underline (extracted from rough-notation.iife.js)
+// Only the necessary functionality for animated underlining
 
-// Random number generator с seed для консистентности
+// Random number generator with seed for consistency
 class RoughRandomizer {
   constructor(seed) {
     this.seed = seed;
@@ -45,7 +45,7 @@ class RoughRandomizer {
   }
 }
 
-// Получить случайное число из randomizer'а
+// Get a random number from the randomizer
 function getRandomNumber(config) {
   if (!config.randomizer) {
     config.randomizer = new RoughRandomizer(config.seed || 0);
@@ -53,17 +53,17 @@ function getRandomNumber(config) {
   return config.randomizer.next();
 }
 
-// Случайное смещение в диапазоне
+// Random offset within a range
 function offsetValue(min, max, config, roughnessGain = 1) {
   return config.roughness * roughnessGain * (getRandomNumber(config) * (max - min) + min);
 }
 
-// Случайное смещение от 0
+// Random offset from 0
 function offset(x, config, roughnessGain = 1) {
   return offsetValue(-x, x, config, roughnessGain);
 }
 
-// Рисование линии с roughness эффектом
+// Draw a line with roughness effect
 function drawRoughLine(x1, y1, x2, y2, config) {
   const lengthSq = Math.pow(x1 - x2, 2) + Math.pow(y1 - y2, 2);
   const length = Math.sqrt(lengthSq);
@@ -109,7 +109,7 @@ function drawRoughLine(x1, y1, x2, y2, config) {
   return ops;
 }
 
-// Конвертация операций в SVG path
+// Convert operations to SVG path
 function opsToPath(ops) {
   let path = '';
   for (const op of ops) {
@@ -129,17 +129,17 @@ function opsToPath(ops) {
   return path.trim();
 }
 
-// Создание highlight анимации (как в RoughNotation) - эффект маркера-выделителя
+// Create highlight animation (like in RoughNotation) - marker highlight effect
 function createHighlightAnimation(element, options = {}) {
   const color = options.color || '#FFC107';
   const duration = options.animationDuration || 600;
   const iterations = 2; // Количество линий
   const padding = [5, 5, 5, 5]; // top, right, bottom, left
   
-  // Получаем размеры элемента
+  // Get element dimensions
   const rect = element.getBoundingClientRect();
   
-  // Для highlight используется особый конфиг с roughness: 3
+  // For highlight, use a special config with roughness: 3
   const config = {
     maxRandomnessOffset: 2,
     roughness: 3, // Больше roughness для эффекта маркера
@@ -151,7 +151,7 @@ function createHighlightAnimation(element, options = {}) {
   
   const strokeWidth = 0.95 * rect.height; // Толстая линия для заполнения фона
   
-  // Создаём SVG контейнер
+  // Create SVG container
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   svg.setAttribute('class', 'rough-annotation');
   svg.style.cssText = `
@@ -165,16 +165,16 @@ function createHighlightAnimation(element, options = {}) {
     z-index: -1;
   `;
   
-  // Вставляем SVG перед элементом (как в оригинале для highlight)
+  // Insert SVG before the element (as in the original for highlight)
   element.insertAdjacentElement('beforebegin', svg);
   
-  // Позиция линии highlight (посередине высоты элемента)
+  // Highlight line position (middle of the element height)
   const svgRect = svg.getBoundingClientRect();
   const lineY = (rect.top || rect.y) + rect.height / 2 - (svgRect.top || svgRect.y);
   const lineX1 = (rect.left || rect.x) - (svgRect.left || svgRect.x) - 4; // Немного левее
   const lineX2 = lineX1 + rect.width + 16; // Добавляем 16px к ширине для полного покрытия
   
-  // Генерируем несколько линий (iterations)
+  // Generate several lines (iterations)
   const paths = [];
   for (let i = 0; i < iterations; i++) {
     const ops = i % 2 
@@ -185,7 +185,7 @@ function createHighlightAnimation(element, options = {}) {
     paths.push(pathString);
   }
   
-  // Создаём path элементы с анимацией
+  // Create path elements with animation
   const pathElements = [];
   let totalLength = 0;
   
@@ -206,7 +206,7 @@ function createHighlightAnimation(element, options = {}) {
   
   return {
     show: () => {
-      // Добавляем keyframe анимацию если ещё нет
+  // Add keyframe animation if not already present
       if (!window.__rno_kf_s) {
         const style = document.createElement('style');
         style.textContent = '@keyframes rough-notation-dash { to { stroke-dashoffset: 0; } }';
@@ -214,7 +214,7 @@ function createHighlightAnimation(element, options = {}) {
         window.__rno_kf_s = true;
       }
       
-      // Анимируем каждый path
+  // Animate each path
       let delay = 0;
       for (const { path, length } of pathElements) {
         const animDuration = totalLength ? duration * (length / totalLength) : 0;
@@ -232,7 +232,7 @@ function createHighlightAnimation(element, options = {}) {
   };
 }
 
-// Проверка статуса текущей вкладки (задача из цикла, задача из панели, или обычная страница)
+// Check the status of the current tab (task from cycle, task from panel, or regular page)
 async function getTabStatus() {
   try {
     const response = await chrome.runtime.sendMessage({ 
@@ -244,14 +244,14 @@ async function getTabStatus() {
   }
 }
 
-// Создание баннера
+// Create banner
 async function createBanner() {
   if (banner) return;
   
-  // Получаем статус вкладки
+  // Get tab status
   const tabStatus = await getTabStatus();
   
-  // Определяем тип баннера
+  // Determine banner type
   let bannerType = 'normal'; // normal | cycle | panel
   let bannerText = 'Daily tasks are not completed';
   let bannerIcon = 'sync'; // sync или bedtime
@@ -268,17 +268,17 @@ async function createBanner() {
   }
   // else - обычная страница, показываем normal баннер
   
-  // Проверяем настройку баннера ТОЛЬКО для обычного баннера
+  // Check banner setting ONLY for normal banner
   if (bannerType === 'normal') {
     const { bannerEnabled = true } = await chrome.storage.local.get('bannerEnabled');
-    if (!bannerEnabled) return; // Баннер отключен в настройках
+  if (!bannerEnabled) return; // Banner is disabled in settings
   }
   
   banner = document.createElement('div');
   banner.id = 'daily-panel-banner';
   
   if (bannerType === 'cycle') {
-    // Квадратная иконка с закругленными углами для цикла
+    // Square icon with rounded corners for cycle
     banner.innerHTML = `
       <div style="
         position: fixed;
@@ -315,7 +315,7 @@ async function createBanner() {
     
     document.body.appendChild(banner);
     
-    // Hover эффект (только увеличение)
+  // Hover effect (only scaling up)
     const indicator = banner.querySelector('#cycle-indicator');
     
     indicator.addEventListener('mouseenter', () => {
@@ -325,11 +325,11 @@ async function createBanner() {
       indicator.style.transform = 'scale(1)';
     });
     
-    // Tooltip при наведении
+  // Tooltip on hover
     indicator.title = 'Task cycle is running';
     
   } else {
-    // Обычный баннер сверху для normal режима (без кнопки)
+  // Regular banner at the top for normal mode (no button)
     banner.innerHTML = `
       <div id="normal-banner-content" style="
         position: fixed;
@@ -355,21 +355,21 @@ async function createBanner() {
     
     document.body.prepend(banner);
     
-    // Добавляем отступ для body чтобы контент не перекрывался
+  // Add padding to body so content is not overlapped
     document.body.style.paddingTop = '36px';
     
-    // Скрытие баннера когда курсор на баннере (0-36px)
+  // Hide banner when cursor is over the banner area (0-36px)
     const bannerContent = banner.querySelector('#normal-banner-content');
     let isHidden = false;
     
     document.addEventListener('mousemove', (e) => {
-      // Если курсор на баннере (0-36px) - скрываем
+  // If cursor is over the banner (0-36px) - hide
       if (e.clientY < 36 && !isHidden) {
         isHidden = true;
         bannerContent.style.transform = 'translateY(-100%)';
         bannerContent.style.opacity = '0';
       }
-      // Если курсор ниже баннера (36px+) - показываем
+  // If cursor is below the banner (36px+) - show
       else if (e.clientY >= 36 && isHidden) {
         isHidden = false;
         bannerContent.style.transform = 'translateY(0)';
@@ -378,7 +378,7 @@ async function createBanner() {
     });
   }
   
-  // Добавляем keyframes для анимации
+  // Add keyframes for animation
   if (!document.getElementById('daily-panel-banner-animations')) {
     const style = document.createElement('style');
     style.id = 'daily-panel-banner-animations';
@@ -392,17 +392,17 @@ async function createBanner() {
   }
 }
 
-// Удаление баннера
+// Remove banner
 function removeBanner() {
   if (banner) {
     banner.remove();
     banner = null;
-    // Убираем отступ только если это был баннер сверху
+  // Remove padding only if it was the top banner
     document.body.style.paddingTop = '';
   }
 }
 
-// Проверка наличия активных страниц
+// Check for active pages
 async function checkActiveTasks() {
   try {
     const response = await chrome.runtime.sendMessage({ action: ACTIONS.GET_ACTIVE_PAGES });
@@ -414,28 +414,28 @@ async function checkActiveTasks() {
       removeBanner();
     }
   } catch (error) {
-    // Тихо игнорируем ошибки в content script
-    // (может быть недоступен runtime при закрытии расширения)
+  // Silently ignore errors in content script
+  // (runtime may be unavailable when extension is closed)
   }
 }
 
-// Инициализация
+// Initialization
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', checkActiveTasks);
 } else {
   checkActiveTasks();
 }
 
-// Слушаем обновления от background
+// Listen for updates from background
 chrome.runtime.onMessage.addListener((message) => {
   if (message.action === ACTIONS.PAGES_UPDATED) {
     checkActiveTasks();
   } else if (message.action === ACTIONS.BANNER_SETTING_CHANGED) {
-    // Настройка баннера изменилась
+  // Banner setting changed
     if (message.enabled) {
-      checkActiveTasks(); // Проверяем и показываем баннер если нужно
+  checkActiveTasks(); // Check and show banner if needed
     } else {
-      removeBanner(); // Скрываем баннер
+  removeBanner(); // Hide banner
     }
   } else if (message.action === ACTIONS.SHOW_ADDED_NOTIFICATION) {
     showNotification('Page added to Daily Panel', message.title, 'success');
@@ -444,9 +444,9 @@ chrome.runtime.onMessage.addListener((message) => {
   }
 });
 
-// Функция для показа уведомления
+// Function to show notification
 function showNotification(text, title, type) {
-  // Загружаем Outfit шрифт если ещё не загружен
+  // Load Outfit font if not already loaded
   if (!document.getElementById('daily-panel-outfit-font')) {
     const style = document.createElement('style');
     style.id = 'daily-panel-outfit-font';
@@ -456,13 +456,13 @@ function showNotification(text, title, type) {
     document.head.appendChild(style);
   }
   
-  // Удаляем предыдущее уведомление если есть
+  // Remove previous notification if exists
   const existing = document.getElementById('daily-panel-notification');
   if (existing) {
     existing.remove();
   }
 
-  // Создаём уведомление
+  // Create notification
   const notification = document.createElement('div');
   notification.id = 'daily-panel-notification';
   notification.style.cssText = `
@@ -483,7 +483,7 @@ function showNotification(text, title, type) {
     transition: opacity 0.3s ease;
   `;
 
-  // Заголовок с иконкой
+  // Header with icon
   const headerContainer = document.createElement('div');
   headerContainer.style.cssText = `
     display: flex;
@@ -492,7 +492,7 @@ function showNotification(text, title, type) {
     margin-bottom: 16px;
   `;
   
-  // Внутренний контейнер для иконки и текста (только они подсвечиваются)
+  // Inner container for icon and text (only these are highlighted)
   const highlightWrapper = document.createElement('div');
   highlightWrapper.style.cssText = `
     display: flex;
@@ -504,7 +504,7 @@ function showNotification(text, title, type) {
     highlightWrapper.id = 'notification-highlight'; // ID только на иконку + текст
   }
 
-  // Иконка schedule (без фона)
+  // Schedule icon (no background)
   const icon = document.createElement('div');
   icon.style.cssText = `
     display: flex;
@@ -518,7 +518,7 @@ function showNotification(text, title, type) {
     </svg>
   `;
 
-  // Заголовок
+  // Header
   const header = document.createElement('h1');
   header.style.cssText = `
     font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -539,7 +539,7 @@ function showNotification(text, title, type) {
   highlightWrapper.appendChild(header);
   headerContainer.appendChild(highlightWrapper);
 
-  // Контейнер для страницы (стиль как .page-item)
+  // Container for page (styled like .page-item)
   const pageContainer = document.createElement('div');
   pageContainer.style.cssText = `
     display: flex;
@@ -551,7 +551,7 @@ function showNotification(text, title, type) {
     gap: 12px;
   `;
 
-  // Фавикон
+  // Favicon
   const favicon = document.createElement('img');
   const domain = new URL(window.location.href).hostname;
   favicon.src = `https://www.google.com/s2/favicons?domain=${domain}&sz=32`;
@@ -564,14 +564,14 @@ function showNotification(text, title, type) {
     this.style.display = 'none';
   };
 
-  // Контейнер для текста (название + URL)
+  // Container for text (title + URL)
   const textContainer = document.createElement('div');
   textContainer.style.cssText = `
     flex: 1;
     overflow: hidden;
   `;
 
-  // Название страницы
+  // Page title
   const titleText = document.createElement('div');
   titleText.style.cssText = `
     font-size: 14px;
@@ -607,11 +607,11 @@ function showNotification(text, title, type) {
 
   document.body.appendChild(notification);
 
-  // Анимация появления
+  // Show animation
   requestAnimationFrame(() => {
     notification.style.opacity = '1';
     
-    // Применяем минимальную highlight анимацию на весь контейнер (иконка + заголовок)
+  // Apply minimal highlight animation to the whole container (icon + header)
     if (type === 'success') {
       const highlightElement = document.getElementById('notification-highlight');
       if (highlightElement) {
@@ -628,7 +628,7 @@ function showNotification(text, title, type) {
     }
   });
 
-  // Автоматическое скрытие через 3 секунды
+  // Auto-hide after 3 seconds
   setTimeout(() => {
     notification.style.opacity = '0';
     setTimeout(() => {
@@ -638,7 +638,7 @@ function showNotification(text, title, type) {
 }
 
 // ============================================================================
-// НОВЫЙ ЦЕНТРАЛЬНЫЙ БАННЕР - НЕ ТРОГАЕТ СУЩЕСТВУЮЩИЙ КОД
+// NEW CENTRAL BANNER - DOES NOT TOUCH EXISTING CODE
 // ============================================================================
 
 let centralBanner = null;
@@ -795,42 +795,42 @@ function createCentralBanner() {
   centralBanner.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
 }
 
-// Проверка и показ центрального баннера только на первой странице первого цикла
+// Check and show central banner only on the first page of the first cycle
 async function checkAndShowCentralBanner() {
   try {
-    // Получаем статус вкладки
+  // Get tab status
     const tabStatus = await getTabStatus();
     
-    // Показываем баннер только если:
-    // 1. Это задача из цикла (fromCycle === true)
-    // 2. Это первая задача (cycleIndex === 0)
-    // 3. Баннер еще не показывался после установки/включения
+  // Show banner only if:
+  // 1. This is a task from the cycle (fromCycle === true)
+  // 2. This is the first task (cycleIndex === 0)
+  // 3. The banner has not yet been shown after install/enable
     if (tabStatus.isTask && tabStatus.fromCycle && tabStatus.cycleIndex === 0) {
-      // Проверяем флаг в local storage (сохраняется между перезапусками браузера)
+  // Check flag in local storage (persists between browser restarts)
       const { centralBannerShown } = await chrome.storage.local.get('centralBannerShown');
       
       if (!centralBannerShown) {
-        // Ждем загрузки шрифтов перед показом баннера
+  // Wait for fonts to load before showing banner
         if (document.fonts) {
           await document.fonts.ready;
         } else {
-          // Fallback для старых браузеров - просто ждем 500ms
+          // Fallback for old browsers - just wait 500ms
           await new Promise(resolve => setTimeout(resolve, 500));
         }
         
-        // Показываем баннер
+  // Show banner
         createCentralBanner();
         
-        // Устанавливаем флаг, что баннер показан
+  // Set flag that banner has been shown
         await chrome.storage.local.set({ centralBannerShown: true });
       }
     }
   } catch (error) {
-    // Тихо игнорируем ошибки
+  // Silently ignore errors
   }
 }
 
-// Показываем центральный баннер при загрузке страницы (только для первой страницы цикла)
+// Show central banner on page load (only for the first page of the cycle)
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', checkAndShowCentralBanner);
 } else {
