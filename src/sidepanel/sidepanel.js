@@ -7,7 +7,7 @@ import { PageOperations } from './pageOperations.js';
 import { EventManager } from './eventManager.js';
 import { PageRenderer } from './pageRenderer.js';
 
-class DailyPanel {
+class TaskSidepanel {
   constructor() {
   // Sections
     this.activeSection = document.getElementById('activeSection');
@@ -213,5 +213,5 @@ class DailyPanel {
 
 // Initialize panel on load
 document.addEventListener('DOMContentLoaded', () => {
-  new DailyPanel();
+  new TaskSidepanel();
 });
