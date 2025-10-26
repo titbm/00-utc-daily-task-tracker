@@ -1,4 +1,4 @@
-// Модуль планировщика - проверка времени и восстановление задач
+// Scheduler module - time checking and task restoration
 import { getFolderIds } from './folderManager.js';
 import { getCompletedPages } from './bookmarkOperations.js';
 import { movePageToActive } from './cycle.js';
@@ -6,24 +6,24 @@ import { notifyPanelUpdate } from '../shared/notifications.js';
 import { logError, logInfo } from '../shared/errorHandler.js';
 import { RESET_TYPES, TIMINGS } from '../shared/constants.js';
 
-// Функция запуска периодической проверки
+// Function to start periodic check
 export async function startTimeChecker() {
   await checkAndRestoreOldPages();
   
-  // Планируем следующую проверку на основе анализа Completed задач
+  // Schedule the next check based on analysis of Completed tasks
   await scheduleNextCheck();
 }
 
-// Динамическое планирование следующей проверки
+// Dynamic scheduling of the next check
 export async function scheduleNextCheck() {
   try {
     const completedPages = await getCompletedPages();
     
-    // Очищаем предыдущий alarm
+  // Clear previous alarm
     await chrome.alarms.clear('checkPages');
     
     if (completedPages.length === 0) {
-      // Нет задач - проверяем раз в час
+  // No tasks - check every hour
       chrome.alarms.create('checkPages', { periodInMinutes: 60 });
       logInfo('scheduler', 'No completed tasks - next check in 60 minutes');
       return;
@@ -41,7 +41,7 @@ export async function scheduleNextCheck() {
     
     for (const page of completedPages) {
       if (page.resetType === RESET_TYPES.INTERVAL && page.restoreAt) {
-        // Interval задачи - проверяем по restoreAt
+  // Interval tasks - check by restoreAt
         const restoreMs = new Date(page.restoreAt).getTime();
         const timeUntilRestore = restoreMs - now;
         
@@ -49,7 +49,7 @@ export async function scheduleNextCheck() {
           nextCheckMs = timeUntilRestore;
         }
       } else if (page.resetType === RESET_TYPES.MIDNIGHT) {
-        // Midnight задачи - проверяем в полночь
+  // Midnight tasks - check at midnight
         const tomorrowStart = todayStart + 86400000; // следующая полночь
         const timeUntilMidnight = tomorrowStart - now;
         
@@ -59,7 +59,7 @@ export async function scheduleNextCheck() {
       }
     }
     
-    // Конвертируем в минуты (минимум 1, максимум 60)
+  // Convert to minutes (min 1, max 60)
     const intervalMinutes = Math.max(1, Math.min(60, Math.ceil(nextCheckMs / 60000)));
     
     chrome.alarms.create('checkPages', { periodInMinutes: intervalMinutes });
@@ -67,25 +67,25 @@ export async function scheduleNextCheck() {
     
   } catch (error) {
     logError('scheduleNextCheck', error);
-    // Fallback на стандартный интервал
+  // Fallback to default interval
     chrome.alarms.create('checkPages', { periodInMinutes: TIMINGS.ALARM_INTERVAL });
   }
 }
 
-// Инициализация слушателя alarm
+// Initialize alarm listener
 export function initAlarmListener() {
   chrome.alarms.onAlarm.addListener((alarm) => {
     if (alarm.name === 'checkPages') {
       logInfo('scheduler', 'Alarm triggered - checking pages');
       checkAndRestoreOldPages().then(() => {
-        // После проверки пересчитываем следующую
+  // After check, reschedule the next one
         scheduleNextCheck();
       });
     }
   });
 }
 
-// Функция проверки и восстановления старых страниц
+// Function to check and restore old pages
 export async function checkAndRestoreOldPages() {
   try {
     logInfo('checkAndRestoreOldPages', 'Running scheduled check...');
@@ -124,7 +124,7 @@ export async function checkAndRestoreOldPages() {
     
     if (restoredCount > 0) {
       logInfo('checkAndRestoreOldPages', `Total restored: ${restoredCount} tasks`);
-      // notifyPanelUpdate уже вызывается внутри movePageToActive
+  // notifyPanelUpdate is already called inside movePageToActive
     } else {
       logInfo('checkAndRestoreOldPages', 'Check complete - no tasks to restore yet');
     }
