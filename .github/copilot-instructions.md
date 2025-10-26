@@ -103,7 +103,7 @@ export const MY_CONSTANT = 42;
 ```
 
 **Module Locations:**
-- `src/shared/` - Reusable utilities (debug, notifications, bookmarkParser, dateUtils, constants)
+- `src/shared/` - Reusable utilities (errorHandler, notifications, bookmarkParser, constants)
 - `src/background/` - Service worker logic (folderManager, bookmarkOperations, scheduler, cycle, messageHandler)
 
 ### 2. Asynchronous Message Handlers (CRITICAL)

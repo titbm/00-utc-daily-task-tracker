@@ -63,7 +63,7 @@ Daily panel/
 │   ├── shared/                        # Shared utilities
 │   │   ├── notifications.js           # Panel update notifications
 │   │   ├── bookmarkParser.js          # Metadata parsing/creation
-│   │   ├── dateUtils.js               # Date/time utilities
+│   │   ├── errorHandler.js            # Centralized error logging
 │   │   └── constants.js               # App constants
 │   ├── background/                    # Service worker modules
 │   │   ├── folderManager.js           # Bookmark folder management
