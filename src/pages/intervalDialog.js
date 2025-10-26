@@ -101,8 +101,7 @@ function updateCurrentInterval() {
   
   chrome.storage.session.set({
     [`intervalDialog_${bookmarkId}`]: {
-      intervalHours: intervalHours,
-      timestamp: Date.now()
+      intervalHours: intervalHours
     }
   });
 }
