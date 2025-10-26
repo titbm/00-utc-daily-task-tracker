@@ -9,8 +9,14 @@ import { restoreCycleState, handleTabRemove } from './src/background/cycle.js';
 import { initMessageHandler } from './src/background/messageHandler.js';
 import { logError, logInfo } from './src/shared/errorHandler.js';
 
-chrome.runtime.onInstalled.addListener(async () => {
+chrome.runtime.onInstalled.addListener(async (details) => {
   logInfo('runtime', 'Extension installed/updated');
+  
+  // Сбрасываем флаг показа центрального баннера при установке или включении
+  if (details.reason === 'install' || details.reason === 'update') {
+    await chrome.storage.local.set({ centralBannerShown: false });
+    logInfo('runtime', 'Central banner flag reset');
+  }
   
   // Создаем контекстное меню для добавления страниц в панель
   chrome.contextMenus.create({
@@ -101,3 +107,35 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   }
 });
 
+// Отслеживаем включение расширения для сброса флага баннера
+chrome.management.getSelf((info) => {
+  // При старте service worker проверяем, было ли расширение только что включено
+  // Если это первый запуск после включения, сбрасываем флаг
+  chrome.storage.local.get('extensionEnabled', (result) => {
+    if (result.extensionEnabled === false && info.enabled) {
+      // Расширение было выключено, а теперь включено - сбрасываем флаг баннера
+      chrome.storage.local.set({ centralBannerShown: false });
+      logInfo('runtime', 'Extension enabled - central banner flag reset');
+    }
+    // Сохраняем текущее состояние
+    chrome.storage.local.set({ extensionEnabled: info.enabled });
+  });
+});
+
+// Отслеживаем изменения состояния расширения
+chrome.management.onEnabled.addListener((info) => {
+  if (info.id === chrome.runtime.id) {
+    chrome.storage.local.set({ 
+      centralBannerShown: false,
+      extensionEnabled: true
+    });
+    logInfo('runtime', 'Extension enabled - central banner flag reset');
+  }
+});
+
+chrome.management.onDisabled.addListener((info) => {
+  if (info.id === chrome.runtime.id) {
+    chrome.storage.local.set({ extensionEnabled: false });
+    logInfo('runtime', 'Extension disabled');
+  }
+});

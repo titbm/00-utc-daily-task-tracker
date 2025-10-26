@@ -12,7 +12,8 @@
     "sidePanel",
     "bookmarks",
     "alarms",
-    "storage"
+    "storage",
+    "management"
   ],
   
   "background": {
@@ -34,7 +35,13 @@
   
   "web_accessible_resources": [
     {
-      "resources": ["src/pages/intervalDialog.html", "src/pages/completed.html", "src/shared/roughNotation.js"],
+      "resources": [
+        "src/pages/intervalDialog.html", 
+        "src/pages/completed.html", 
+        "src/shared/roughNotation.js",
+        "assets/icons/local_fire_department-cropped.svg",
+        "assets/icons/check.svg"
+      ],
       "matches": ["<all_urls>"]
     }
   ],

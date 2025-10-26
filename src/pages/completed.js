@@ -43,9 +43,15 @@ document.getElementById('openPanelBtn').addEventListener('click', async () => {
   }
 });
 
-// Обработка Enter - нажатие Enter открывает панель
-document.addEventListener('keydown', (e) => {
+// Обработка Enter - нажатие Enter открывает панель, Esc - закрывает вкладку
+document.addEventListener('keydown', async (e) => {
   if (e.key === 'Enter') {
     document.getElementById('openPanelBtn').click();
+  } else if (e.key === 'Escape') {
+    // Закрываем текущую вкладку
+    const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (tabs[0]) {
+      chrome.tabs.remove(tabs[0].id);
+    }
   }
 });

@@ -235,7 +235,8 @@ async function openNextInCycle() {
           bookmarkId: nextPage.id,
           fromCycle: true,
           isIntervalDialog: false,
-          dialogFromCycle: false
+          dialogFromCycle: false,
+          cycleIndex: currentCycleIndex
         });
         
         if (!currentWindowId) {
@@ -377,8 +378,9 @@ export function getTabStatus(tabId) {
       isTask: true, 
       fromCycle: tabInfo.fromCycle,
       isIntervalDialog: tabInfo.isIntervalDialog,
-      dialogFromCycle: tabInfo.dialogFromCycle
+      dialogFromCycle: tabInfo.dialogFromCycle,
+      cycleIndex: tabInfo.cycleIndex !== undefined ? tabInfo.cycleIndex : -1
     };
   }
-  return { isTask: false, fromCycle: false };
+  return { isTask: false, fromCycle: false, cycleIndex: -1 };
 }

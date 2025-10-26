@@ -21,6 +21,15 @@ if (!document.getElementById('daily-panel-material-symbols')) {
   document.head.appendChild(link);
 }
 
+// Загружаем Outfit шрифт для заголовков
+if (!document.getElementById('daily-panel-outfit-font')) {
+  const link = document.createElement('link');
+  link.id = 'daily-panel-outfit-font';
+  link.rel = 'stylesheet';
+  link.href = 'https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600&display=swap';
+  document.head.appendChild(link);
+}
+
 // Минимальная реализация RoughNotation underline (извлечено из rough-notation.iife.js)
 // Только необходимый функционал для анимированного подчёркивания
 
@@ -162,8 +171,8 @@ function createHighlightAnimation(element, options = {}) {
   // Позиция линии highlight (посередине высоты элемента)
   const svgRect = svg.getBoundingClientRect();
   const lineY = (rect.top || rect.y) + rect.height / 2 - (svgRect.top || svgRect.y);
-  const lineX1 = (rect.left || rect.x) - (svgRect.left || svgRect.x);
-  const lineX2 = lineX1 + rect.width;
+  const lineX1 = (rect.left || rect.x) - (svgRect.left || svgRect.x) - 4; // Немного левее
+  const lineX2 = lineX1 + rect.width + 16; // Добавляем 16px к ширине для полного покрытия
   
   // Генерируем несколько линий (iterations)
   const paths = [];
@@ -626,4 +635,204 @@ function showNotification(text, title, type) {
       notification.remove();
     }, 300);
   }, 3000);
+}
+
+// ============================================================================
+// НОВЫЙ ЦЕНТРАЛЬНЫЙ БАННЕР - НЕ ТРОГАЕТ СУЩЕСТВУЮЩИЙ КОД
+// ============================================================================
+
+let centralBanner = null;
+
+function createCentralBanner() {
+  if (centralBanner) return; // Уже создан
+  
+  centralBanner = document.createElement('div');
+  centralBanner.id = 'daily-panel-central-banner';
+  centralBanner.style.cssText = `
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: #ffffff;
+    border-radius: 8px;
+    border: 1px solid #e5e5e5;
+    padding: 32px 28px 16px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    z-index: 2147483646;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    max-width: 500px;
+    width: 100%;
+    text-align: center;
+    animation: centralBannerFadeIn 0.4s ease-out;
+  `;
+  
+  centralBanner.innerHTML = `
+    <style>
+      @keyframes centralBannerFadeIn {
+        from { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
+        to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+      }
+      
+      @keyframes iconBounce {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-20px); }
+      }
+      
+      #daily-panel-central-banner-close:hover {
+        background: #333333;
+      }
+    </style>
+    
+    <!-- Иконка -->
+    <div style="
+      margin-bottom: 16px;
+      animation: iconBounce 1s ease-in-out;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    ">
+      <img src="${chrome.runtime.getURL('assets/icons/local_fire_department-cropped.svg')}" width="80" height="80" style="filter: grayscale(1) brightness(0.6);">
+    </div>
+    
+    <!-- Заголовок с подсветкой -->
+    <div style="margin-bottom: 12px;">
+      <div style="display: inline-block; position: relative;">
+        <h1 id="central-banner-highlight" style="
+          margin: 0;
+          font-size: 28px;
+          font-weight: 500;
+          font-family: 'Outfit', 'Inter', sans-serif;
+          color: #000000;
+          position: relative;
+          z-index: 1;
+        ">Work Faster</h1>
+      </div>
+    </div>
+    
+    <!-- Текст -->
+    <p style="
+      margin: 0 0 24px 0;
+      font-size: 16px;
+      color: #666666;
+    ">Use Ctrl+W to close tabs quickly and complete your tasks faster.</p>
+    
+    <!-- Кнопка закрытия -->
+    <button id="daily-panel-central-banner-close" style="
+      background: #000000;
+      color: #ffffff;
+      border: 1px solid #000000;
+      padding: 14px 28px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: 'Inter', sans-serif;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    ">
+      <img src="${chrome.runtime.getURL('assets/icons/check.svg')}" width="20" height="20" style="filter: brightness(0) invert(1);">
+      Got it
+    </button>
+    
+    <!-- Helper text -->
+    <p style="
+      font-size: 12px;
+      color: #999999;
+      margin-top: 16px;
+      margin-bottom: 0;
+    ">Press Esc or Enter to close</p>
+  `;
+  
+  document.body.appendChild(centralBanner);
+  
+  // Применяем highlight анимацию на заголовок (как в уведомлении "Task added")
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      const highlightElement = document.getElementById('central-banner-highlight');
+      if (highlightElement) {
+        // Добавляем небольшой padding слева и справа для полного покрытия
+        const rect = highlightElement.getBoundingClientRect();
+        highlightElement.style.paddingLeft = '4px';
+        highlightElement.style.paddingRight = '4px';
+        
+        const annotation = createHighlightAnimation(highlightElement, {
+          color: '#FFC107',
+          animationDuration: 600,
+          padding: 2
+        });
+        
+        // Увеличиваем задержку чтобы элемент успел полностью отрендериться
+        setTimeout(() => {
+          annotation.show();
+        }, 200);
+      }
+    });
+  });
+  
+  // Обработчик кнопки закрытия
+  const closeButton = centralBanner.querySelector('#daily-panel-central-banner-close');
+  closeButton.addEventListener('click', () => {
+    centralBanner.style.opacity = '0';
+    centralBanner.style.transform = 'translate(-50%, -50%) scale(0.9)';
+    setTimeout(() => {
+      centralBanner.remove();
+      centralBanner = null;
+    }, 300);
+  });
+  
+  // Закрытие по Esc и Enter
+  const handleKeyPress = (e) => {
+    if ((e.key === 'Escape' || e.key === 'Enter') && centralBanner) {
+      closeButton.click();
+      document.removeEventListener('keydown', handleKeyPress);
+    }
+  };
+  document.addEventListener('keydown', handleKeyPress);
+  
+  // Добавляем transition для плавного закрытия
+  centralBanner.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+}
+
+// Проверка и показ центрального баннера только на первой странице первого цикла
+async function checkAndShowCentralBanner() {
+  try {
+    // Получаем статус вкладки
+    const tabStatus = await getTabStatus();
+    
+    // Показываем баннер только если:
+    // 1. Это задача из цикла (fromCycle === true)
+    // 2. Это первая задача (cycleIndex === 0)
+    // 3. Баннер еще не показывался после установки/включения
+    if (tabStatus.isTask && tabStatus.fromCycle && tabStatus.cycleIndex === 0) {
+      // Проверяем флаг в local storage (сохраняется между перезапусками браузера)
+      const { centralBannerShown } = await chrome.storage.local.get('centralBannerShown');
+      
+      if (!centralBannerShown) {
+        // Ждем загрузки шрифтов перед показом баннера
+        if (document.fonts) {
+          await document.fonts.ready;
+        } else {
+          // Fallback для старых браузеров - просто ждем 500ms
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+        
+        // Показываем баннер
+        createCentralBanner();
+        
+        // Устанавливаем флаг, что баннер показан
+        await chrome.storage.local.set({ centralBannerShown: true });
+      }
+    }
+  } catch (error) {
+    // Тихо игнорируем ошибки
+  }
+}
+
+// Показываем центральный баннер при загрузке страницы (только для первой страницы цикла)
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', checkAndShowCentralBanner);
+} else {
+  checkAndShowCentralBanner();
 }
