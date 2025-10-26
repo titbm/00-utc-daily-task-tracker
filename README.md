@@ -14,9 +14,6 @@ A Chrome extension for tracking and managing your daily internet tasks with auto
 
 ## Installation
 
-### From Chrome Web Store
-[Install from Chrome Web Store](#) *(link pending publication)*
-
 ### Manual Installation (Developer Mode)
 1. Download or clone this repository
 2. Open `chrome://extensions/` in Chrome
@@ -200,6 +197,14 @@ Contributions are welcome! Please:
 - Icons: Material Symbols
 - Fonts: Google Fonts (Outfit, Inter)
 - Inspiration: RoughNotation library (for highlight animation)
+
+---
+
+## Third-party licenses
+
+- **Google Fonts (Inter, Outfit, Material Symbols)** — [SIL Open Font License (OFL)](https://scripts.sil.org/OFL)
+- **Material Symbols icons by Google** — [Apache License 2.0](https://github.com/google/material-design-icons/blob/master/LICENSE)
+- **RoughNotation** — [MIT License](https://github.com/rough-stuff/rough-notation)
 
 ---
 

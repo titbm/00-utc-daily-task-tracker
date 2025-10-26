@@ -1,32 +1,32 @@
-// Общие константы для всего расширения
+// Common constants for the entire extension
 
-// Debug режим - установите true для включения логирования в консоль
+// Debug mode - set to true to enable console logging
 export const DEBUG = false;
 
-// Имя папки в закладках
+// Name of the bookmarks folder
 export const FOLDER_NAME = '00 UTC | Daily Task Tracker';
 
-// Названия подпапок
+// Subfolder names
 export const FOLDER_NAMES = {
   ACTIVE: 'Active',
   COMPLETED: 'Completed'
 };
 
-// Типы сброса задач
+// Task reset types
 export const RESET_TYPES = {
   MIDNIGHT: 'midnight',
   INTERVAL: 'interval'
 };
 
-// Таймауты и интервалы (мс)
+// Timeouts and intervals (ms)
 export const TIMINGS = {
-  DEBOUNCE_DELAY: 500,        // Задержка для батчинга restore запросов
-  TIMER_INTERVAL: 1000,       // Обновление таймеров каждую секунду
-  ROUGH_NOTATION_RETRY: 100,  // Повтор инициализации RoughNotation
-  ALARM_INTERVAL: 1           // Проверка через alarms API (минуты)
+  DEBOUNCE_DELAY: 500,        // Delay for batching restore requests
+  TIMER_INTERVAL: 1000,       // Update timers every second
+  ROUGH_NOTATION_RETRY: 100,  // Retry RoughNotation initialization
+  ALARM_INTERVAL: 1           // Check via alarms API (minutes)
 };
 
-// Стили для кнопок
+// Button styles
 export const BUTTON_STATES = {
   ENABLED: {
     opacity: '1',
@@ -38,7 +38,7 @@ export const BUTTON_STATES = {
   }
 };
 
-// Названия actions для chrome.runtime.sendMessage
+// Action names for chrome.runtime.sendMessage
 export const ACTIONS = {
   GET_ACTIVE_PAGES: 'getActivePages',
   GET_COMPLETED_PAGES: 'getCompletedPages',

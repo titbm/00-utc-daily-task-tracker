@@ -1,0 +1,57 @@
+# 00 UTC | Daily Task Tracker
+
+## Short description
+Track and manage your daily internet tasks with automatic restoration at midnight UTC. Organize web pages you need to visit daily with bookmark-based storage.
+
+## Full description
+00 UTC | Daily Task Tracker is a Chrome extension that helps you stay productive by tracking and managing your daily web tasks. All your tasks are stored as bookmarks and automatically reset at midnight UTC or after a custom interval. No external servers or accounts required — everything is local and private.
+
+**Features:**
+- Bookmark-based storage: all tasks live in Chrome bookmarks
+- Automatic restoration: tasks reset at 00:00 UTC or after a custom interval
+- Quick add: right-click context menu or popup button
+- Side panel UI: manage active and completed tasks
+- Task cycles: open all tasks sequentially with one click
+- Beautiful highlight animations (RoughNotation-inspired)
+- Smart banners: reminder when you have pending tasks
+- No data collection, no ads, no tracking
+
+**How it works:**
+1. Add any page as a daily task via right-click or popup
+2. Click "Start" to begin your task cycle — each task opens in a new tab
+3. Close the tab when done; tasks are marked as completed
+4. At midnight UTC (or after your chosen interval), completed tasks return to active
+
+**Permissions:**
+- bookmarks: store and manage your tasks
+- storage: save extension settings
+- tabs: open/close tabs for task cycle
+- contextMenus: add right-click menu
+- sidePanel: show side panel UI
+- alarms: schedule automatic restoration
+
+**Privacy:**
+- No personal data is collected or sent anywhere
+- All data is stored locally in your browser
+- See PRIVACY_POLICY.md for details
+
+**Third-party licenses:**
+- Google Fonts (Inter, Outfit, Material Symbols) — SIL Open Font License (OFL)
+- Material Symbols icons by Google — Apache License 2.0
+- RoughNotation — MIT License
+
+---
+
+Made with ❤️ for productivity enthusiasts
+
+## Screenshots (to add manually)
+- Popup window with task counters and buttons
+- Side panel with active/completed tasks
+- Banner on a web page ("Work Faster")
+- Completed page ("All tasks completed!")
+
+## How to create screenshots
+1. Open Chrome, load the extension in developer mode
+2. Open popup, side panel, and completed page — take screenshots (1280x800 px or larger)
+3. Save as PNG or JPG
+4. Upload when publishing in Chrome Web Store

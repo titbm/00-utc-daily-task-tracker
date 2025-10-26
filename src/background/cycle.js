@@ -1,4 +1,4 @@
-// Модуль управления циклом задач
+// Task cycle management module
 import { getFolderIds } from './folderManager.js';
 import { getActivePages } from './bookmarkOperations.js';
 import { scheduleNextCheck } from './scheduler.js';
@@ -7,7 +7,7 @@ import { notifyPanelUpdate } from '../shared/notifications.js';
 import { RESET_TYPES } from '../shared/constants.js';
 import { logError, logInfo } from '../shared/errorHandler.js';
 
-// Глобальное состояние цикла
+// Global cycle state
 const openedTabs = new Map();
 let isCycleMode = false;
 let currentWindowId = null;
@@ -15,7 +15,7 @@ let cycleQueue = [];
 let currentCycleIndex = 0;
 let isProcessingNext = false;
 
-// Восстановление состояния из session storage при старте SW
+// Restore state from session storage on service worker startup
 export async function restoreCycleState() {
   const { cycleState } = await chrome.storage.session.get('cycleState');
   if (cycleState) {
@@ -33,7 +33,7 @@ export async function restoreCycleState() {
   }
 }
 
-// Сохранение состояния в session storage
+// Save state to session storage
 async function saveCycleState() {
   await chrome.storage.session.set({
     cycleState: {
@@ -47,7 +47,7 @@ async function saveCycleState() {
   });
 }
 
-// Функция перемещения страницы из Active в Completed
+// Move page from Active to Completed
 export async function movePageToCompleted(bookmarkId) {
   try {
     const ids = await getFolderIds();
@@ -78,14 +78,14 @@ export async function movePageToCompleted(bookmarkId) {
     logInfo('movePageToCompleted', `Moved to completed: ${parsed.title}`);
     notifyPanelUpdate();
     
-    // Пересчитываем следующую проверку
+  // Schedule the next check
     scheduleNextCheck();
   } catch (error) {
     logError('movePageToCompleted', error);
   }
 }
 
-// Функция перемещения страницы из Completed в Active
+// Move page from Completed to Active
 export async function movePageToActive(bookmarkId) {
   try {
     const ids = await getFolderIds();
@@ -105,14 +105,14 @@ export async function movePageToActive(bookmarkId) {
     logInfo('movePageToActive', `Restored to active: ${parsed.title}`);
     notifyPanelUpdate();
     
-    // Пересчитываем следующую проверку
+  // Schedule the next check
     scheduleNextCheck();
   } catch (error) {
     logError('movePageToActive', error);
   }
 }
 
-// Универсальная функция обновления Completed страницы
+// Universal function to update a Completed page
 export async function updateCompletedPage(bookmarkId, resetType, intervalHours = null) {
   try {
     const bookmark = await chrome.bookmarks.get(bookmarkId);
@@ -127,17 +127,17 @@ export async function updateCompletedPage(bookmarkId, resetType, intervalHours =
     let metadata;
     
     if (resetType === RESET_TYPES.MIDNIGHT) {
-      // Для midnight: restoreAt и resetInterval пустые
+  // For midnight: restoreAt and resetInterval are empty
       metadata = [
         parsed.completedAt,
-        '',  // restoreAt пустой
+  '',  // restoreAt is empty
         RESET_TYPES.MIDNIGHT,
-        '',  // resetInterval пустой
+  '',  // resetInterval is empty
         parsed.addedAt
       ].join('|');
       
     } else if (resetType === RESET_TYPES.INTERVAL) {
-      // Для interval: рассчитываем restoreAt
+  // For interval: calculate restoreAt
       const now = new Date();
       const restoreAt = new Date(now.getTime() + intervalHours * 60 * 60 * 1000);
       
@@ -152,7 +152,7 @@ export async function updateCompletedPage(bookmarkId, resetType, intervalHours =
     
     const newTitle = `${parsed.title} [${metadata}]`;
     
-    // Удаляем и создаём заново
+  // Remove and recreate the bookmark
     const ids = await getFolderIds();
     await chrome.bookmarks.remove(bookmarkId);
     await chrome.bookmarks.create({
@@ -169,7 +169,7 @@ export async function updateCompletedPage(bookmarkId, resetType, intervalHours =
   }
 }
 
-// Универсальная функция запуска цикла задач
+// Universal function to start the task cycle
 export async function startTasksCycle() {
   const pages = await getActivePages();
   if (pages.length === 0) return;
@@ -183,7 +183,7 @@ export async function startTasksCycle() {
   openNextInCycle();
 }
 
-// Функция открытия следующей страницы из очереди
+// Function to open the next page in the queue
 async function openNextInCycle() {
   if (!isCycleMode) return;
   
@@ -254,7 +254,7 @@ async function openNextInCycle() {
   }
 }
 
-// Обработчик закрытия вкладок
+// Tab close handler
 export async function handleTabRemove(tabId, removeInfo) {
   const tabInfo = openedTabs.get(tabId);
   if (!tabInfo) return;
@@ -268,7 +268,7 @@ export async function handleTabRemove(tabId, removeInfo) {
       if (result[storageKey]) {
         const data = result[storageKey];
         
-        // Обновляем страницу в зависимости от типа
+  // Update the page depending on the type
         if (data.resetType === 'midnight') {
           await updateCompletedPage(tabInfo.bookmarkId, 'midnight');
         } else if (data.resetType === 'interval') {
@@ -312,7 +312,7 @@ export async function handleTabRemove(tabId, removeInfo) {
       }
       
       if (parsed.resetType === RESET_TYPES.INTERVAL) {
-        // Перемещаем в Completed, но НЕ обновляем метаданные - это сделает dialog при закрытии
+  // Move to Completed, but DO NOT update metadata - dialog will do it on close
         await movePageToCompleted(bookmarkId);
         
         const faviconUrl = getFaviconUrl(page.url);
@@ -352,7 +352,7 @@ export async function handleTabRemove(tabId, removeInfo) {
   }
 }
 
-// Открытие одной страницы (не из цикла)
+// Open a single page (not from cycle)
 export async function openSinglePage(url, bookmarkId) {
   return new Promise((resolve) => {
     chrome.tabs.create({ url }, async (tab) => {
@@ -370,7 +370,7 @@ export async function openSinglePage(url, bookmarkId) {
   });
 }
 
-// Получение статуса вкладки
+// Get tab status
 export function getTabStatus(tabId) {
   const tabInfo = openedTabs.get(tabId);
   if (tabInfo) {
