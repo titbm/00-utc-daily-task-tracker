@@ -3,7 +3,8 @@ import { getFolderIds } from './folderManager.js';
 import { getActivePages } from './bookmarkOperations.js';
 import { parseActiveBookmarkTitle, parseCompletedBookmarkTitle, createCompletedBookmarkTitle } from '../shared/bookmarkParser.js';
 import { notifyPanelUpdate } from '../shared/notifications.js';
-import { logError } from '../shared/errorHandler.js';
+
+import { logError, logInfo } from '../shared/errorHandler.js';
 
 // Глобальное состояние цикла
 const openedTabs = new Map();
@@ -73,6 +74,7 @@ export async function movePageToCompleted(bookmarkId) {
     await chrome.bookmarks.move(bookmarkId, { parentId: ids.completed });
     await chrome.bookmarks.update(bookmarkId, { title: newTitle });
     
+    logInfo('movePageToCompleted', `Moved to completed: ${parsed.title}`);
     notifyPanelUpdate();
   } catch (error) {
     logError('movePageToCompleted', error);
@@ -103,6 +105,7 @@ export async function setPageInterval(bookmarkId, intervalHours) {
     
     await chrome.bookmarks.update(bookmarkId, { title: newTitle });
     
+    logInfo('setPageInterval', `Set interval ${intervalHours}h for: ${parsed.title}`);
     notifyPanelUpdate();
   } catch (error) {
     logError('setPageInterval', error);
@@ -112,6 +115,7 @@ export async function startTasksCycle() {
   const pages = await getActivePages();
   if (pages.length === 0) return;
   
+  logInfo('startTasksCycle', `Starting cycle with ${pages.length} tasks`);
   cycleQueue = pages;
   currentCycleIndex = 0;
   isCycleMode = true;
@@ -167,6 +171,7 @@ async function openNextInCycle() {
     
     chrome.tabs.create({ url: nextPage.url }, async (tab) => {
       if (tab) {
+        logInfo('openNextInCycle', `Opening task ${currentCycleIndex + 1}/${cycleQueue.length}: ${nextPage.title}`);
         openedTabs.set(tab.id, {
           bookmarkId: nextPage.id,
           fromCycle: true,
@@ -193,6 +198,8 @@ async function openNextInCycle() {
 export async function handleTabRemove(tabId, removeInfo) {
   const tabInfo = openedTabs.get(tabId);
   if (!tabInfo) return;
+  
+  logInfo('handleTabRemove', `Tab closed: ${tabInfo.fromCycle ? 'from cycle' : 'single page'}`);
   
   if (tabInfo.isIntervalDialog) {
     const storageKey = `intervalDialog_${tabInfo.bookmarkId}`;

@@ -2,7 +2,7 @@
 import { getFolderIds } from './folderManager.js';
 import { parseActiveBookmarkTitle, parseCompletedBookmarkTitle } from '../shared/bookmarkParser.js';
 import { notifyPanelUpdate } from '../shared/notifications.js';
-import { logError } from '../shared/errorHandler.js';
+import { logError, logInfo } from '../shared/errorHandler.js';
 
 // Функция чтения активных страниц из закладок
 export async function getActivePages() {
@@ -93,6 +93,7 @@ export async function addPageToActive(tab) {
       url: tab.url
     });
     
+    logInfo('addPageToActive', `Added: ${tab.title}`);
     notifyPanelUpdate();
     return { exists: false, added: true };
   } catch (error) {
@@ -105,6 +106,7 @@ export async function addPageToActive(tab) {
 export async function removePage(bookmarkId) {
   try {
     await chrome.bookmarks.remove(bookmarkId);
+    logInfo('removePage', `Removed bookmark: ${bookmarkId}`);
     notifyPanelUpdate();
   } catch (error) {
     logError('removePage', error);

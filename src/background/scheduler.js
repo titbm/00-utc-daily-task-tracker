@@ -2,7 +2,7 @@
 import { getFolderIds } from './folderManager.js';
 import { getCompletedPages } from './bookmarkOperations.js';
 import { notifyPanelUpdate } from '../shared/notifications.js';
-import { logError } from '../shared/errorHandler.js';
+import { logError, logInfo } from '../shared/errorHandler.js';
 
 // Функция запуска периодической проверки
 export async function startTimeChecker() {
@@ -17,6 +17,7 @@ export async function startTimeChecker() {
 export function initAlarmListener() {
   chrome.alarms.onAlarm.addListener((alarm) => {
     if (alarm.name === 'checkPages') {
+      logInfo('scheduler', 'Alarm triggered - checking pages');
       checkAndRestoreOldPages();
     }
   });
@@ -25,13 +26,21 @@ export function initAlarmListener() {
 // Функция проверки и восстановления старых страниц
 export async function checkAndRestoreOldPages() {
   try {
+    logInfo('checkAndRestoreOldPages', 'Running scheduled check...');
+    
     const ids = await getFolderIds();
     const completedPages = await getCompletedPages();
     
-    if (completedPages.length === 0) return;
+    if (completedPages.length === 0) {
+      logInfo('checkAndRestoreOldPages', 'No completed pages to check');
+      return;
+    }
+    
+    logInfo('checkAndRestoreOldPages', `Checking ${completedPages.length} completed pages`);
     
     const now = new Date();
     const todayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0));
+    let restoredCount = 0;
     
     for (const page of completedPages) {
       let shouldRestore = false;
@@ -53,10 +62,18 @@ export async function checkAndRestoreOldPages() {
           title: newTitle,
           url: page.url
         });
+        
+        restoredCount++;
+        logInfo('checkAndRestoreOldPages', `Restored: ${page.title} (${page.resetType})`);
       }
     }
     
-    notifyPanelUpdate();
+    if (restoredCount > 0) {
+      logInfo('checkAndRestoreOldPages', `Total restored: ${restoredCount} tasks`);
+      notifyPanelUpdate();
+    } else {
+      logInfo('checkAndRestoreOldPages', 'Check complete - no tasks to restore yet');
+    }
   } catch (error) {
     logError('checkAndRestoreOldPages', error);
   }

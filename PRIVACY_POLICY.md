@@ -24,7 +24,7 @@ The Extension requires the following permissions:
 - **alarms**: To schedule automatic task restoration at midnight UTC
 - **activeTab**: To get the current page's URL and title when you add a task
 - **tabs**: To open tasks in new tabs and detect when you close them
-- **contextMenus**: To add "Add to 00 UTC | Daily Task Tracker" option in right-click menu
+- **contextMenus**: To add "Add to Daily Panel" option in right-click menu
 - **sidePanel**: To display the side panel interface
 
 ## Third-Party Services

@@ -5,37 +5,60 @@ import { movePageToCompleted, setPageInterval, startTasksCycle, openSinglePage, 
 import { checkAndRestoreOldPages } from './scheduler.js';
 import { parseActiveBookmarkTitle, parseCompletedBookmarkTitle } from '../shared/bookmarkParser.js';
 import { notifyPanelUpdate } from '../shared/notifications.js';
-import { logError } from '../shared/errorHandler.js';
+import { logError, logInfo } from '../shared/errorHandler.js';
+import { ACTIONS } from '../shared/constants.js';
 
 export function initMessageHandler() {
   chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    if (request.action === 'openSinglePage') {
+    logInfo('messageHandler', `Received: ${request.action}`);
+    
+    if (request.action === ACTIONS.OPEN_SINGLE_PAGE) {
       // Открытие ОДНОЙ страницы БЕЗ прерывания активного цикла
       openSinglePage(request.url, request.bookmarkId);
       sendResponse({ success: true });
       return true;
-    } else if (request.action === 'getActivePages') {
-      getActivePages().then(pages => sendResponse({ pages }));
+    } else if (request.action === ACTIONS.GET_ACTIVE_PAGES) {
+      getActivePages().then(pages => {
+        logInfo('messageHandler', `Returning ${pages.length} active pages`);
+        sendResponse({ pages });
+      });
       return true; // Асинхронный ответ
-    } else if (request.action === 'getCompletedPages') {
-      getCompletedPages().then(pages => sendResponse({ pages }));
+    } else if (request.action === ACTIONS.GET_COMPLETED_PAGES) {
+      getCompletedPages().then(pages => {
+        logInfo('messageHandler', `Returning ${pages.length} completed pages`);
+        sendResponse({ pages });
+      });
       return true; // Асинхронный ответ
-    } else if (request.action === 'moveToCompleted') {
+    } else if (request.action === ACTIONS.MOVE_TO_COMPLETED) {
       movePageToCompleted(request.bookmarkId).then(() => {
         sendResponse({ success: true });
       });
       return true; // Асинхронный ответ
-    } else if (request.action === 'setPageInterval') {
+    } else if (request.action === ACTIONS.SET_PAGE_INTERVAL) {
       setPageInterval(request.bookmarkId, request.intervalHours).then(() => {
         sendResponse({ success: true });
       });
       return true; // Асинхронный ответ
-    } else if (request.action === 'removePage') {
+    } else if (request.action === ACTIONS.REMOVE_PAGE) {
       removePage(request.bookmarkId).then(() => {
         sendResponse({ success: true });
       });
       return true; // Асинхронный ответ
-    } else if (request.action === 'restorePage') {
+    } else if (request.action === ACTIONS.ADD_PAGE) {
+      // Добавление страницы в активные задачи (как из контекстного меню)
+      (async () => {
+        try {
+          const tab = request.tab;
+          logInfo('messageHandler', `Adding page: ${tab.title}`);
+          const result = await addPageToActive(tab);
+          sendResponse(result || { exists: false, added: false });
+        } catch (error) {
+          logError('addPage', error);
+          sendResponse({ exists: false, added: false, error: error.message });
+        }
+      })();
+      return true;
+    } else if (request.action === ACTIONS.RESTORE_PAGE) {
       // Перемещаем из Completed в Active
       (async () => {
         const ids = await getFolderIds();
@@ -50,34 +73,25 @@ export function initMessageHandler() {
           title: newTitle,
           url: bookmark[0].url
         });
+        
+        logInfo('messageHandler', `Restored page: ${parsed.title}`);
         notifyPanelUpdate();
         sendResponse({ success: true });
       })();
       return true; // Асинхронный ответ
-    } else if (request.action === 'openNextPage') {
+    } else if (request.action === ACTIONS.OPEN_NEXT_PAGE) {
       // Запуск цикла (используется кнопкой "Запустить задачи" в панели)
       startTasksCycle();
       sendResponse({ success: true });
-    } else if (request.action === 'continueAfterInterval') {
-      // УСТАРЕЛО: цикл продолжается автоматически при закрытии диалога
-      sendResponse({ success: true });
-    } else if (request.action === 'clearAll') {
-      // Удаляем все страницы из Active
-      (async () => {
-        const pages = await getActivePages();
-        for (const page of pages) {
-          await removePage(page.id);
-        }
-        sendResponse({ success: true });
-      })();
-      return true; // Асинхронный ответ
-    } else if (request.action === 'setResetType') {
+    } else if (request.action === ACTIONS.SET_RESET_TYPE) {
       // Обновляем resetType в метаданных закладки Active
       (async () => {
         try {
           const bookmark = await chrome.bookmarks.get(request.bookmarkId);
           if (bookmark && bookmark[0]) {
             const parsed = parseActiveBookmarkTitle(bookmark[0].title);
+            
+            logInfo('messageHandler', `Setting reset type to ${request.resetType} for: ${parsed.title}`);
             const newTitle = `${parsed.title} [${request.resetType}]`;
             await chrome.bookmarks.update(request.bookmarkId, { title: newTitle });
             notifyPanelUpdate();
@@ -89,28 +103,23 @@ export function initMessageHandler() {
         }
       })();
       return true; // Асинхронный ответ
-    } else if (request.action === 'moveToCompletedWithInterval') {
-      // УСТАРЕЛО: обратная совместимость, просто обновляем интервал
-      (async () => {
-        await setPageInterval(request.bookmarkId, request.intervalHours);
-        sendResponse({ success: true });
-      })();
-      return true;
-    } else if (request.action === 'restoreAllAndStart') {
+    } else if (request.action === ACTIONS.RESTORE_ALL_AND_START) {
       // Восстановить все из Completed в Active и запустить
       (async () => {
-        // Отправляем сообщение боковой панели закрыться
-        chrome.runtime.sendMessage({ action: 'closeSidePanel' }).catch(() => {});
-        
-        // Небольшая задержка для закрытия панели
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
         const completedPages = await getCompletedPages();
         
         if (completedPages.length === 0) {
           sendResponse({ success: false, message: 'No completed pages' });
           return;
         }
+        
+        logInfo('messageHandler', `Restoring all ${completedPages.length} completed pages and starting cycle`);
+        
+        // Отправляем сообщение боковой панели закрыться
+        chrome.runtime.sendMessage({ action: ACTIONS.CLOSE_SIDE_PANEL }).catch(() => {});
+        
+        // Небольшая задержка для закрытия панели
+        await new Promise(resolve => setTimeout(resolve, 100));
         
         // Переносим все страницы из Completed в Active
         for (const page of completedPages) {
@@ -133,29 +142,18 @@ export function initMessageHandler() {
         sendResponse({ success: true });
       })();
       return true;
-    } else if (request.action === 'startStealthMode') {
-      (async () => {
-        chrome.runtime.sendMessage({ action: 'closeSidePanel' }).catch(() => {});
-        await new Promise(resolve => setTimeout(resolve, 100));
-        await startTasksCycle();
-        sendResponse({ success: true });
-      })();
-      return true;
-    } else if (request.action === 'startDailyTasks') {
-      startTasksCycle();
-      sendResponse({ success: true });
-    } else if (request.action === 'getMyTabStatus') {
+    } else if (request.action === ACTIONS.GET_TAB_STATUS) {
       // Content script спрашивает: "Я задача? Я из цикла?"
       const tabId = sender.tab?.id;
       const status = getTabStatus(tabId);
       sendResponse(status);
       return true;
-    } else if (request.action === 'toggleBanner') {
+    } else if (request.action === ACTIONS.TOGGLE_BANNER) {
       // Уведомляем все вкладки об изменении настройки баннера
       chrome.tabs.query({}, (tabs) => {
         tabs.forEach(tab => {
           chrome.tabs.sendMessage(tab.id, { 
-            action: 'bannerSettingChanged', 
+            action: ACTIONS.BANNER_SETTING_CHANGED, 
             enabled: request.enabled 
           }).catch(() => {
             // Игнорируем ошибки (вкладки без content script)
@@ -163,32 +161,11 @@ export function initMessageHandler() {
         });
       });
       sendResponse({ success: true });
-    } else if (request.action === 'checkRestore') {
+    } else if (request.action === ACTIONS.CHECK_RESTORE) {
       // Sidepanel запрашивает немедленную проверку восстановления (когда таймер достиг нуля)
+      logInfo('messageHandler', 'Manual restore check requested');
       checkAndRestoreOldPages();
       sendResponse({ status: 'checking' });
-    } else if (request.action === 'addCurrentTab') {
-      // Добавление текущей вкладки в активные задачи
-      (async () => {
-        try {
-          const tab = request.tab;
-          if (tab && tab.url && !tab.url.startsWith('chrome://')) {
-            const result = await addPageToActive(tab);
-            notifyPanelUpdate();
-            sendResponse({ 
-              success: true, 
-              exists: result?.exists || false,
-              location: result?.location
-            });
-          } else {
-            sendResponse({ success: false, message: 'Invalid tab' });
-          }
-        } catch (error) {
-          logError('addCurrentTab', error);
-          sendResponse({ success: false, error: error.message });
-        }
-      })();
-      return true;
     }
   });
 }

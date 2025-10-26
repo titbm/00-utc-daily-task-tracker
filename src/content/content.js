@@ -1,21 +1,16 @@
 // Content script для отображения баннера с активными задачами
 
-let banner = null;
-
-// Debug mode - будет загружен асинхронно
-let DEBUG_MODE = false;
-(async () => {
-  try {
-    const module = await import(chrome.runtime.getURL('src/shared/constants.js'));
-    DEBUG_MODE = module.DEBUG;
-  } catch (e) {
-    // Игнорируем ошибку загрузки
-  }
-})();
-
-const logError = (context, error) => {
-  if (DEBUG_MODE) console.error(`[${context}]`, error);
+// Константы actions (дублируются из constants.js, т.к. content script не поддерживает ES6 modules)
+const ACTIONS = {
+  GET_ACTIVE_PAGES: 'getActivePages',
+  GET_TAB_STATUS: 'getMyTabStatus',
+  PAGES_UPDATED: 'pagesUpdated',
+  BANNER_SETTING_CHANGED: 'bannerSettingChanged',
+  SHOW_ADDED_NOTIFICATION: 'showAddedNotification',
+  SHOW_ALREADY_ADDED_NOTIFICATION: 'showAlreadyAddedNotification'
 };
+
+let banner = null;
 
 // Загружаем Material Symbols если ещё нет
 if (!document.getElementById('daily-panel-material-symbols')) {
@@ -232,7 +227,7 @@ function createHighlightAnimation(element, options = {}) {
 async function getTabStatus() {
   try {
     const response = await chrome.runtime.sendMessage({ 
-      action: 'getMyTabStatus'
+      action: ACTIONS.GET_TAB_STATUS
     });
     return response || { isTask: false, fromCycle: false };
   } catch (error) {
@@ -401,7 +396,7 @@ function removeBanner() {
 // Проверка наличия активных страниц
 async function checkActiveTasks() {
   try {
-    const response = await chrome.runtime.sendMessage({ action: 'getActivePages' });
+    const response = await chrome.runtime.sendMessage({ action: ACTIONS.GET_ACTIVE_PAGES });
     const activePages = response.pages || [];
     
     if (activePages.length > 0) {
@@ -410,7 +405,8 @@ async function checkActiveTasks() {
       removeBanner();
     }
   } catch (error) {
-    logError('checkActiveTasks', error);
+    // Тихо игнорируем ошибки в content script
+    // (может быть недоступен runtime при закрытии расширения)
   }
 }
 
@@ -423,19 +419,19 @@ if (document.readyState === 'loading') {
 
 // Слушаем обновления от background
 chrome.runtime.onMessage.addListener((message) => {
-  if (message.action === 'pagesUpdated') {
+  if (message.action === ACTIONS.PAGES_UPDATED) {
     checkActiveTasks();
-  } else if (message.action === 'bannerSettingChanged') {
+  } else if (message.action === ACTIONS.BANNER_SETTING_CHANGED) {
     // Настройка баннера изменилась
     if (message.enabled) {
       checkActiveTasks(); // Проверяем и показываем баннер если нужно
     } else {
       removeBanner(); // Скрываем баннер
     }
-  } else if (message.action === 'showAddedNotification') {
-    showNotification('Page added to active tasks', message.title, 'success');
-  } else if (message.action === 'showAlreadyAddedNotification') {
-    showNotification('Page already in task list', message.title, 'info');
+  } else if (message.action === ACTIONS.SHOW_ADDED_NOTIFICATION) {
+    showNotification('Page added to Daily Panel', message.title, 'success');
+  } else if (message.action === ACTIONS.SHOW_ALREADY_ADDED_NOTIFICATION) {
+    showNotification('Page already in Daily Panel', message.title, 'info');
   }
 });
 

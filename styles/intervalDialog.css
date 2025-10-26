@@ -25,10 +25,10 @@ body {
 }
 
 .header {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 24px;
+  margin: 0 auto 24px auto;
   justify-content: center;
 }
 
@@ -44,6 +44,7 @@ h1 {
   font-family: 'Outfit', 'Inter', sans-serif;
   color: #000000;
   margin: 0;
+  text-align: center;
 }
 
 .page-info {

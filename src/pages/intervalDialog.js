@@ -1,3 +1,6 @@
+// Импорт констант
+import { ACTIONS } from '../shared/constants.js';
+
 // Получаем параметры из URL
 const urlParams = new URLSearchParams(window.location.search);
 const bookmarkId = urlParams.get('bookmarkId');
@@ -7,7 +10,7 @@ const pageFavicon = decodeURIComponent(urlParams.get('favicon') || '');
 const defaultInterval = parseInt(urlParams.get('interval') || '24');
 
 // Проверяем открыт ли диалог из цикла и показываем индикатор
-chrome.runtime.sendMessage({ action: 'getMyTabStatus' }, (response) => {
+chrome.runtime.sendMessage({ action: ACTIONS.GET_TAB_STATUS }, (response) => {
   if (response && response.dialogFromCycle) {
     // Показываем индикатор цикла
     const cycleIndicator = document.getElementById('cycle-indicator');
@@ -83,7 +86,7 @@ document.getElementById('confirmBtn').addEventListener('click', () => {
   
   // Страница уже в Completed, просто обновляем интервал
   chrome.runtime.sendMessage({
-    action: 'setPageInterval',
+    action: ACTIONS.SET_PAGE_INTERVAL,
     bookmarkId: bookmarkId,
     intervalHours: intervalHours
   }, () => {
@@ -114,7 +117,16 @@ function updateCurrentInterval() {
 
 // Обновляем при изменении
 document.getElementById('hoursInput').addEventListener('input', updateCurrentInterval);
-document.getElementById('minutesInput').addEventListener('input', updateCurrentInterval);
+document.getElementById('minutesInput').addEventListener('input', (e) => {
+  // Ограничиваем минуты от 0 до 59
+  let value = parseInt(e.target.value) || 0;
+  if (value > 59) {
+    e.target.value = 59;
+  } else if (value < 0) {
+    e.target.value = 0;
+  }
+  updateCurrentInterval();
+});
 document.querySelectorAll('.quick-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     setTimeout(updateCurrentInterval, 10);

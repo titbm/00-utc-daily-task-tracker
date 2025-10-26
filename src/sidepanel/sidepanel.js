@@ -1,16 +1,11 @@
 // Импорт констант
-import { DEBUG, TIMINGS } from '../shared/constants.js';
+import { ACTIONS } from '../shared/constants.js';
 
-// Константы для удобства
-const DEBOUNCE_DELAY = TIMINGS.DEBOUNCE_DELAY;
-const TIMER_INTERVAL = TIMINGS.TIMER_INTERVAL;
-const RESIZE_DEBOUNCE = TIMINGS.RESIZE_DEBOUNCE;
-const ROUGH_NOTATION_RETRY = TIMINGS.ROUGH_NOTATION_RETRY;
-
-// Локальная функция логирования для UI
-const logError = (context, error) => {
-  if (DEBUG) console.error(`[${context}]`, error);
-};
+// Константы для таймингов
+const DEBOUNCE_DELAY = 500; // мс - задержка для батчинга restore запросов
+const TIMER_INTERVAL = 1000; // мс - обновление таймеров каждую секунду
+const RESIZE_DEBOUNCE = 400; // мс - задержка для обработки resize
+const ROUGH_NOTATION_RETRY = 100; // мс - повтор инициализации RoughNotation
 
 class DailyPanel {
   constructor() {
@@ -65,7 +60,7 @@ class DailyPanel {
     }
     
     this._restoreCheckTimeout = setTimeout(() => {
-      chrome.runtime.sendMessage({ action: 'checkRestore' });
+      chrome.runtime.sendMessage({ action: ACTIONS.CHECK_RESTORE });
       this._restoreCheckTimeout = null;
     }, DEBOUNCE_DELAY);
   }
@@ -83,14 +78,19 @@ class DailyPanel {
     
     // Слушаем сообщения от background script
     chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-      if (message.action === 'pageAdded' || message.action === 'pagesUpdated') {
-        this.loadPages();
-      } else if (message.action === 'showCompleted') {
-        // Переключаемся на вкладку "Отработанные"
-        if (this.currentSection === 'active') {
-          this.toggleSection();
-        }
-      } else if (message.action === 'closeSidePanel') {
+      if (message.action === ACTIONS.PAGES_UPDATED) {
+        // Проверяем флаг открытия на Completed (для уже открытой панели)
+        chrome.storage.session.get('openOnCompleted', async ({ openOnCompleted }) => {
+          await this.loadPages();
+          
+          if (openOnCompleted) {
+            if (this.currentSection === 'active') {
+              this.toggleSection();
+            }
+            chrome.storage.session.remove('openOnCompleted');
+          }
+        });
+      } else if (message.action === ACTIONS.CLOSE_SIDE_PANEL) {
         // Закрываем боковую панель
         window.close();
       }
@@ -174,7 +174,7 @@ class DailyPanel {
     const tryInit = () => {
       if (window.RoughNotation) {
         if (!this.activeTab || !this.completedTab) {
-          logError('initTabHighlighter', 'Tab elements not found!');
+          console.error('Tab elements not found!');
           return;
         }
         
@@ -254,8 +254,8 @@ class DailyPanel {
   async loadPages() {
     try {
       // Запрашиваем данные у background
-      const activeResponse = await chrome.runtime.sendMessage({ action: 'getActivePages' });
-      const completedResponse = await chrome.runtime.sendMessage({ action: 'getCompletedPages' });
+      const activeResponse = await chrome.runtime.sendMessage({ action: ACTIONS.GET_ACTIVE_PAGES });
+      const completedResponse = await chrome.runtime.sendMessage({ action: ACTIONS.GET_COMPLETED_PAGES });
       
       const activePages = activeResponse.pages || [];
       const completedPages = completedResponse.pages || [];
@@ -284,7 +284,7 @@ class DailyPanel {
       this.setButtonState(this.startTasksBtn, activePages.length > 0);
       this.setButtonState(this.restoreCompletedBtn, completedPages.length > 0);
     } catch (error) {
-      logError('loadPages', error);
+      console.error('Error loading pages:', error);
     }
   }
   
@@ -588,24 +588,24 @@ class DailyPanel {
     try {
       // Используем openSinglePage чтобы открыть ТОЛЬКО эту страницу без цикла
       await chrome.runtime.sendMessage({
-        action: 'openSinglePage',
+        action: ACTIONS.OPEN_SINGLE_PAGE,
         url: url,
         bookmarkId: bookmarkId
       });
     } catch (error) {
-      logError('openPage', error);
+      console.error('Error opening page:', error);
     }
   }
   
   async restoreCompletedPage(bookmarkId) {
     try {
       await chrome.runtime.sendMessage({
-        action: 'restorePage',
+        action: ACTIONS.RESTORE_PAGE,
         bookmarkId: bookmarkId
       });
       
       // Проверяем, осталось ли что-то в отработанных
-      const completedResponse = await chrome.runtime.sendMessage({ action: 'getCompletedPages' });
+      const completedResponse = await chrome.runtime.sendMessage({ action: ACTIONS.GET_COMPLETED_PAGES });
       const completedPages = completedResponse.pages || [];
       
       // Переключаемся на раздел активных только если это была последняя отработанная
@@ -613,24 +613,24 @@ class DailyPanel {
         this.toggleSection();
       }
     } catch (error) {
-      logError('restorePage', error);
+      console.error('Error restoring page:', error);
     }
   }
   
   async removePage(bookmarkId) {
     try {
       await chrome.runtime.sendMessage({
-        action: 'removePage',
+        action: ACTIONS.REMOVE_PAGE,
         bookmarkId: bookmarkId
       });
     } catch (error) {
-      logError('removePage', error);
+      console.error('Error removing page:', error);
     }
   }
   
   async restoreAllCompleted() {
     try {
-      const completedResponse = await chrome.runtime.sendMessage({ action: 'getCompletedPages' });
+      const completedResponse = await chrome.runtime.sendMessage({ action: ACTIONS.GET_COMPLETED_PAGES });
       const completedPages = completedResponse.pages || [];
       
       if (completedPages.length === 0) {
@@ -640,7 +640,7 @@ class DailyPanel {
       // Восстанавливаем все страницы
       for (const page of completedPages) {
         await chrome.runtime.sendMessage({
-          action: 'restorePage',
+          action: ACTIONS.RESTORE_PAGE,
           bookmarkId: page.id
         });
       }
@@ -650,16 +650,16 @@ class DailyPanel {
         this.toggleSection();
       }
     } catch (error) {
-      logError('restoreAllCompleted', error);
+      console.error('Error restoring all completed:', error);
     }
   }
   
   async startAllTasks() {
     try {
       // Запускаем отработку всех задач через background
-      await chrome.runtime.sendMessage({ action: 'openNextPage' });
+      await chrome.runtime.sendMessage({ action: ACTIONS.OPEN_NEXT_PAGE });
     } catch (error) {
-      logError('startAllTasks', error);
+      console.error('Error starting all tasks:', error);
     }
   }
   
@@ -678,13 +678,13 @@ class DailyPanel {
     // Отправляем в background для сохранения
     try {
       await chrome.runtime.sendMessage({
-        action: 'setResetType',
+        action: ACTIONS.SET_RESET_TYPE,
         bookmarkId: page.id,
         resetType: newType,
         resetInterval: page.resetInterval || 24
       });
     } catch (error) {
-      logError('setResetType', error);
+      console.error('Error setting reset type:', error);
     }
   }
   
@@ -739,7 +739,7 @@ class DailyPanel {
     
     try {
       // Получаем текущий список активных страниц
-      const response = await chrome.runtime.sendMessage({ action: 'getActivePages' });
+      const response = await chrome.runtime.sendMessage({ action: ACTIONS.GET_ACTIVE_PAGES });
       const pages = response.pages || [];
       
       // Находим индексы
@@ -765,7 +765,7 @@ class DailyPanel {
       this.loadPages();
       
     } catch (error) {
-      logError('reorderPages', error);
+      console.error('Error reordering pages:', error);
     }
   }
 }

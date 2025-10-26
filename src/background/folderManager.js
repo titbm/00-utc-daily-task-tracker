@@ -1,5 +1,6 @@
 // Модуль управления папками закладок
-import { logError } from '../shared/errorHandler.js';
+
+import { logError, logInfo } from '../shared/errorHandler.js';
 import { FOLDER_NAME, FOLDER_NAMES } from '../shared/constants.js';
 
 // Функция инициализации папки закладок (с двумя подпапками)
@@ -15,7 +16,7 @@ export async function initializeBookmarksFolder() {
     const bookmarkTreeNodes = await chrome.bookmarks.getTree();
     const rootNode = bookmarkTreeNodes[0];
     
-    let mainFolder = null;
+    let dailyPanelFolder = null;
     
     for (const child of rootNode.children) {
       if (child.title === FOLDER_NAME && !child.url) {
@@ -66,6 +67,7 @@ export async function initializeBookmarksFolder() {
     };
     
     await chrome.storage.session.set({ FOLDER_IDS: folderIds });
+    logInfo('initializeBookmarksFolder', `Folders initialized: Active=${activeFolder.id}, Completed=${completedFolder.id}`);
     
   } catch (error) {
     logError('initializeBookmarksFolder', error);

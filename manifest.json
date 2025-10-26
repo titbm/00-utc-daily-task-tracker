@@ -34,7 +34,7 @@
   
   "web_accessible_resources": [
     {
-      "resources": ["src/sidepanel/intervalDialog.html", "src/sidepanel/completed.html", "src/shared/roughNotation.js"],
+      "resources": ["src/pages/intervalDialog.html", "src/pages/completed.html", "src/shared/roughNotation.js"],
       "matches": ["<all_urls>"]
     }
   ],
