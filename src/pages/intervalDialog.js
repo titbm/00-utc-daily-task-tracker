@@ -82,16 +82,8 @@ document.getElementById('confirmBtn').addEventListener('click', () => {
     return;
   }
   
-  const intervalHours = hours + (minutes / 60);
-  
-  // Страница уже в Completed, просто обновляем интервал
-  chrome.runtime.sendMessage({
-    action: ACTIONS.SET_PAGE_INTERVAL,
-    bookmarkId: bookmarkId,
-    intervalHours: intervalHours
-  }, () => {
-    window.close();
-  });
+  // Storage уже обновлён через updateCurrentInterval, просто закрываем окно
+  window.close();
 });
 
 // Обработка Enter
@@ -99,6 +91,24 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') {
     document.getElementById('confirmBtn').click();
   }
+});
+
+// Кнопка переключения на midnight тип
+document.getElementById('switchToMidnightBtn').addEventListener('click', () => {
+  // Очищаем storage чтобы handleTabRemove не пытался установить интервал
+  const storageKey = `intervalDialog_${bookmarkId}`;
+  chrome.storage.session.remove(storageKey);
+  
+  // Отправляем запрос на изменение типа задачи на midnight
+  chrome.runtime.sendMessage({
+    action: ACTIONS.SWITCH_TO_MIDNIGHT,
+    bookmarkId: bookmarkId
+  }, () => {
+    // Даем Chrome время обновить bookmark перед закрытием
+    setTimeout(() => {
+      window.close();
+    }, 200);
+  });
 });
 
 // Сохраняем текущие значения в storage при любом изменении
