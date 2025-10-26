@@ -44,7 +44,7 @@ We may update this Privacy Policy from time to time. Changes will be reflected i
 
 ## Contact
 If you have questions about this Privacy Policy, please create an issue on our GitHub repository:
-[https://github.com/yourusername/daily-task-tracker](https://github.com/yourusername/daily-task-tracker)
+[https://github.com/titbm/00-utc-daily-task-tracker](https://github.com/titbm/00-utc-daily-task-tracker)
 
 ## Your Rights
 You can:
