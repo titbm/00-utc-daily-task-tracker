@@ -115,6 +115,12 @@ class DailyPanel {
     // Планируем проверку midnight задач в полночь UTC
     this.scheduleMidnightCheck();
     
+    // Запускаем глобальный таймер сразу при открытии панели
+    // (он будет обновлять таймеры completed задач независимо от секции)
+    if (Object.keys(this._timerElements).length > 0) {
+      this.startGlobalTimer();
+    }
+    
     // Подключаемся к background для включения быстрых проверок
     this.port = chrome.runtime.connect({ name: 'sidepanel' });
     
@@ -277,9 +283,7 @@ class DailyPanel {
       if (this.restoreCompletedBtn) this.restoreCompletedBtn.style.display = 'flex';
       
       // Запускаем таймеры для Completed задач (если они не работают)
-      if (Object.keys(this._timerElements).length > 0 && !this._globalTimerInterval) {
-        this.startGlobalTimer();
-      }
+      // Таймер уже запущен глобально, ничего не делаем
     } else {
       this.currentSection = 'active';
       this.completedSection.classList.remove('active');
@@ -292,13 +296,6 @@ class DailyPanel {
       // Показываем кнопку Start, скрываем кнопку Reset в шапке
       if (this.startTasksBtn) this.startTasksBtn.style.display = 'flex';
       if (this.restoreCompletedBtn) this.restoreCompletedBtn.style.display = 'none';
-      
-      // Останавливаем таймеры при переходе на Active (они не нужны)
-      if (this._globalTimerInterval) {
-        clearInterval(this._globalTimerInterval);
-        this._globalTimerInterval = null;
-        logInfo('sidepanel:timer', 'Timer stopped (switched to Active section)');
-      }
     }
     
     // Обновляем подчеркивание
@@ -327,6 +324,11 @@ class DailyPanel {
       if (completedPagesChanged) {
         this.renderPages(completedPages, this.completedPagesList, this.emptyStateCompleted, true);
         this._cachedCompletedPages = structuredClone(completedPages);
+        
+        // Запускаем таймер если есть completed задачи и он еще не запущен
+        if (Object.keys(this._timerElements).length > 0 && !this._globalTimerInterval) {
+          this.startGlobalTimer();
+        }
       }
       
       // Обновляем счетчики и кнопки только если что-то изменилось
@@ -386,11 +388,6 @@ class DailyPanel {
       const pageElement = this.createPageElement(page, index, isCompleted);
       listElement.appendChild(pageElement);
     });
-    
-    // Запускаем глобальный таймер для всех completed задач
-    if (isCompleted && Object.keys(this._timerElements).length > 0) {
-      this.startGlobalTimer();
-    }
   }
   
   // Один setInterval для всех таймеров
