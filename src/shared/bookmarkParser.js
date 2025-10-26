@@ -1,9 +1,9 @@
-// Утилиты для парсинга и создания заголовков закладок
+// Utilities for parsing and creating bookmark titles
 import { RESET_TYPES } from './constants.js';
 
 /**
- * Парсит заголовок активной закладки
- * Формат: "Title [resetType]"
+ * Parses the title of an active bookmark
+ * Format: "Title [resetType]"
  */
 export function parseActiveBookmarkTitle(title) {
   const match = title.match(/^(.+?)\s*\[(midnight|interval)\]$/);
@@ -20,8 +20,8 @@ export function parseActiveBookmarkTitle(title) {
 }
 
 /**
- * Парсит заголовок завершенной закладки
- * Формат: "Title [completedAt|restoreAt|resetType|resetInterval|addedAt]"
+ * Parses the title of a completed bookmark
+ * Format: "Title [completedAt|restoreAt|resetType|resetInterval|addedAt]"
  */
 export function parseCompletedBookmarkTitle(title) {
   const match = title.match(/^(.+?)\s*\[([^\]]+)\]$/);
@@ -47,7 +47,7 @@ export function parseCompletedBookmarkTitle(title) {
 }
 
 /**
- * Создает заголовок для завершенной закладки
+ * Creates a title for a completed bookmark
  */
 export function createCompletedBookmarkTitle(title, completedAt, restoreAt, resetType, resetInterval, addedAt) {
   const parts = [
@@ -61,7 +61,7 @@ export function createCompletedBookmarkTitle(title, completedAt, restoreAt, rese
 }
 
 /**
- * Получает URL фавиконки для домена
+ * Gets the favicon URL for a domain
  */
 export function getFaviconUrl(url) {
   try {
