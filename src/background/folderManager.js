@@ -1,9 +1,9 @@
-// Модуль управления папками закладок
+// Bookmarks folder management module
 
 import { logError, logInfo } from '../shared/errorHandler.js';
 import { FOLDER_NAME, FOLDER_NAMES } from '../shared/constants.js';
 
-// Функция инициализации папки закладок (с двумя подпапками)
+// Function to initialize bookmarks folder (with two subfolders)
 export async function initializeBookmarksFolder() {
   const lockStatus = await chrome.storage.session.get('isInitializing');
   if (lockStatus.isInitializing) {
@@ -76,7 +76,7 @@ export async function initializeBookmarksFolder() {
   }
 }
 
-// Функция получения ID папок (с инициализацией если нужно)
+// Function to get folder IDs (with initialization if needed)
 export async function getFolderIds() {
   const cached = await chrome.storage.session.get('FOLDER_IDS');
   
