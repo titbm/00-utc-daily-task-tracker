@@ -2,6 +2,7 @@
 import { ACTIONS, RESET_TYPES, TIMINGS, BUTTON_STATES } from '../shared/constants.js';
 import { logInfo, logWarning } from '../shared/errorHandler.js';
 import { TimerManager } from './TimerManager.js';
+import { UIManager } from './UIManager.js';
 
 class DailyPanel {
   constructor() {
@@ -29,12 +30,21 @@ class DailyPanel {
     this.activeCount = document.getElementById('activeCount');
     this.completedCount = document.getElementById('completedCount');
     
-  // Current active section
-  this.currentSection = 'active'; // 'active' or 'completed'
-    
   // Timer Manager for handling countdown timers
   this.timerManager = new TimerManager(() => {
     chrome.runtime.sendMessage({ action: ACTIONS.CHECK_RESTORE });
+  });
+
+  // UI Manager for handling UI state
+  this.uiManager = new UIManager({
+    activeSection: this.activeSection,
+    completedSection: this.completedSection,
+    activeTab: this.activeTab,
+    completedTab: this.completedTab,
+    startTasksBtn: this.startTasksBtn,
+    restoreCompletedBtn: this.restoreCompletedBtn,
+    activeCount: this.activeCount,
+    completedCount: this.completedCount
   });
     
   // Cache for render optimization
@@ -73,7 +83,7 @@ class DailyPanel {
   init() {
     this.loadPages();
     this.setupEventListeners();
-    this.initTabHighlighter();
+    this.uiManager.initTabHighlighter();
     
   // Schedule midnight task check at UTC midnight
     this.timerManager.scheduleMidnightCheck();
@@ -94,8 +104,8 @@ class DailyPanel {
           await this.loadPages();
           
           if (openOnCompleted) {
-            if (this.currentSection === 'active') {
-              this.toggleSection();
+            if (this.uiManager.getCurrentSection() === 'active') {
+              this.uiManager.toggleSection();
             }
             chrome.storage.session.remove('openOnCompleted');
           }
@@ -111,16 +121,16 @@ class DailyPanel {
   // Tabs for switching sections
     if (this.activeTab) {
       this.activeTab.addEventListener('click', () => {
-        if (this.currentSection !== 'active') {
-          this.toggleSection();
+        if (this.uiManager.getCurrentSection() !== 'active') {
+          this.uiManager.toggleSection();
         }
       });
     }
     
     if (this.completedTab) {
       this.completedTab.addEventListener('click', () => {
-        if (this.currentSection !== 'completed') {
-          this.toggleSection();
+        if (this.uiManager.getCurrentSection() !== 'completed') {
+          this.uiManager.toggleSection();
         }
       });
     }
@@ -147,8 +157,8 @@ class DailyPanel {
     if (goToCompletedLink) {
       goToCompletedLink.addEventListener('click', (e) => {
         e.preventDefault();
-        if (this.currentSection === 'active') {
-          this.toggleSection();
+        if (this.uiManager.getCurrentSection() === 'active') {
+          this.uiManager.toggleSection();
         }
       });
     }
@@ -158,108 +168,24 @@ class DailyPanel {
     if (goToActiveLink) {
       goToActiveLink.addEventListener('click', (e) => {
         e.preventDefault();
-        if (this.currentSection === 'completed') {
-          this.toggleSection();
+        if (this.uiManager.getCurrentSection() === 'completed') {
+          this.uiManager.toggleSection();
         }
       });
     }
     
   // Clicks on counters to switch sections
     this.activeCount.addEventListener('click', () => {
-      if (this.currentSection !== 'active') {
-        this.toggleSection();
+      if (this.uiManager.getCurrentSection() !== 'active') {
+        this.uiManager.toggleSection();
       }
     });
     
     this.completedCount.addEventListener('click', () => {
-      if (this.currentSection !== 'completed') {
-        this.toggleSection();
+      if (this.uiManager.getCurrentSection() !== 'completed') {
+        this.uiManager.toggleSection();
       }
     });
-  }
-  
-  initTabHighlighter() {
-  // Initialize underline with RoughNotation
-  // Wait for the library to load
-    const tryInit = () => {
-      if (window.RoughNotation) {
-        if (!this.activeTab || !this.completedTab) {
-          console.error('Tab elements not found!');
-          return;
-        }
-        
-        this.activeTabAnnotation = window.RoughNotation.annotate(this.activeTab, {
-          type: 'underline',
-          color: '#FFC107',
-          strokeWidth: 2,
-          padding: 2,
-          iterations: 2,
-          animationDuration: 600
-        });
-        
-        this.completedTabAnnotation = window.RoughNotation.annotate(this.completedTab, {
-          type: 'underline',
-          color: '#FFC107',
-          strokeWidth: 2,
-          padding: 2,
-          iterations: 2,
-          animationDuration: 600
-        });
-        
-  // Show underline for active tab
-        this.activeTabAnnotation.show();
-      } else {
-  // If the library is not loaded yet, try again later
-        setTimeout(tryInit, TIMINGS.ROUGH_NOTATION_RETRY);
-      }
-    };
-    
-    tryInit();
-  }
-  
-  updateTabHighlighter() {
-    // Update underline when switching tabs
-    if (this.activeTabAnnotation && this.completedTabAnnotation) {
-      if (this.currentSection === 'active') {
-        this.completedTabAnnotation.hide();
-        this.activeTabAnnotation.show();
-      } else {
-        this.activeTabAnnotation.hide();
-        this.completedTabAnnotation.show();
-      }
-    }
-  }  toggleSection() {
-    if (this.currentSection === 'active') {
-      this.currentSection = 'completed';
-      this.activeSection.classList.remove('active');
-      this.completedSection.classList.add('active');
-      
-      // Update tabs
-      if (this.activeTab) this.activeTab.classList.remove('active');
-      if (this.completedTab) this.completedTab.classList.add('active');
-      
-      // Show Reset button, hide Start button in header
-      if (this.startTasksBtn) this.startTasksBtn.style.display = 'none';
-      if (this.restoreCompletedBtn) this.restoreCompletedBtn.style.display = 'flex';
-      
-      // Start timers for Completed tasks (if not running)
-      // Timer already started globally, do nothing
-    } else {
-      this.currentSection = 'active';
-      this.completedSection.classList.remove('active');
-      this.activeSection.classList.add('active');
-      
-      // Update tabs
-      if (this.completedTab) this.completedTab.classList.remove('active');
-      if (this.activeTab) this.activeTab.classList.add('active');
-      
-      // Show Start button, hide Reset button in header
-      if (this.startTasksBtn) this.startTasksBtn.style.display = 'flex';
-      if (this.restoreCompletedBtn) this.restoreCompletedBtn.style.display = 'none';
-    }
-    
-    // Update underline
-    this.updateTabHighlighter();
   }
   
   async loadPages() {
@@ -293,12 +219,12 @@ class DailyPanel {
       
   // Update counters and buttons only if something changed
       if (activePagesChanged || completedPagesChanged) {
-        this.updateCounters(activePages.length, completedPages.length);
+        this.uiManager.updateCounters(activePages.length, completedPages.length);
       }
       
   // Manage button states
-      this.setButtonState(this.startTasksBtn, activePages.length > 0);
-      this.setButtonState(this.restoreCompletedBtn, completedPages.length > 0);
+      this.uiManager.setButtonState(this.startTasksBtn, activePages.length > 0);
+      this.uiManager.setButtonState(this.restoreCompletedBtn, completedPages.length > 0);
     } catch (error) {
       console.error('Error loading pages:', error);
     }
@@ -313,19 +239,6 @@ class DailyPanel {
   }
   
   // Utility for managing button state
-  setButtonState(button, enabled) {
-    if (!button) return;
-    
-    button.disabled = !enabled;
-    const state = enabled ? BUTTON_STATES.ENABLED : BUTTON_STATES.DISABLED;
-    button.style.opacity = state.opacity;
-    button.style.cursor = state.cursor;
-  }
-  
-  updateCounters(activeCount, completedCount) {
-    this.activeCount.textContent = `Active: ${activeCount}`;
-    this.completedCount.textContent = `Completed: ${completedCount}`;
-  }
   
   renderPages(pages, listElement, emptyStateElement, isCompleted = false) {
   // Stop global timer if it was running and rendering completed pages
@@ -557,8 +470,8 @@ class DailyPanel {
       const completedPages = completedResponse.pages || [];
       
   // Switch to active section only if it was the last completed
-      if (this.currentSection === 'completed' && completedPages.length === 0) {
-        this.toggleSection();
+      if (this.uiManager.getCurrentSection() === 'completed' && completedPages.length === 0) {
+        this.uiManager.toggleSection();
       }
     } catch (error) {
       console.error('Error restoring page:', error);
@@ -594,8 +507,8 @@ class DailyPanel {
       }
       
   // Switch to active section
-      if (this.currentSection === 'completed') {
-        this.toggleSection();
+      if (this.uiManager.getCurrentSection() === 'completed') {
+        this.uiManager.toggleSection();
       }
     } catch (error) {
       console.error('Error restoring all completed:', error);
