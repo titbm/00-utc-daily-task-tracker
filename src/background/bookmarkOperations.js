@@ -1,10 +1,10 @@
-// Модуль операций с закладками (CRUD)
+// Bookmarks operations module (CRUD)
 import { getFolderIds } from './folderManager.js';
 import { parseActiveBookmarkTitle, parseCompletedBookmarkTitle, getFaviconUrl } from '../shared/bookmarkParser.js';
 import { notifyPanelUpdate } from '../shared/notifications.js';
 import { logError, logInfo } from '../shared/errorHandler.js';
 
-// Функция чтения активных страниц из закладок
+// Function to read active pages from bookmarks
 export async function getActivePages() {
   try {
     const ids = await getFolderIds();
@@ -35,7 +35,7 @@ export async function getActivePages() {
   }
 }
 
-// Функция чтения отработанных страниц из закладок
+// Function to read completed pages from bookmarks
 export async function getCompletedPages() {
   try {
     const ids = await getFolderIds();
@@ -68,7 +68,7 @@ export async function getCompletedPages() {
   }
 }
 
-// Функция добавления страницы в Active
+// Function to add a page to Active
 export async function addPageToActive(tab) {
   try {
     const ids = await getFolderIds();
@@ -102,7 +102,7 @@ export async function addPageToActive(tab) {
   }
 }
 
-// Функция удаления страницы по ID закладки
+// Function to remove a page by bookmark ID
 export async function removePage(bookmarkId) {
   try {
     await chrome.bookmarks.remove(bookmarkId);
