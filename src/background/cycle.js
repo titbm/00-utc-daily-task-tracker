@@ -1,7 +1,7 @@
 // Модуль управления циклом задач
 import { getFolderIds } from './folderManager.js';
 import { getActivePages } from './bookmarkOperations.js';
-import { parseActiveBookmarkTitle, parseCompletedBookmarkTitle, createCompletedBookmarkTitle } from '../shared/bookmarkParser.js';
+import { parseActiveBookmarkTitle, parseCompletedBookmarkTitle, createCompletedBookmarkTitle, getFaviconUrl } from '../shared/bookmarkParser.js';
 import { notifyPanelUpdate } from '../shared/notifications.js';
 import { RESET_TYPES } from '../shared/constants.js';
 import { logError, logInfo } from '../shared/errorHandler.js';
@@ -249,7 +249,7 @@ export async function handleTabRemove(tabId, removeInfo) {
         await movePageToCompleted(bookmarkId);
         await setPageInterval(bookmarkId, 24);
         
-        const faviconUrl = `https://www.google.com/s2/favicons?domain=${new URL(page.url).hostname}&sz=32`;
+        const faviconUrl = getFaviconUrl(page.url);
         
         const dialogUrl = chrome.runtime.getURL('src/pages/intervalDialog.html') + 
           `?bookmarkId=${bookmarkId}` +

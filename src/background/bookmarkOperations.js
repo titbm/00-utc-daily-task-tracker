@@ -1,6 +1,6 @@
 // Модуль операций с закладками (CRUD)
 import { getFolderIds } from './folderManager.js';
-import { parseActiveBookmarkTitle, parseCompletedBookmarkTitle } from '../shared/bookmarkParser.js';
+import { parseActiveBookmarkTitle, parseCompletedBookmarkTitle, getFaviconUrl } from '../shared/bookmarkParser.js';
 import { notifyPanelUpdate } from '../shared/notifications.js';
 import { logError, logInfo } from '../shared/errorHandler.js';
 
@@ -20,7 +20,7 @@ export async function getActivePages() {
           id: bookmark.id,
           title: parsed.title,
           url: bookmark.url,
-          favicon: `https://www.google.com/s2/favicons?domain=${new URL(bookmark.url).hostname}&sz=32`,
+          favicon: getFaviconUrl(bookmark.url),
           addedAt: bookmark.dateAdded ? new Date(bookmark.dateAdded).toISOString() : new Date().toISOString(),
           resetType: parsed.resetType,
           resetInterval: 24
@@ -51,7 +51,7 @@ export async function getCompletedPages() {
           id: bookmark.id,
           title: parsed.title,
           url: bookmark.url,
-          favicon: `https://www.google.com/s2/favicons?domain=${new URL(bookmark.url).hostname}&sz=32`,
+          favicon: getFaviconUrl(bookmark.url),
           addedAt: parsed.addedAt,
           completedAt: parsed.completedAt,
           restoreAt: parsed.restoreAt,
