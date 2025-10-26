@@ -93,6 +93,18 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
+// Кнопка "Reset at 00:00 UTC"
+document.getElementById('switchToMidnightBtn').addEventListener('click', () => {
+  const storageKey = `intervalDialog_${bookmarkId}`;
+  chrome.storage.session.set({
+    [storageKey]: {
+      resetType: 'midnight'
+    }
+  }, () => {
+    window.close();
+  });
+});
+
 // Сохраняем текущие значения в storage при любом изменении
 function updateCurrentInterval() {
   const hours = parseInt(document.getElementById('hoursInput').value) || 0;
@@ -101,6 +113,7 @@ function updateCurrentInterval() {
   
   chrome.storage.session.set({
     [`intervalDialog_${bookmarkId}`]: {
+      resetType: 'interval',
       intervalHours: intervalHours
     }
   });

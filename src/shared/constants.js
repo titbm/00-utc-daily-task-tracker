@@ -47,7 +47,6 @@ export const ACTIONS = {
   RESTORE_PAGE: 'restorePage',
   RESTORE_ALL_AND_START: 'restoreAllAndStart',
   SET_RESET_TYPE: 'setResetType',
-  SET_PAGE_INTERVAL: 'setPageInterval',
   MOVE_TO_COMPLETED: 'moveToCompleted',
   OPEN_NEXT_PAGE: 'openNextPage',
   OPEN_SINGLE_PAGE: 'openSinglePage',

@@ -112,8 +112,8 @@ export async function movePageToActive(bookmarkId) {
   }
 }
 
-// Функция установки интервала для отработанной страницы
-export async function setPageInterval(bookmarkId, intervalHours) {
+// Универсальная функция обновления Completed страницы
+export async function updateCompletedPage(bookmarkId, resetType, intervalHours = null) {
   try {
     const bookmark = await chrome.bookmarks.get(bookmarkId);
     if (!bookmark || !bookmark[0]) return;
@@ -121,30 +121,52 @@ export async function setPageInterval(bookmarkId, intervalHours) {
     const page = bookmark[0];
     const parsed = parseCompletedBookmarkTitle(page.title);
     
-    const now = new Date();
-    const restoreAt = new Date(now.getTime() + intervalHours * 60 * 60 * 1000);
+    let metadata;
     
-    const metadata = [
-      parsed.completedAt || now.toISOString(),
-      restoreAt.toISOString(),
-      RESET_TYPES.INTERVAL,
-      intervalHours,
-      parsed.addedAt
-    ].join('|');
+    if (resetType === RESET_TYPES.MIDNIGHT) {
+      // Для midnight: restoreAt и resetInterval пустые
+      metadata = [
+        parsed.completedAt,
+        '',  // restoreAt пустой
+        RESET_TYPES.MIDNIGHT,
+        '',  // resetInterval пустой
+        parsed.addedAt
+      ].join('|');
+      
+    } else if (resetType === RESET_TYPES.INTERVAL) {
+      // Для interval: рассчитываем restoreAt
+      const now = new Date();
+      const restoreAt = new Date(now.getTime() + intervalHours * 60 * 60 * 1000);
+      
+      metadata = [
+        parsed.completedAt || now.toISOString(),
+        restoreAt.toISOString(),
+        RESET_TYPES.INTERVAL,
+        intervalHours,
+        parsed.addedAt
+      ].join('|');
+    }
     
     const newTitle = `${parsed.title} [${metadata}]`;
     
-    await chrome.bookmarks.update(bookmarkId, { title: newTitle });
+    // Удаляем и создаём заново
+    const ids = await getFolderIds();
+    await chrome.bookmarks.remove(bookmarkId);
+    await chrome.bookmarks.create({
+      parentId: ids.completed,
+      title: newTitle,
+      url: page.url
+    });
     
-    logInfo('setPageInterval', `Set interval ${intervalHours}h for: ${parsed.title}`);
-    notifyPanelUpdate();
-    
-    // Пересчитываем следующую проверку
+    logInfo('updateCompletedPage', `Updated to ${resetType}: ${parsed.title}`);
     scheduleNextCheck();
+    
   } catch (error) {
-    logError('setPageInterval', error);
+    logError('updateCompletedPage', error);
   }
-}// Универсальная функция запуска цикла задач
+}
+
+// Универсальная функция запуска цикла задач
 export async function startTasksCycle() {
   const pages = await getActivePages();
   if (pages.length === 0) return;
@@ -239,11 +261,16 @@ export async function handleTabRemove(tabId, removeInfo) {
     const storageKey = `intervalDialog_${tabInfo.bookmarkId}`;
     chrome.storage.session.get(storageKey, async (result) => {
       if (result[storageKey]) {
-        const { intervalHours } = result[storageKey];
+        const data = result[storageKey];
         
-        await setPageInterval(tabInfo.bookmarkId, intervalHours);
+        // Обновляем страницу в зависимости от типа
+        if (data.resetType === 'midnight') {
+          await updateCompletedPage(tabInfo.bookmarkId, 'midnight');
+        } else if (data.resetType === 'interval') {
+          await updateCompletedPage(tabInfo.bookmarkId, 'interval', data.intervalHours);
+        }
+        
         notifyPanelUpdate();
-        
         chrome.storage.session.remove(storageKey);
       }
     });
@@ -281,7 +308,7 @@ export async function handleTabRemove(tabId, removeInfo) {
       
       if (parsed.resetType === RESET_TYPES.INTERVAL) {
         await movePageToCompleted(bookmarkId);
-        await setPageInterval(bookmarkId, 24);
+        await updateCompletedPage(bookmarkId, 'interval', 24);
         
         const faviconUrl = getFaviconUrl(page.url);
         

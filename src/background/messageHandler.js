@@ -1,7 +1,7 @@
 // Модуль обработки сообщений от popup, sidepanel и content scripts
 import { getActivePages, getCompletedPages, addPageToActive, removePage } from './bookmarkOperations.js';
 import { getFolderIds } from './folderManager.js';
-import { movePageToCompleted, movePageToActive, setPageInterval, startTasksCycle, openSinglePage, getTabStatus } from './cycle.js';
+import { movePageToCompleted, movePageToActive, startTasksCycle, openSinglePage, getTabStatus } from './cycle.js';
 import { checkAndRestoreOldPages } from './scheduler.js';
 import { parseActiveBookmarkTitle, parseCompletedBookmarkTitle } from '../shared/bookmarkParser.js';
 import { notifyPanelUpdate } from '../shared/notifications.js';
@@ -31,11 +31,6 @@ export function initMessageHandler() {
       return true; // Асинхронный ответ
     } else if (request.action === ACTIONS.MOVE_TO_COMPLETED) {
       movePageToCompleted(request.bookmarkId).then(() => {
-        sendResponse({ success: true });
-      });
-      return true; // Асинхронный ответ
-    } else if (request.action === ACTIONS.SET_PAGE_INTERVAL) {
-      setPageInterval(request.bookmarkId, request.intervalHours).then(() => {
         sendResponse({ success: true });
       });
       return true; // Асинхронный ответ
