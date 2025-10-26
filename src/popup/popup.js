@@ -1,9 +1,9 @@
-﻿// Импорт констант
+﻿// Import constants
 import { ACTIONS, BUTTON_STATES } from '../shared/constants.js';
 
-// Загрузка счетчиков и состояния баннера
+// Load counters and banner state
 (async () => {
-  // Загрузка счетчиков
+  // Load counters
   const activeResponse = await chrome.runtime.sendMessage({ action: ACTIONS.GET_ACTIVE_PAGES });
   const completedResponse = await chrome.runtime.sendMessage({ action: ACTIONS.GET_COMPLETED_PAGES });
   
@@ -13,48 +13,48 @@ import { ACTIONS, BUTTON_STATES } from '../shared/constants.js';
   document.getElementById('activeCount').textContent = activePages.length;
   document.getElementById('completedCount').textContent = completedPages.length;
   
-  // Загрузка состояния баннера
+  // Load banner state
   const { bannerEnabled = true } = await chrome.storage.local.get('bannerEnabled');
   document.getElementById('bannerToggle').checked = bannerEnabled;
   
-  // Настройка кнопки START/REPEAT ALL
+  // Setup START/REPEAT ALL button
   const stealthBtn = document.getElementById('stealthMode');
   
   if (activePages.length === 0 && completedPages.length > 0) {
-    // Нет активных задач, но есть completed - показываем кнопку REPEAT ALL
+  // No active tasks, but there are completed - show REPEAT ALL button
     stealthBtn.innerHTML = '<span class="material-symbols-outlined">refresh</span>Repeat all';
     stealthBtn.addEventListener('click', async () => {
-      // Восстанавливаем все из Completed и запускаем цикл (готовый обработчик)
+  // Restore all from Completed and start cycle (ready handler)
       await chrome.runtime.sendMessage({ action: ACTIONS.RESTORE_ALL_AND_START });
       window.close();
     });
   } else if (activePages.length === 0 && completedPages.length === 0) {
-    // Нет ни активных, ни completed задач - отключаем кнопку
+  // No active or completed tasks - disable button
     stealthBtn.disabled = true;
     stealthBtn.style.opacity = BUTTON_STATES.DISABLED.opacity;
     stealthBtn.style.cursor = BUTTON_STATES.DISABLED.cursor;
   } else {
-    // Есть активные задачи - кнопка START работает
+  // There are active tasks - START button works
     stealthBtn.addEventListener('click', async () => {
-      // Закрываем sidepanel (если открыт)
+  // Close sidepanel (if open)
       chrome.runtime.sendMessage({ action: ACTIONS.CLOSE_SIDE_PANEL }).catch(() => {});
       
-      // Небольшая задержка для закрытия панели
+  // Small delay for panel closing
       await new Promise(resolve => setTimeout(resolve, 100));
       
-      // Запускаем цикл задач
+  // Start task cycle
       chrome.runtime.sendMessage({ action: ACTIONS.OPEN_NEXT_PAGE });
       window.close();
     });
   }
 })();
 
-// Обработчик переключателя баннера
+// Banner toggle handler
 document.getElementById('bannerToggle').addEventListener('change', async (e) => {
   const enabled = e.target.checked;
   await chrome.storage.local.set({ bannerEnabled: enabled });
   
-  // Отправляем сообщение background для уведомления всех content scripts
+  // Send message to background to notify all content scripts
   chrome.runtime.sendMessage({ 
     action: ACTIONS.TOGGLE_BANNER,
     enabled: enabled
@@ -71,7 +71,7 @@ document.getElementById('addCurrentTab').addEventListener('click', async () => {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   
   if (tab) {
-    // Добавляем текущую вкладку в активные задачи
+  // Add current tab to active tasks
     const response = await chrome.runtime.sendMessage({ 
       action: ACTIONS.ADD_PAGE,
       tab: {
@@ -81,15 +81,15 @@ document.getElementById('addCurrentTab').addEventListener('click', async () => {
       }
     });
     
-    // Показываем уведомление в зависимости от результата
+  // Show notification depending on result
     if (response && response.exists) {
-      // Страница уже была добавлена
+  // Page was already added
       chrome.tabs.sendMessage(tab.id, { 
         action: ACTIONS.SHOW_ALREADY_ADDED_NOTIFICATION,
         title: tab.title 
       }).catch(() => {});
     } else if (response && response.added) {
-      // Страница успешно добавлена
+  // Page successfully added
       chrome.tabs.sendMessage(tab.id, { 
         action: ACTIONS.SHOW_ADDED_NOTIFICATION,
         title: tab.title 
