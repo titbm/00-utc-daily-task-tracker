@@ -67,14 +67,17 @@ chrome.runtime.onConnect.addListener((port) => {
 // Инициализация слушателя alarm
 initAlarmListener();
 
-// Восстановление состояния цикла
-restoreCycleState();
-
-// Обработчик закрытия вкладок
-chrome.tabs.onRemoved.addListener(handleTabRemove);
-
-// Инициализация обработчика сообщений
-initMessageHandler();
+// Асинхронная инициализация
+(async () => {
+  // Восстановление состояния цикла (может запустить keep-alive если цикл был активен)
+  await restoreCycleState();
+  
+  // Обработчик закрытия вкладок
+  chrome.tabs.onRemoved.addListener(handleTabRemove);
+  
+  // Инициализация обработчика сообщений
+  initMessageHandler();
+})();
 
 // Обработчик клика по контекстному меню
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {

@@ -4,7 +4,7 @@ import { getActivePages } from './bookmarkOperations.js';
 import { scheduleNextCheck } from './scheduler.js';
 import { parseActiveBookmarkTitle, parseCompletedBookmarkTitle, createCompletedBookmarkTitle, getFaviconUrl } from '../shared/bookmarkParser.js';
 import { notifyPanelUpdate } from '../shared/notifications.js';
-import { RESET_TYPES } from '../shared/constants.js';
+import { RESET_TYPES, TIMINGS } from '../shared/constants.js';
 import { logError, logInfo } from '../shared/errorHandler.js';
 
 // Global cycle state
@@ -15,21 +15,35 @@ let cycleQueue = [];
 let currentCycleIndex = 0;
 let isProcessingNext = false;
 
+// Keep-alive mechanism (official Google recommendation)
+let keepAliveInterval = null;
+let keepAliveTimeout = null;
+
 // Restore state from session storage on service worker startup
 export async function restoreCycleState() {
   const { cycleState } = await chrome.storage.session.get('cycleState');
   if (cycleState) {
-    isCycleMode = cycleState.isCycleMode || false;
-    currentWindowId = cycleState.currentWindowId || null;
-    cycleQueue = cycleState.cycleQueue || [];
-    currentCycleIndex = cycleState.currentCycleIndex || 0;
-    isProcessingNext = cycleState.isProcessingNext || false;
+    // If cycle data exists, it means SW was killed unexpectedly
+    // (normal cycle completion clears the data)
+    logInfo('restoreCycleState', 'Found stale cycle data - clearing (SW was killed)');
     
+    // Notify all tabs that cycle has ended (remove moon indicators)
     if (cycleState.openedTabs) {
-      Object.entries(cycleState.openedTabs).forEach(([tabId, info]) => {
-        openedTabs.set(Number(tabId), info);
-      });
+      for (const [tabId, info] of Object.entries(cycleState.openedTabs)) {
+        if (info.fromCycle) {
+          chrome.tabs.sendMessage(Number(tabId), { 
+            action: 'cycleEnded' 
+          }).catch(() => {
+            // Ignore errors (tab may be closed or not have content script)
+          });
+        }
+      }
     }
+    
+    // Clear stale data
+    await chrome.storage.session.remove('cycleState');
+    
+    // DO NOT restore cycle or openedTabs - cycle was interrupted
   }
 }
 
@@ -45,6 +59,79 @@ async function saveCycleState() {
       openedTabs: Object.fromEntries(openedTabs)
     }
   });
+}
+
+// Start keep-alive to prevent SW from sleeping during cycle
+// Official Google recommendation: https://developer.chrome.com/docs/extensions/develop/migrate/to-service-workers
+function startKeepAlive() {
+  if (keepAliveInterval) return; // Already active
+  
+  logInfo('keepAlive', 'Starting keep-alive for 30 minutes');
+  
+  // Periodically call chrome API to reset SW idle timer
+  keepAliveInterval = setInterval(() => {
+    chrome.runtime.getPlatformInfo(() => {
+      // This simple API call keeps SW alive
+    });
+  }, TIMINGS.KEEPALIVE_INTERVAL); // Every 25 seconds (less than 30s SW timeout)
+  
+  // Auto-stop cycle after 30 minutes
+  if (keepAliveTimeout) {
+    clearTimeout(keepAliveTimeout);
+  }
+  
+  keepAliveTimeout = setTimeout(() => {
+    logInfo('keepAlive', 'Keep-alive timeout - force stopping cycle');
+    forceStopCycle();
+  }, TIMINGS.KEEPALIVE_DURATION);
+}
+
+// Stop keep-alive
+function stopKeepAlive() {
+  if (keepAliveInterval) {
+    clearInterval(keepAliveInterval);
+    keepAliveInterval = null;
+  }
+  
+  if (keepAliveTimeout) {
+    clearTimeout(keepAliveTimeout);
+    keepAliveTimeout = null;
+  }
+  
+  logInfo('keepAlive', 'Keep-alive stopped');
+}
+
+// Force stop cycle after timeout
+async function forceStopCycle() {
+  logInfo('forceStopCycle', 'Force stopping cycle due to timeout');
+  
+  isCycleMode = false;
+  cycleQueue = [];
+  currentCycleIndex = 0;
+  isProcessingNext = false;
+  
+  // Notify all open cycle tabs that cycle has ended
+  for (const [tabId, info] of openedTabs.entries()) {
+    if (info.fromCycle) {
+      chrome.tabs.sendMessage(tabId, { 
+        action: 'cycleEnded' 
+      }).catch(() => {
+        // Ignore errors (tab may be closed or not have content script)
+      });
+      // Remove cycle tabs from tracking
+      openedTabs.delete(tabId);
+    }
+  }
+  // Keep tabs opened from panel (fromCycle: false) in openedTabs
+  
+  currentWindowId = null;
+  
+  stopKeepAlive();
+  
+  // Clear cycle state from storage (cycle is completely stopped)
+  await chrome.storage.session.remove('cycleState');
+  
+  notifyPanelUpdate();
 }
 
 // Move page from Active to Completed
@@ -175,9 +262,31 @@ export async function startTasksCycle() {
   if (pages.length === 0) return;
   
   logInfo('startTasksCycle', `Starting cycle with ${pages.length} tasks`);
+  
+  // Clean up any previous cycle data before starting new one
+  if (isCycleMode) {
+    logInfo('startTasksCycle', 'Stopping previous cycle before starting new one');
+    stopKeepAlive();
+    
+    // Notify all tabs from previous cycle that it ended
+    for (const [tabId, info] of openedTabs.entries()) {
+      if (info.fromCycle) {
+        chrome.tabs.sendMessage(tabId, { 
+          action: 'cycleEnded' 
+        }).catch(() => {});
+        openedTabs.delete(tabId);
+      }
+    }
+  }
+  
   cycleQueue = pages;
   currentCycleIndex = 0;
   isCycleMode = true;
+  currentWindowId = null;
+  
+  // Start keep-alive to prevent SW from sleeping
+  startKeepAlive();
+  
   await saveCycleState();
   
   openNextInCycle();
@@ -216,15 +325,29 @@ async function openNextInCycle() {
       cycleQueue = [];
       currentCycleIndex = 0;
       isProcessingNext = false;
-      await saveCycleState();
       
-      if (currentWindowId) {
-        const completedUrl = chrome.runtime.getURL('src/pages/completed.html');
-        chrome.tabs.create({ url: completedUrl, windowId: currentWindowId });
-        currentWindowId = null;
-      } else {
-        chrome.tabs.create({ url: chrome.runtime.getURL('src/pages/completed.html') });
+      // Remove only cycle tabs from tracking, keep panel tabs
+      for (const [tabId, info] of openedTabs.entries()) {
+        if (info.fromCycle) {
+          openedTabs.delete(tabId);
+        }
       }
+      
+      // Stop keep-alive when cycle completes normally
+      stopKeepAlive();
+      
+      // Clear cycle state from storage (cycle is completely finished)
+      await chrome.storage.session.remove('cycleState');
+      
+      // Open completed page in the same window as cycle
+      const completedUrl = chrome.runtime.getURL('src/pages/completed.html');
+      if (currentWindowId) {
+        chrome.tabs.create({ url: completedUrl, windowId: currentWindowId });
+      } else {
+        chrome.tabs.create({ url: completedUrl });
+      }
+      
+      currentWindowId = null;
       return;
     }
     

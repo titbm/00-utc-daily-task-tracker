@@ -23,7 +23,9 @@ export const TIMINGS = {
   DEBOUNCE_DELAY: 500,        // Delay for batching restore requests
   TIMER_INTERVAL: 1000,       // Update timers every second
   ROUGH_NOTATION_RETRY: 100,  // Retry RoughNotation initialization
-  ALARM_INTERVAL: 1           // Check via alarms API (minutes)
+  ALARM_INTERVAL: 1,          // Check via alarms API (minutes)
+  KEEPALIVE_DURATION: 1 * 60 * 1000, // 30 minutes - auto-stop cycle to prevent resource leaks
+  KEEPALIVE_INTERVAL: 25 * 1000 // 25 seconds - keep service worker alive during cycle
 };
 
 // Button styles
@@ -57,5 +59,6 @@ export const ACTIONS = {
   SHOW_ALREADY_ADDED_NOTIFICATION: 'showAlreadyAddedNotification',
   PAGES_UPDATED: 'pagesUpdated',
   CLOSE_SIDE_PANEL: 'closeSidePanel',
-  GET_TAB_STATUS: 'getMyTabStatus'
+  GET_TAB_STATUS: 'getMyTabStatus',
+  CYCLE_ENDED: 'cycleEnded'
 };

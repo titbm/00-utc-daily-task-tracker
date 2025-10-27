@@ -7,7 +7,8 @@ const ACTIONS = {
   PAGES_UPDATED: 'pagesUpdated',
   BANNER_SETTING_CHANGED: 'bannerSettingChanged',
   SHOW_ADDED_NOTIFICATION: 'showAddedNotification',
-  SHOW_ALREADY_ADDED_NOTIFICATION: 'showAlreadyAddedNotification'
+  SHOW_ALREADY_ADDED_NOTIFICATION: 'showAlreadyAddedNotification',
+  CYCLE_ENDED: 'cycleEnded'
 };
 
 let banner = null;
@@ -392,6 +393,29 @@ async function createBanner() {
   }
 }
 
+// Remove cycle indicator with animation
+function removeCycleIndicator(callback) {
+  const indicator = document.getElementById('cycle-indicator');
+  if (indicator) {
+    indicator.style.transition = 'opacity 0.3s, transform 0.3s';
+    indicator.style.opacity = '0';
+    indicator.style.transform = 'scale(0)';
+    setTimeout(() => {
+      indicator.remove();
+      // Remove the entire banner after moon disappears
+      if (banner) {
+        banner.remove();
+        banner = null;
+      }
+      // Call callback after animation completes
+      if (callback) callback();
+    }, 300);
+  } else {
+    // If no indicator, call callback immediately
+    if (callback) callback();
+  }
+}
+
 // Remove banner
 function removeBanner() {
   if (banner) {
@@ -441,6 +465,11 @@ chrome.runtime.onMessage.addListener((message) => {
     showNotification('Page added to Daily Panel', message.title, 'success');
   } else if (message.action === ACTIONS.SHOW_ALREADY_ADDED_NOTIFICATION) {
     showNotification('Page already in Daily Panel', message.title, 'info');
+  } else if (message.action === ACTIONS.CYCLE_ENDED) {
+    removeCycleIndicator(() => {
+      // After moon animation completes, check if we need normal banner
+      checkActiveTasks();
+    });
   }
 });
 
