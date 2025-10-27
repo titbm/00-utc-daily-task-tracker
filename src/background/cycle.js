@@ -146,6 +146,13 @@ export async function movePageToCompleted(bookmarkId) {
     }
     
     const page = bookmark[0];
+    
+    // Check if already in Completed folder - skip if so
+    if (page.parentId === ids.completed) {
+      logInfo('movePageToCompleted', `Page already in Completed: ${page.title}`);
+      return;
+    }
+    
     const parsed = parseActiveBookmarkTitle(page.title);
     
     const completedAt = new Date().toISOString();
@@ -262,27 +269,9 @@ export async function startTasksCycle() {
   if (pages.length === 0) return;
   
   logInfo('startTasksCycle', `Starting cycle with ${pages.length} tasks`);
-  
-  // Clean up any previous cycle data before starting new one
-  if (isCycleMode) {
-    logInfo('startTasksCycle', 'Stopping previous cycle before starting new one');
-    stopKeepAlive();
-    
-    // Notify all tabs from previous cycle that it ended
-    for (const [tabId, info] of openedTabs.entries()) {
-      if (info.fromCycle) {
-        chrome.tabs.sendMessage(tabId, { 
-          action: 'cycleEnded' 
-        }).catch(() => {});
-        openedTabs.delete(tabId);
-      }
-    }
-  }
-  
   cycleQueue = pages;
   currentCycleIndex = 0;
   isCycleMode = true;
-  currentWindowId = null;
   
   // Start keep-alive to prevent SW from sleeping
   startKeepAlive();
@@ -294,11 +283,17 @@ export async function startTasksCycle() {
 
 // Function to open the next page in the queue
 async function openNextInCycle() {
-  if (!isCycleMode) return;
-  
-  if (isProcessingNext) {
+  if (!isCycleMode) {
+    logInfo('openNextInCycle', 'Cycle mode is OFF, exiting');
     return;
   }
+  
+  if (isProcessingNext) {
+    logInfo('openNextInCycle', 'Already processing next, exiting');
+    return;
+  }
+  
+  logInfo('openNextInCycle', `Starting: currentCycleIndex=${currentCycleIndex}, cycleQueue.length=${cycleQueue.length}`);
   
   isProcessingNext = true;
   await saveCycleState();
@@ -312,15 +307,19 @@ async function openNextInCycle() {
       
       const stillActive = currentActivePages.some(active => active.id === page.id);
       
+      logInfo('openNextInCycle', `Checking page at index ${currentCycleIndex}: ${page.title}, stillActive: ${stillActive}`);
+      
       if (stillActive) {
         nextPage = page;
         break;
       } else {
+        logInfo('openNextInCycle', `Page not active, skipping to next`);
         currentCycleIndex++;
       }
     }
     
     if (!nextPage) {
+      logInfo('openNextInCycle', 'No more active pages in queue - cycle completed');
       isCycleMode = false;
       cycleQueue = [];
       currentCycleIndex = 0;
@@ -382,7 +381,7 @@ export async function handleTabRemove(tabId, removeInfo) {
   const tabInfo = openedTabs.get(tabId);
   if (!tabInfo) return;
   
-  logInfo('handleTabRemove', `Tab closed: ${tabInfo.fromCycle ? 'from cycle' : 'single page'}`);
+  logInfo('handleTabRemove', `Tab closed: ${tabInfo.fromCycle ? 'from cycle' : 'single page'}, bookmarkId: ${tabInfo.bookmarkId}, isCycleMode: ${isCycleMode}`);
   
   if (tabInfo.isIntervalDialog) {
     const storageKey = `intervalDialog_${tabInfo.bookmarkId}`;
@@ -422,14 +421,68 @@ export async function handleTabRemove(tabId, removeInfo) {
     await saveCycleState();
     
     try {
-      const bookmark = await chrome.bookmarks.get(bookmarkId);
-      if (!bookmark || !bookmark[0]) return;
+      const ids = await getFolderIds();
+      
+      let bookmark;
+      try {
+        bookmark = await chrome.bookmarks.get(bookmarkId);
+      } catch (error) {
+        logInfo('handleTabRemove', `Bookmark not found (already deleted?): ${bookmarkId}`);
+        
+        // If bookmark not found and this was from cycle, continue cycle
+        if (wasFromCycle && isCycleMode) {
+          logInfo('handleTabRemove', `Continuing cycle despite missing bookmark`);
+          currentCycleIndex++;
+          await saveCycleState();
+          openNextInCycle();
+        }
+        return;
+      }
+      
+      if (!bookmark || !bookmark[0]) {
+        logInfo('handleTabRemove', `Bookmark not found: ${bookmarkId}`);
+        
+        if (wasFromCycle && isCycleMode) {
+          currentCycleIndex++;
+          await saveCycleState();
+          openNextInCycle();
+        }
+        return;
+      }
       
       const page = bookmark[0];
+      
+      logInfo('handleTabRemove', `Bookmark folder: ${page.parentId}, Active: ${ids.active}, Completed: ${ids.completed}`);
+      
+      // Check if page is already in Completed - skip dialog/move and continue cycle
+      if (page.parentId === ids.completed) {
+        logInfo('handleTabRemove', `Page already completed, wasFromCycle: ${wasFromCycle}, isCycleMode: ${isCycleMode}`);
+        
+        // Remove other non-cycle tabs with same bookmarkId
+        for (const [tId, info] of openedTabs.entries()) {
+          if (info.bookmarkId === bookmarkId && !info.fromCycle) {
+            openedTabs.delete(tId);
+          }
+        }
+        
+        // Continue cycle if this was a cycle tab
+        if (wasFromCycle && isCycleMode) {
+          logInfo('handleTabRemove', `Continuing cycle: incrementing index from ${currentCycleIndex} to ${currentCycleIndex + 1}`);
+          currentCycleIndex++;
+          await saveCycleState();
+          openNextInCycle();
+        }
+        return;
+      }
+      
       const parsed = parseActiveBookmarkTitle(page.title);
       
+      logInfo('handleTabRemove', `Parsed title: resetType=${parsed.resetType}, title="${parsed.title}"`);
+      
+      // Remove other tabs with same bookmarkId, but NOT from cycle
+      // Cycle tabs should be handled by their own close event
       for (const [tId, info] of openedTabs.entries()) {
-        if (info.bookmarkId === bookmarkId) {
+        if (info.bookmarkId === bookmarkId && !info.fromCycle) {
           openedTabs.delete(tId);
         }
       }
