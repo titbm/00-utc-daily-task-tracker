@@ -6,9 +6,6 @@ import { DEBUG } from './constants.js';
 // Variable for runtime switching of DEBUG mode
 let runtimeDebug = DEBUG;
 
-// Cache DEBUG value at initialization
-let cachedDebug = DEBUG;
-
 /**
  * Universal DEBUG mode switcher
  * debug() - toggle
