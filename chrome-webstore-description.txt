@@ -43,7 +43,7 @@ Track and manage your daily internet tasks with automatic restoration at midnigh
 **Third-party licenses:**
 - Google Fonts (Inter, Outfit, Material Symbols) — SIL Open Font License (OFL)
 - Material Symbols icons by Google — Apache License 2.0
-- RoughNotation — MIT License
+- RoughNotation — MIT License (used for beautiful hand-drawn animations on task highlights)
 
 ---
 
