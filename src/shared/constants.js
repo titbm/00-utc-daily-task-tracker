@@ -1,7 +1,7 @@
 // Common constants for the entire extension
 
 // Debug mode - set to true to enable console logging
-export const DEBUG = true;
+export const DEBUG = false;
 
 // Name of the bookmarks folder
 export const FOLDER_NAME = '00 UTC | Daily Task Tracker';
@@ -24,7 +24,7 @@ export const TIMINGS = {
   TIMER_INTERVAL: 1000,       // Update timers every second
   ROUGH_NOTATION_RETRY: 100,  // Retry RoughNotation initialization
   ALARM_INTERVAL: 1,          // Check via alarms API (minutes)
-  KEEPALIVE_DURATION: 1 * 60 * 1000, // 30 minutes - auto-stop cycle to prevent resource leaks
+  KEEPALIVE_DURATION: 15 * 60 * 1000, // 30 minutes - auto-stop cycle to prevent resource leaks
   KEEPALIVE_INTERVAL: 25 * 1000 // 25 seconds - keep service worker alive during cycle
 };
 
