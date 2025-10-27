@@ -1,3 +1,5 @@
+![00 UTC Chrome Webstore Screenshots](./public/00%20UTC%20Chrome%20Webstore%20Screenshots.png)
+
 # 00 UTC | Daily Task Tracker
 
 A Chrome extension for tracking and managing your daily internet tasks with automatic restoration at midnight UTC.
@@ -11,10 +13,6 @@ A Chrome extension for tracking and managing your daily internet tasks with auto
 🔄 **Task Cycles** - Open all tasks sequentially with one click  
 🎨 **Beautiful Animations** - Hand-drawn highlight effects using RoughNotation-inspired code  
 🌐 **Smart Banners** - Reminder banner on web pages when you have pending tasks
-
-## Screenshots
-
-![00 UTC Chrome Webstore Screenshots](./public/00%20UTC%20Chrome%20Webstore%20Screenshots.png)
 
 ## Installation
 
