@@ -1,7 +1,7 @@
 // Common constants for the entire extension
 
 // Debug mode - set to true to enable console logging
-export const DEBUG = true;
+export const DEBUG = false;
 
 // Name of the bookmarks folder
 export const FOLDER_NAME = '00 UTC | Daily Task Tracker';

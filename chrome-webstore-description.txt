@@ -25,6 +25,7 @@ Track and manage your daily internet tasks with automatic restoration at midnigh
 6. Completed tasks will automatically return to active at the time you selected, or you can restore them manually from the side panel at any time
 
 **Permissions:**
+- activeTab: detect when you open/close task tabs during cycles
 - bookmarks: store and manage your tasks
 - storage: save extension settings
 - tabs: open/close tabs for task cycle
