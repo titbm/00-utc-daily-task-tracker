@@ -12,6 +12,10 @@ A Chrome extension for tracking and managing your daily internet tasks with auto
 🎨 **Beautiful Animations** - Hand-drawn highlight effects using RoughNotation-inspired code  
 🌐 **Smart Banners** - Reminder banner on web pages when you have pending tasks
 
+## Screenshots
+
+![00 UTC Chrome Webstore Screenshots](./public/00%20UTC%20Chrome%20Webstore%20Screenshots.png)
+
 ## Installation
 
 ### Manual Installation (Developer Mode)
