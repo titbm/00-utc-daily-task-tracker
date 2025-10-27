@@ -18,9 +18,11 @@ Track and manage your daily internet tasks with automatic restoration at midnigh
 
 **How it works:**
 1. Add any page as a daily task via right-click or popup
-2. Click "Start" to begin your task cycle — each task opens in a new tab
-3. Close the tab when done; tasks are marked as completed
-4. At midnight UTC (or after your chosen interval), completed tasks return to active
+2. Reorder your tasks in the side panel by simply dragging and dropping them — the order is saved and used for task cycles
+3. For each task, choose when it should return to active: at midnight UTC or after a custom interval (1h, 3h, 6h, 12h, 24h)
+4. Click "Start" to begin your task cycle — each task opens in a new tab, in your chosen order
+5. Close the tab when done; the task will be marked as completed, and the next task in your queue will open automatically — repeat until all tasks are completed
+6. Completed tasks will automatically return to active at the time you selected, or you can restore them manually from the side panel at any time
 
 **Permissions:**
 - bookmarks: store and manage your tasks

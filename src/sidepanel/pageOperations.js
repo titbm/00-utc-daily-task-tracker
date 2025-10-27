@@ -165,6 +165,7 @@ export class PageOperations {
     if (draggedId === targetId) return;
 
     try {
+      console.log('[Reorder] Moving', draggedId, 'to position of', targetId);
       // Get current list of active pages
       const response = await chrome.runtime.sendMessage({ action: ACTIONS.GET_ACTIVE_PAGES });
       const pages = response.pages || [];
@@ -173,7 +174,10 @@ export class PageOperations {
       const draggedIndex = pages.findIndex(p => p.id === draggedId);
       const targetIndex = pages.findIndex(p => p.id === targetId);
 
-      if (draggedIndex === -1 || targetIndex === -1) return;
+      if (draggedIndex === -1 || targetIndex === -1) {
+        console.error('[Reorder] Page not found - draggedIndex:', draggedIndex, 'targetIndex:', targetIndex);
+        return;
+      }
 
       // Move bookmark in Chrome Bookmarks
       const targetPage = pages[targetIndex];
@@ -188,6 +192,7 @@ export class PageOperations {
         index: targetIndex
       });
 
+      console.log('[Reorder] Success! New order:', draggedIndex, '→', targetIndex);
       // Reload pages via background check
       await chrome.runtime.sendMessage({ action: ACTIONS.CHECK_RESTORE });
     } catch (error) {

@@ -93,6 +93,7 @@ export class EventManager {
       element.classList.add('dragging');
       e.dataTransfer.effectAllowed = 'move';
       e.dataTransfer.setData('text/html', element.innerHTML);
+      console.log('[Drag] Started dragging:', element.dataset.pageId);
     });
     
     element.addEventListener('dragend', (e) => {
@@ -110,6 +111,7 @@ export class EventManager {
       const dragging = document.querySelector('.dragging');
       if (dragging && dragging !== element) {
         element.classList.add('drag-over');
+        console.log('[Drag] Over:', element.dataset.pageId);
       }
     });
     
@@ -123,6 +125,7 @@ export class EventManager {
       
       const dragging = document.querySelector('.dragging');
       if (dragging && dragging !== element) {
+        console.log('[Drag] Dropped:', dragging.dataset.pageId, '→', element.dataset.pageId);
         await this.pageOperations.reorderPages(dragging, element);
       }
     });

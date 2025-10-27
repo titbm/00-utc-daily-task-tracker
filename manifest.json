@@ -2,8 +2,8 @@
   "manifest_version": 3,
   "name": "00 UTC | Daily Task Tracker",
   "version": "1.0.4",
-  "description": "Track and manage your daily internet tasks with automatic restoration at midnight UTC. Organize web pages you need to visit daily with bookmark-based storage.",
-  "author": "titbm",
+  "description": "Daily task tracker with auto-restoration, side panel UI, and task cycles. Bookmark storage. Works offline. No database needed.",
+  "author": "titbmm",
   
   "permissions": [
     "activeTab",
