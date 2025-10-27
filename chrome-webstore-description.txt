@@ -32,6 +32,7 @@ Track and manage your daily internet tasks with automatic restoration at midnigh
 - contextMenus: add right-click menu
 - sidePanel: show side panel UI
 - alarms: schedule automatic restoration
+- management: detect extension enable/disable events
 
 **Privacy:**
 - No personal data is collected or sent anywhere
