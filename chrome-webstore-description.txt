@@ -33,6 +33,7 @@ Track and manage your daily internet tasks with automatic restoration at midnigh
 - sidePanel: show side panel UI
 - alarms: schedule automatic restoration
 - management: detect extension enable/disable events
+- host_permissions (<all_urls>): show reminder banner on all web pages when you have pending tasks
 
 **Privacy:**
 - No personal data is collected or sent anywhere
