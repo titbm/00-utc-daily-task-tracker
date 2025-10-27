@@ -11,6 +11,7 @@ A Chrome extension for tracking and managing your daily internet tasks with auto
 🎯 **Quick Add** - Right-click context menu or popup button  
 📋 **Side Panel UI** - Dedicated panel for managing active and completed tasks  
 🔄 **Task Cycles** - Open all tasks sequentially with one click  
+⚡ **Persistent Cycles** - Keep-alive mechanism prevents interruption during active cycles  
 🎨 **Beautiful Animations** - Hand-drawn highlight effects using RoughNotation-inspired code  
 🌐 **Smart Banners** - Reminder banner on web pages when you have pending tasks
 
@@ -49,6 +50,7 @@ A Chrome extension for tracking and managing your daily internet tasks with auto
 
 ### Technology Stack
 - **Manifest V3** service worker with ES6 modules
+- **Service Worker Keep-Alive** - Official Chrome solution (`setInterval`) prevents sleep during cycles
 - **Modular Architecture** - 8 separate modules for maintainability
 - **chrome.storage.session** for persistent state across service worker restarts
 - **Bookmarks API** as primary data storage (no external database)
@@ -143,11 +145,29 @@ export async function myFunction() { ... }
 
 ## Changelog
 
+### Version 1.0.5 (2025-10-28)
+- ⚡ **Service Worker Keep-Alive** - Implemented official Chrome solution to prevent service worker sleep during active cycles
+  - Uses `setInterval(chrome.runtime.getPlatformInfo, 25000)` per official Google documentation
+  - Automatic 30-minute timeout to prevent resource leaks
+  - Graceful cleanup on cycle completion or browser events
+- 🔄 **Enhanced Cycle Management** - Fixed interruptions when opening tasks from both panel and cycle
+  - Concurrent task handling - panel and cycle can work with same task simultaneously
+  - Skip already completed tasks during cycle iteration
+  - Robust error handling for missing bookmarks (interval dialog edge cases)
+  - Preserve panel tabs after cycle ends
+- 🛡️ **Crash Recovery** - Service worker restart detection with automatic cleanup
+  - Sends `cycleEnded` message to all tabs on crash/restart
+  - Clears stale cycle state from session storage
+  - Prevents ghost indicators and zombie state
+- 📊 **Detailed Logging** - Added comprehensive debug logs for cycle operations
+  - Track bookmark IDs, cycle state, parent folder changes
+  - Easier troubleshooting and maintenance
+
 ### Version 1.0.4 (2025-10-26)
 - ✨ **New Feature**: "Reset at 00:00 UTC" button in interval dialog
   - Allows switching interval tasks to midnight reset type after completion
   - Storage-driven architecture - resetType determines processing
-- � **Code Refactoring**: Unified `updateCompletedPage()` function
+- 🔧 **Code Refactoring**: Unified `updateCompletedPage()` function
   - Replaced `setPageInterval()` and `switchPageToMidnight()` with single universal function
   - Handles both 'midnight' and 'interval' reset types
   - Eliminated code duplication and improved maintainability
