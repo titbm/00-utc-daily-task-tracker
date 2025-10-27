@@ -1,5 +1,4 @@
 import { ACTIONS, RESET_TYPES } from '../shared/constants.js';
-import { logInfo } from '../shared/errorHandler.js';
 
 /**
  * PageOperations - manages page-related operations
@@ -166,7 +165,7 @@ export class PageOperations {
     if (draggedId === targetId) return;
 
     try {
-      logInfo('pageOperations:reorderPages', `Moving ${draggedId} to position of ${targetId}`);
+      console.log(`[pageOperations:reorderPages] Moving ${draggedId} to position of ${targetId}`);
       // Get current list of active pages
       const response = await chrome.runtime.sendMessage({ action: ACTIONS.GET_ACTIVE_PAGES });
       const pages = response.pages || [];
@@ -176,7 +175,7 @@ export class PageOperations {
       const targetIndex = pages.findIndex(p => p.id === targetId);
 
       if (draggedIndex === -1 || targetIndex === -1) {
-        logInfo('pageOperations:reorderPages', `Page not found - draggedIndex: ${draggedIndex}, targetIndex: ${targetIndex}`);
+        console.log(`[pageOperations:reorderPages] Page not found - draggedIndex: ${draggedIndex}, targetIndex: ${targetIndex}`);
         return;
       }
 
@@ -193,11 +192,11 @@ export class PageOperations {
         index: targetIndex
       });
 
-      logInfo('pageOperations:reorderPages', `Success! New order: ${draggedIndex} → ${targetIndex}`);
+      console.log(`[pageOperations:reorderPages] Success! New order: ${draggedIndex} → ${targetIndex}`);
       // Reload pages via background check
       await chrome.runtime.sendMessage({ action: ACTIONS.CHECK_RESTORE });
     } catch (error) {
-      logInfo('pageOperations:reorderPages', `Error: ${error.message}`);
+      console.log(`[pageOperations:reorderPages] Error: ${error.message}`);
     }
   }
 }
