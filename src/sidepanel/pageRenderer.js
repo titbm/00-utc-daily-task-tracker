@@ -1,5 +1,6 @@
 // Page rendering for sidepanel
 import { RESET_TYPES } from '../shared/constants.js';
+import { logInfo } from '../shared/errorHandler.js';
 
 /**
  * PageRenderer - manages DOM creation and rendering of page elements
@@ -29,7 +30,7 @@ export class PageRenderer {
     // Add drag & drop only for active tasks
     if (!isCompleted) {
       div.draggable = true;
-      console.log(`[pageRenderer:createPageElement] Setting up drag handlers for: ${page.id}`);
+      logInfo('pageRenderer:createPageElement', `Setting up drag handlers for: ${page.id}`);
       this.eventManager.setupDragHandlers(div);
     }
 

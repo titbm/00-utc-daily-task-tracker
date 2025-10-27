@@ -51,7 +51,7 @@ class TaskSidepanel {
   });
 
   // Page Operations for managing pages
-  this.pageOperations = new PageOperations(this.uiState);
+  this.pageOperations = new PageOperations(this.uiState, () => this.loadPages());
 
   // Event Manager for handling user interactions
   this.eventManager = new EventManager({

@@ -1,4 +1,5 @@
 import { ACTIONS, RESET_TYPES } from '../shared/constants.js';
+import { logInfo } from '../shared/errorHandler.js';
 
 /**
  * PageOperations - manages page-related operations
@@ -11,8 +12,9 @@ import { ACTIONS, RESET_TYPES } from '../shared/constants.js';
  * - Toggling reset types
  */
 export class PageOperations {
-  constructor(uiState) {
+  constructor(uiState, onPagesChanged = null) {
     this.uiState = uiState;
+    this.onPagesChanged = onPagesChanged; // Callback to refresh UI after operations
   }
 
   /**
@@ -165,7 +167,7 @@ export class PageOperations {
     if (draggedId === targetId) return;
 
     try {
-      console.log(`[pageOperations:reorderPages] Moving ${draggedId} to position of ${targetId}`);
+      logInfo('pageOperations:reorderPages', `Moving ${draggedId} to position of ${targetId}`);
       // Get current list of active pages
       const response = await chrome.runtime.sendMessage({ action: ACTIONS.GET_ACTIVE_PAGES });
       const pages = response.pages || [];
@@ -175,7 +177,7 @@ export class PageOperations {
       const targetIndex = pages.findIndex(p => p.id === targetId);
 
       if (draggedIndex === -1 || targetIndex === -1) {
-        console.log(`[pageOperations:reorderPages] Page not found - draggedIndex: ${draggedIndex}, targetIndex: ${targetIndex}`);
+        logInfo('pageOperations:reorderPages', `Page not found - draggedIndex: ${draggedIndex}, targetIndex: ${targetIndex}`);
         return;
       }
 
@@ -192,11 +194,16 @@ export class PageOperations {
         index: targetIndex
       });
 
-      console.log(`[pageOperations:reorderPages] Success! New order: ${draggedIndex} → ${targetIndex}`);
+      logInfo('pageOperations:reorderPages', `Success! New order: ${draggedIndex} → ${targetIndex}`);
       // Reload pages via background check
       await chrome.runtime.sendMessage({ action: ACTIONS.CHECK_RESTORE });
+      
+      // Refresh UI after reordering
+      if (this.onPagesChanged) {
+        await this.onPagesChanged();
+      }
     } catch (error) {
-      console.log(`[pageOperations:reorderPages] Error: ${error.message}`);
+      logInfo('pageOperations:reorderPages', `Error: ${error.message}`);
     }
   }
 }

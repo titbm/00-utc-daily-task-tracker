@@ -6,6 +6,9 @@ import { DEBUG } from './constants.js';
 // Variable for runtime switching of DEBUG mode
 let runtimeDebug = DEBUG;
 
+// Cache DEBUG value at initialization
+let cachedDebug = DEBUG;
+
 /**
  * Universal DEBUG mode switcher
  * debug() - toggle
@@ -71,7 +74,8 @@ export function logWarning(context, message) {
  * @param {string} message - Message
  */
 export function logInfo(context, message) {
-  if (runtimeDebug) {
+  // Use actual DEBUG value from constants, not runtimeDebug variable
+  if (DEBUG || runtimeDebug) {
     console.log(`[${context}]`, message);
   }
 }
