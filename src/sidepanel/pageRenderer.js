@@ -29,6 +29,7 @@ export class PageRenderer {
     // Add drag & drop only for active tasks
     if (!isCompleted) {
       div.draggable = true;
+      console.log('[PageRenderer] Setting up drag handlers for:', page.id);
       this.eventManager.setupDragHandlers(div);
     }
 
