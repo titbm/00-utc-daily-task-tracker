@@ -269,6 +269,23 @@ export async function startTasksCycle() {
   if (pages.length === 0) return;
   
   logInfo('startTasksCycle', `Starting cycle with ${pages.length} tasks`);
+  
+  // Clean up any previous cycle data before starting new one
+  if (isCycleMode) {
+    logInfo('startTasksCycle', 'Stopping previous cycle before starting new one');
+    stopKeepAlive();
+    
+    // Notify all tabs from previous cycle that it ended
+    for (const [tabId, info] of openedTabs.entries()) {
+      if (info.fromCycle) {
+        chrome.tabs.sendMessage(tabId, { 
+          action: 'cycleEnded' 
+        }).catch(() => {});
+        openedTabs.delete(tabId);
+      }
+    }
+  }
+  
   cycleQueue = pages;
   currentCycleIndex = 0;
   isCycleMode = true;
