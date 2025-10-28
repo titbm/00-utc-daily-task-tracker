@@ -1,6 +1,6 @@
 # Privacy Policy for 00 UTC | Daily Task Tracker
 
-**Last Updated: January 25, 2025**
+**Last Updated: October 28, 2025**
 
 ## Overview
 00 UTC | Daily Task Tracker ("the Extension") is committed to protecting your privacy. This extension does not collect, store, or transmit any personal data to external servers.
@@ -26,6 +26,7 @@ The Extension requires the following permissions:
 - **tabs**: To open tasks in new tabs and detect when you close them
 - **contextMenus**: To add "Add to Daily Panel" option in right-click menu
 - **sidePanel**: To display the side panel interface
+- **downloads**: To export your tasks to a JSON file for backup purposes
 
 ## Third-Party Services
 
@@ -49,5 +50,6 @@ If you have questions about this Privacy Policy, please create an issue on our G
 ## Your Rights
 You can:
 - Delete all extension data by removing the extension
-- Export your tasks manually from Chrome bookmarks
+- Export your tasks to JSON file using the built-in Export feature
+- Import tasks from JSON file to restore your data
 - Disable the extension at any time without losing your bookmarks

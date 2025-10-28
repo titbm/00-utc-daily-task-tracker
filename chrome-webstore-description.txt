@@ -12,6 +12,7 @@ Track and manage your daily internet tasks with automatic restoration at midnigh
 - Quick add: right-click context menu or popup button
 - Side panel UI: manage active and completed tasks
 - Task cycles: open all tasks sequentially with one click
+- Import/Export: backup and restore your tasks via JSON files with duplicate detection
 - Beautiful highlight animations (RoughNotation-inspired)
 - Smart banners: reminder when you have pending tasks
 - No data collection, no ads, no tracking
@@ -33,6 +34,7 @@ Track and manage your daily internet tasks with automatic restoration at midnigh
 - sidePanel: show side panel UI
 - alarms: schedule automatic restoration
 - management: detect extension enable/disable events
+- downloads: export tasks to JSON file for backup
 - host_permissions (<all_urls>): show reminder banner on all web pages when you have pending tasks
 
 **Privacy:**
