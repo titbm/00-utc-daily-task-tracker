@@ -169,15 +169,15 @@ Used for hand-drawn UI annotations (underlines, brackets, strikethroughs):
 - `src/background/bookmarkOperations.js` (107 lines): CRUD operations - getActivePages, getCompletedPages, addPageToActive, removePage
 - `src/background/scheduler.js` (59 lines): Time-based restoration with alarms - checkAndRestoreOldPages
 - `src/background/cycle.js` (302 lines): Task cycle management - state, movePageToCompleted, startTasksCycle, handleTabRemove
-- `src/background/messageHandler.js` (192 lines): All runtime.onMessage routing (20+ actions)
+- `src/background/messageHandler.js` (240 lines): All runtime.onMessage routing (22+ actions), includes IMPORT_DATA handler with duplicate detection
 - `src/shared/bookmarkParser.js` (68 lines): Metadata parsing for Active/Completed bookmarks
 - `src/shared/notifications.js` (12 lines): Panel update notifications
+- `src/shared/constants.js` (66 lines): App constants including ACTIONS.IMPORT_DATA
 - `src/sidepanel/sidepanel.js` (688 lines): Main UI controller with class-based architecture (`DailyPanel`), active/completed section toggling
-- `src/popup/popup.js` (150 lines): Browser action popup with counters, "Start" vs "Repeat All" button logic based on active task count
+- `src/popup/popup.js` (200 lines): Browser action popup with counters, "Start" vs "Repeat All" button logic, Import/Export functionality
 - `src/content/content.js` (304 lines): Injects "Daily tasks are not completed" banner, checks `bannerEnabled` storage setting
 - `src/pages/intervalDialog.html/js`: Modal for setting custom restore intervals (hours/minutes), uses quick-select buttons (1h, 3h, 6h, 12h)
 - `src/pages/completed.html/js`: Success page shown after all tasks completed, offers "Go to Completed" panel view
-- `src/sidepanel/completed.html/js`: Success page shown after all tasks completed, offers "Go to Completed" panel view
 
 ## Extension Permissions & APIs Used
 
@@ -187,7 +187,51 @@ Used for hand-drawn UI annotations (underlines, brackets, strikethroughs):
 - `storage`: Settings persistence (`bannerEnabled`)
 - `tabs`: Tab creation/closure detection, message passing
 - `contextMenus`: Right-click "Add to Daily Panel"
+- `downloads`: Export tasks to JSON file
 - `host_permissions: ["<all_urls>"]`: Required for content script injection
+
+## Import/Export System
+
+### Export (JSON Format)
+- **Trigger**: Click "Export" button in popup (split-button)
+- **File format**: `daily-panel-tasks-YYYYMMDD.json`
+- **Structure**:
+  ```json
+  {
+    "version": "1.0.0",
+    "exportedAt": "2025-10-28T12:34:56.789Z",
+    "active": [
+      {
+        "title": "YouTube",
+        "url": "https://youtube.com",
+        "resetType": "midnight"
+      }
+    ],
+    "completed": [
+      {
+        "title": "GitHub",
+        "url": "https://github.com",
+        "resetType": "interval",
+        "resetInterval": 180,
+        "completedAt": "2025-10-28T11:00:00.000Z",
+        "restoreAt": "2025-10-28T14:00:00.000Z",
+        "addedAt": "2025-10-28T09:00:00.000Z"
+      }
+    ]
+  }
+  ```
+- **Implementation**: `popup.js` → `chrome.downloads.download()` with Blob
+
+### Import (Duplicate Detection)
+- **Trigger**: Click "Import" button in popup → file picker opens
+- **Validation**: Checks for required fields (`version`, `active`, `completed`)
+- **Duplicate detection**: 
+  - Combines all URLs from **both** Active and Completed folders into single Set
+  - Skips tasks where `allExistingUrls.has(task.url)` is true
+  - Prevents duplicates **across folders** (Active ↔ Completed)
+  - Also prevents duplicates **within import file** by adding imported URLs to Set
+- **Result**: Alert shows `Imported: X, Skipped: Y`
+- **Implementation**: `messageHandler.js` → `ACTIONS.IMPORT_DATA` handler
 
 ## Conventions
 

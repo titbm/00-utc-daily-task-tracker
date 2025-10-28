@@ -102,12 +102,102 @@ document.getElementById('addCurrentTab').addEventListener('click', async () => {
 
 // Import button handler
 document.getElementById('importData').addEventListener('click', async () => {
-  console.log('Import clicked - to be implemented');
-  // TODO: Implement import functionality
+  // Trigger file input
+  document.getElementById('importFileInput').click();
+});
+
+// File input change handler
+document.getElementById('importFileInput').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  
+  try {
+    // Read file
+    const text = await file.text();
+    const data = JSON.parse(text);
+    
+    // Validate JSON structure
+    if (!data.version || !data.active || !data.completed) {
+      alert('Invalid file format. Please select a valid Daily Panel export file.');
+      return;
+    }
+    
+    // Send import request to background
+    const response = await chrome.runtime.sendMessage({
+      action: ACTIONS.IMPORT_DATA,
+      data: data
+    });
+    
+    if (response.success) {
+      // Show success message
+      alert(`Import complete!\n\nImported: ${response.imported}\nSkipped (duplicates): ${response.skipped}`);
+      
+      // Reload popup to show updated counts
+      window.location.reload();
+    } else {
+      alert(`Import failed: ${response.error || 'Unknown error'}`);
+    }
+    
+  } catch (error) {
+    console.error('Import error:', error);
+    alert(`Import failed: ${error.message}`);
+  } finally {
+    // Reset file input
+    e.target.value = '';
+  }
 });
 
 // Export button handler
 document.getElementById('exportData').addEventListener('click', async () => {
-  console.log('Export clicked - to be implemented');
-  // TODO: Implement export functionality
+  try {
+    // Get all tasks from background
+    const activeResponse = await chrome.runtime.sendMessage({ action: ACTIONS.GET_ACTIVE_PAGES });
+    const completedResponse = await chrome.runtime.sendMessage({ action: ACTIONS.GET_COMPLETED_PAGES });
+    
+    const activePages = activeResponse.pages || [];
+    const completedPages = completedResponse.pages || [];
+    
+    // Prepare export data
+    const exportData = {
+      version: "1.0.0",
+      exportedAt: new Date().toISOString(),
+      active: activePages.map(page => ({
+        title: page.title,
+        url: page.url,
+        resetType: page.resetType
+      })),
+      completed: completedPages.map(page => ({
+        title: page.title,
+        url: page.url,
+        resetType: page.resetType,
+        resetInterval: page.resetInterval,
+        completedAt: page.completedAt,
+        restoreAt: page.restoreAt,
+        addedAt: page.addedAt
+      }))
+    };
+    
+    // Create JSON blob
+    const jsonString = JSON.stringify(exportData, null, 2);
+    const blob = new Blob([jsonString], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    
+    // Generate filename with current date
+    const now = new Date();
+    const dateStr = now.toISOString().split('T')[0].replace(/-/g, '');
+    const filename = `daily-panel-tasks-${dateStr}.json`;
+    
+    // Download file
+    await chrome.downloads.download({
+      url: url,
+      filename: filename,
+      saveAs: true
+    });
+    
+    // Clean up blob URL
+    setTimeout(() => URL.revokeObjectURL(url), 100);
+    
+  } catch (error) {
+    console.error('Export failed:', error);
+  }
 });

@@ -13,7 +13,8 @@ A Chrome extension for tracking and managing your daily internet tasks with auto
 🔄 **Task Cycles** - Open all tasks sequentially with one click  
 ⚡ **Persistent Cycles** - Keep-alive mechanism prevents interruption during active cycles  
 🎨 **Beautiful Animations** - Hand-drawn highlight effects using RoughNotation-inspired code  
-🌐 **Smart Banners** - Reminder banner on web pages when you have pending tasks
+🌐 **Smart Banners** - Reminder banner on web pages when you have pending tasks  
+💾 **Import/Export** - Backup and restore tasks via JSON files with automatic duplicate detection
 
 ## Installation
 
@@ -45,6 +46,8 @@ A Chrome extension for tracking and managing your daily internet tasks with auto
 - View **Active** and **Completed** tasks
 - **Delete** tasks you no longer need
 - **Restore** completed tasks manually
+- **Export** all tasks to JSON file for backup
+- **Import** tasks from JSON file (duplicates by URL are automatically skipped)
 
 ## Architecture
 

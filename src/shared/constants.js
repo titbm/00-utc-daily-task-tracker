@@ -60,5 +60,6 @@ export const ACTIONS = {
   PAGES_UPDATED: 'pagesUpdated',
   CLOSE_SIDE_PANEL: 'closeSidePanel',
   GET_TAB_STATUS: 'getMyTabStatus',
-  CYCLE_ENDED: 'cycleEnded'
+  CYCLE_ENDED: 'cycleEnded',
+  IMPORT_DATA: 'importData'
 };
