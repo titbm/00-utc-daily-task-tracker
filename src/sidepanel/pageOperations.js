@@ -93,8 +93,20 @@ export class PageOperations {
    */
   async restoreAllCompleted() {
     try {
-      const completedResponse = await chrome.runtime.sendMessage({ action: ACTIONS.GET_COMPLETED_PAGES });
-      const completedPages = completedResponse.pages || [];
+      // First request might fail if SW is sleeping - retry once
+      let completedPages = [];
+      try {
+        const completedResponse = await chrome.runtime.sendMessage({ action: ACTIONS.GET_COMPLETED_PAGES });
+        completedPages = completedResponse.pages || [];
+      } catch (firstError) {
+        if (firstError.message?.includes('Could not establish connection')) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+          const completedResponse = await chrome.runtime.sendMessage({ action: ACTIONS.GET_COMPLETED_PAGES });
+          completedPages = completedResponse.pages || [];
+        } else {
+          throw firstError;
+        }
+      }
 
       if (completedPages.length === 0) {
         return;
