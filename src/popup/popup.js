@@ -99,3 +99,15 @@ document.getElementById('addCurrentTab').addEventListener('click', async () => {
     window.close();
   }
 });
+
+// Import button handler
+document.getElementById('importData').addEventListener('click', async () => {
+  console.log('Import clicked - to be implemented');
+  // TODO: Implement import functionality
+});
+
+// Export button handler
+document.getElementById('exportData').addEventListener('click', async () => {
+  console.log('Export clicked - to be implemented');
+  // TODO: Implement export functionality
+});

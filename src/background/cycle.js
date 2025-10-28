@@ -270,6 +270,15 @@ export async function startTasksCycle() {
   
   logInfo('startTasksCycle', `Starting cycle with ${pages.length} tasks`);
   
+  // Close all completed.html tabs before starting new cycle
+  const completedUrl = chrome.runtime.getURL('src/pages/completed.html');
+  const allTabs = await chrome.tabs.query({});
+  for (const tab of allTabs) {
+    if (tab.url && tab.url.startsWith(completedUrl)) {
+      chrome.tabs.remove(tab.id).catch(() => {});
+    }
+  }
+  
   // Clean up any previous cycle data before starting new one
   if (isCycleMode) {
     logInfo('startTasksCycle', 'Stopping previous cycle before starting new one');
