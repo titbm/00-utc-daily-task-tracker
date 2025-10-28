@@ -148,6 +148,24 @@ export async function myFunction() { ... }
 
 ## Changelog
 
+### Version 1.0.6 (2025-10-28)
+- 💾 **Import/Export System** - Full backup and restore functionality
+  - Export all tasks to JSON file (`daily-panel-tasks-YYYYMMDD.json`)
+  - Import tasks from JSON with validation
+  - Smart duplicate detection across both Active and Completed folders
+  - Prevents duplicates within same import file
+  - Shows import summary (imported/skipped counts)
+- 🎨 **Split-Button UI** - Professional import/export interface in popup
+  - Two-part button with separate Import/Export actions
+  - Custom styles with hover effects and animations
+  - Press animation for all buttons (scale + color feedback)
+- 🔒 **Enhanced Data Integrity** - URL-based uniqueness enforcement
+  - No duplicate URLs allowed across entire system
+  - Combined Set for fast duplicate checking
+  - Maintains data consistency during import
+- 📦 **New Permission** - Added `downloads` for file export functionality
+- 📝 **Documentation Updates** - README and copilot-instructions updated with import/export details
+
 ### Version 1.0.5 (2025-10-28)
 - ⚡ **Service Worker Keep-Alive** - Implemented official Chrome solution to prevent service worker sleep during active cycles
   - Uses `setInterval(chrome.runtime.getPlatformInfo, 25000)` per official Google documentation
