@@ -21,22 +21,34 @@ export function initMessageHandler() {
       getActivePages().then(pages => {
         logInfo('messageHandler', `Returning ${pages.length} active pages`);
         sendResponse({ pages });
+      }).catch((error) => {
+        logError('getActivePages', error);
+        sendResponse({ pages: [] });
       });
   return true; // Async response
     } else if (request.action === ACTIONS.GET_COMPLETED_PAGES) {
       getCompletedPages().then(pages => {
         logInfo('messageHandler', `Returning ${pages.length} completed pages`);
         sendResponse({ pages });
+      }).catch((error) => {
+        logError('getCompletedPages', error);
+        sendResponse({ pages: [] });
       });
   return true; // Async response
     } else if (request.action === ACTIONS.MOVE_TO_COMPLETED) {
       movePageToCompleted(request.bookmarkId).then(() => {
         sendResponse({ success: true });
+      }).catch((error) => {
+        logError('moveToCompleted', error);
+        sendResponse({ success: false, error: error.message });
       });
   return true; // Async response
     } else if (request.action === ACTIONS.REMOVE_PAGE) {
       removePage(request.bookmarkId).then(() => {
         sendResponse({ success: true });
+      }).catch((error) => {
+        logError('removePage', error);
+        sendResponse({ success: false, error: error.message });
       });
   return true; // Async response
     } else if (request.action === ACTIONS.ADD_PAGE) {
@@ -57,6 +69,9 @@ export function initMessageHandler() {
   // Move from Completed to Active
       movePageToActive(request.bookmarkId).then(() => {
         sendResponse({ success: true });
+      }).catch((error) => {
+        logError('restorePage', error);
+        sendResponse({ success: false, error: error.message });
       });
   return true; // Async response
     } else if (request.action === ACTIONS.OPEN_NEXT_PAGE) {
