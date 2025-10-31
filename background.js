@@ -3,7 +3,7 @@ import { ACTIONS } from './src/shared/constants.js';
 
 // Импорт модулей
 import { initializeBookmarksFolder } from './src/background/folderManager.js';
-import { addPageToActive } from './src/background/bookmarkOperations.js';
+import { addPageToActive, getActivePages } from './src/background/bookmarkOperations.js';
 import { startTimeChecker, initAlarmListener } from './src/background/scheduler.js';
 import { restoreCycleState, handleTabRemove } from './src/background/cycle.js';
 import { initMessageHandler } from './src/background/messageHandler.js';
@@ -94,12 +94,18 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
           action: ACTIONS.SHOW_ALREADY_ADDED_NOTIFICATION,
           title: tab.title 
         }).catch(() => {});
-      } else {
-        // Страница успешно добавлена
+      } else if (result && result.added) {
+        // Страница успешно добавлена - получаем bookmarkId
         logInfo('contextMenuHandler', `Page added successfully: ${tab.title}`);
+        
+        // Получаем bookmarkId только что добавленной страницы
+        const activePages = await getActivePages();
+        const addedPage = activePages.find(p => p.url === tab.url);
+        
         chrome.tabs.sendMessage(tab.id, { 
           action: ACTIONS.SHOW_ADDED_NOTIFICATION,
-          title: tab.title 
+          title: tab.title,
+          bookmarkId: addedPage ? addedPage.id : null
         }).catch(() => {
           // Игнорируем ошибки (страница может не поддерживать content scripts)
         });

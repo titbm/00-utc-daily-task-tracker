@@ -118,7 +118,7 @@ document.getElementById('importFileInput').addEventListener('change', async (e) 
     
     // Validate JSON structure
     if (!data.version || !data.active || !data.completed) {
-      alert('Invalid file format. Please select a valid Daily Panel export file.');
+      alert('Invalid file format. Please select a valid Extension export file.');
       return;
     }
     
@@ -185,7 +185,7 @@ document.getElementById('exportData').addEventListener('click', async () => {
     // Generate filename with current date
     const now = new Date();
     const dateStr = now.toISOString().split('T')[0].replace(/-/g, '');
-    const filename = `daily-panel-tasks-${dateStr}.json`;
+    const filename = `00-UTC-tasks-${dateStr}.json`;
     
     // Download file
     await chrome.downloads.download({

@@ -150,7 +150,7 @@ export async function myFunction() { ... }
 
 ### Version 1.0.6 (2025-10-28)
 - 💾 **Import/Export System** - Full backup and restore functionality
-  - Export all tasks to JSON file (`daily-panel-tasks-YYYYMMDD.json`)
+  - Export all tasks to JSON file (`extension-tasks-YYYYMMDD.json`)
   - Import tasks from JSON with validation
   - Smart duplicate detection across both Active and Completed folders
   - Prevents duplicates within same import file

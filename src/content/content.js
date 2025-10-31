@@ -8,22 +8,23 @@ const ACTIONS = {
   BANNER_SETTING_CHANGED: 'bannerSettingChanged',
   SHOW_ADDED_NOTIFICATION: 'showAddedNotification',
   SHOW_ALREADY_ADDED_NOTIFICATION: 'showAlreadyAddedNotification',
-  CYCLE_ENDED: 'cycleEnded'
+  CYCLE_ENDED: 'cycleEnded',
+  MOVE_TO_COMPLETED: 'moveToCompleted'
 };
 
 let banner = null;
 
 // Load Material Symbols if not already loaded
-if (!document.getElementById('daily-panel-material-symbols')) {
+if (!document.getElementById('extension-material-symbols')) {
   const link = document.createElement('link');
-  link.id = 'daily-panel-material-symbols';
+  link.id = 'extension-material-symbols';
   link.rel = 'stylesheet';
   link.href = 'https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined';
   document.head.appendChild(link);
 }// Load Outfit font for headers
-if (!document.getElementById('daily-panel-outfit-font')) {
+if (!document.getElementById('extension-outfit-font')) {
   const link = document.createElement('link');
-  link.id = 'daily-panel-outfit-font';
+  link.id = 'extension-outfit-font';
   link.rel = 'stylesheet';
   link.href = 'https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600&display=swap';
   document.head.appendChild(link);
@@ -274,7 +275,7 @@ async function createBanner() {
   }
   
   banner = document.createElement('div');
-  banner.id = 'daily-panel-banner';
+  banner.id = 'extension-banner';
   
   if (bannerType === 'cycle') {
     // Square icon with rounded corners for cycle
@@ -378,9 +379,9 @@ async function createBanner() {
   }
   
   // Add keyframes for animation
-  if (!document.getElementById('daily-panel-banner-animations')) {
+  if (!document.getElementById('extension-banner-animations')) {
     const style = document.createElement('style');
-    style.id = 'daily-panel-banner-animations';
+    style.id = 'extension-banner-animations';
     style.textContent = `
       @keyframes rotate {
         from { transform: rotate(0deg); }
@@ -460,9 +461,9 @@ chrome.runtime.onMessage.addListener((message) => {
   removeBanner(); // Hide banner
     }
   } else if (message.action === ACTIONS.SHOW_ADDED_NOTIFICATION) {
-    showNotification('Page added to Daily Panel', message.title, 'success');
+    showNotification('Page added to Extension', message.title, 'success', message.bookmarkId);
   } else if (message.action === ACTIONS.SHOW_ALREADY_ADDED_NOTIFICATION) {
-    showNotification('Page already in Daily Panel', message.title, 'info');
+    showNotification('Page already in Extension', message.title, 'info', null);
   } else if (message.action === ACTIONS.CYCLE_ENDED) {
     removeCycleIndicator(() => {
       // After moon animation completes, check if we need normal banner
@@ -472,11 +473,11 @@ chrome.runtime.onMessage.addListener((message) => {
 });
 
 // Function to show notification
-function showNotification(text, title, type) {
+function showNotification(text, title, type, bookmarkId = null) {
   // Load Outfit font if not already loaded
-  if (!document.getElementById('daily-panel-outfit-font')) {
+  if (!document.getElementById('extension-outfit-font')) {
     const style = document.createElement('style');
-    style.id = 'daily-panel-outfit-font';
+    style.id = 'extension-outfit-font';
     style.textContent = `
       @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600&display=swap');
     `;
@@ -484,14 +485,14 @@ function showNotification(text, title, type) {
   }
   
   // Remove previous notification if exists
-  const existing = document.getElementById('daily-panel-notification');
+  const existing = document.getElementById('extension-notification');
   if (existing) {
     existing.remove();
   }
 
   // Create notification
   const notification = document.createElement('div');
-  notification.id = 'daily-panel-notification';
+  notification.id = 'extension-notification';
   notification.style.cssText = `
     position: fixed;
     top: 50%;
@@ -723,8 +724,23 @@ function showNotification(text, title, type) {
     btn1.appendChild(text1);
     setupButton(btn1);
     
-    btn1.addEventListener('click', () => {
-      // Store metadata for "Restore at 00 UTC"
+    btn1.addEventListener('click', async () => {
+      // Move page to Completed (like closing tab for midnight task)
+      if (bookmarkId) {
+        try {
+          console.log('[Extension] Moving to completed, bookmarkId:', bookmarkId);
+          const response = await chrome.runtime.sendMessage({
+            action: ACTIONS.MOVE_TO_COMPLETED,
+            bookmarkId: bookmarkId
+          });
+          console.log('[Extension] Move response:', response);
+        } catch (error) {
+          console.error('[Extension] Error moving to completed:', error);
+        }
+      } else {
+        console.error('[Extension] No bookmarkId provided');
+      }
+      
       notification.style.opacity = '0';
       setTimeout(() => {
         notification.remove();
@@ -807,7 +823,7 @@ function createCentralBanner() {
   if (centralBanner) return; // Уже создан
   
   centralBanner = document.createElement('div');
-  centralBanner.id = 'daily-panel-central-banner';
+  centralBanner.id = 'extension-central-banner';
   centralBanner.style.cssText = `
     position: fixed;
     top: 50%;
@@ -838,7 +854,7 @@ function createCentralBanner() {
         50% { transform: translateY(-20px); }
       }
       
-      #daily-panel-central-banner-close:hover {
+      #extension-central-banner-close:hover {
         background: #333333;
       }
     </style>
@@ -877,7 +893,7 @@ function createCentralBanner() {
     ">Use Ctrl+W to close tabs quickly and complete your tasks faster.</p>
     
     <!-- Кнопка закрытия -->
-    <button id="daily-panel-central-banner-close" style="
+    <button id="extension-central-banner-close" style="
       background: #000000;
       color: #ffffff;
       border: 1px solid #000000;
@@ -932,7 +948,7 @@ function createCentralBanner() {
   });
   
   // Обработчик кнопки закрытия
-  const closeButton = centralBanner.querySelector('#daily-panel-central-banner-close');
+  const closeButton = centralBanner.querySelector('#extension-central-banner-close');
   closeButton.addEventListener('click', () => {
     centralBanner.style.opacity = '0';
     centralBanner.style.transform = 'translate(-50%, -50%) scale(0.9)';
