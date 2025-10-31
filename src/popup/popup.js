@@ -235,12 +235,13 @@ document.getElementById('exportData').addEventListener('click', async () => {
     const dateStr = now.toISOString().split('T')[0].replace(/-/g, '');
     const filename = `00-UTC-tasks-${dateStr}.json`;
     
-    // Download file
-    await chrome.downloads.download({
-      url: url,
-      filename: filename,
-      saveAs: true
-    });
+    // Download file using <a> element (no permissions required)
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a); // Required for Firefox
+    a.click();
+    document.body.removeChild(a);
     
     // Clean up blob URL
     setTimeout(() => URL.revokeObjectURL(url), 100);

@@ -148,6 +148,21 @@ export async function myFunction() { ... }
 
 ## Changelog
 
+### Version 1.0.11 (2025-10-31)
+- 🔒 **Reduced Permissions** - Optimized extension security and privacy
+  - Removed `activeTab` permission (duplicate of `tabs`)
+  - Removed `management` permission (replaced with `runtime.onInstalled`)
+  - Removed `downloads` permission (replaced with `<a download>`)
+  - **Result:** 9 → 6 permissions (-33% reduction)
+- 🎯 **Simplified Central Banner Logic** - More predictable behavior
+  - Banner now shows only on first installation
+  - Removed tracking of enable/disable state
+  - Cleaner code without `chrome.management` API
+- 💾 **Export Behavior Change** - Standard browser download
+  - Files now save directly to Downloads folder
+  - No "Save As" dialog (standard web behavior)
+  - Import unchanged - still shows file picker dialog
+
 ### Version 1.0.10 (2025-10-31)
 - 🐛 **Fixed Notification Buttons When Adding via Popup** - Action buttons now work correctly
   - Fixed `bookmarkId` not being passed when adding page through popup

@@ -1,20 +1,17 @@
 {
   "manifest_version": 3,
   "name": "00 UTC | Daily Task Tracker",
-  "version": "1.0.10",
+  "version": "1.0.11",
   "description": "Daily task tracker with auto-restoration, side panel UI, and task cycles. Bookmark storage. Works offline. No database needed.",
   "author": "titbmm",
   
   "permissions": [
-    "activeTab",
     "tabs",
     "contextMenus",
     "sidePanel",
     "bookmarks",
     "alarms",
-    "storage",
-    "management",
-    "downloads"
+    "storage"
   ],
   
   "background": {

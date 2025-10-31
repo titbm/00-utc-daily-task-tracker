@@ -112,35 +112,12 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   }
 });
 
-// Отслеживаем включение расширения для сброса флага баннера
-chrome.management.getSelf((info) => {
-  // При старте service worker проверяем, было ли расширение только что включено
-  // Если это первый запуск после включения, сбрасываем флаг
-  chrome.storage.local.get('extensionEnabled', (result) => {
-    if (result.extensionEnabled === false && info.enabled) {
-      // Расширение было выключено, а теперь включено - сбрасываем флаг баннера
-      chrome.storage.local.set({ centralBannerShown: false });
-      logInfo('runtime', 'Extension enabled - central banner flag reset');
-    }
-    // Сохраняем текущее состояние
-    chrome.storage.local.set({ extensionEnabled: info.enabled });
-  });
-});
-
-// Отслеживаем изменения состояния расширения
-chrome.management.onEnabled.addListener((info) => {
-  if (info.id === chrome.runtime.id) {
-    chrome.storage.local.set({ 
-      centralBannerShown: false,
-      extensionEnabled: true
-    });
-    logInfo('runtime', 'Extension enabled - central banner flag reset');
+// Handle extension installation and updates
+chrome.runtime.onInstalled.addListener((details) => {
+  if (details.reason === 'install') {
+    // First installation - show central banner on first cycle
+    chrome.storage.local.set({ centralBannerShown: false });
+    logInfo('runtime', 'Extension installed - central banner will be shown on first cycle');
   }
-});
-
-chrome.management.onDisabled.addListener((info) => {
-  if (info.id === chrome.runtime.id) {
-    chrome.storage.local.set({ extensionEnabled: false });
-    logInfo('runtime', 'Extension disabled');
-  }
+  // On update - don't reset the flag (user already saw the banner)
 });
