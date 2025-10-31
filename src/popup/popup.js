@@ -17,32 +17,79 @@ import { ACTIONS, BUTTON_STATES } from '../shared/constants.js';
   const { bannerEnabled = true } = await chrome.storage.local.get('bannerEnabled');
   document.getElementById('bannerToggle').checked = bannerEnabled;
   
-  // Setup START/REPEAT ALL button
+  // Setup START button and Check/Reset buttons
   const stealthBtn = document.getElementById('stealthMode');
+  const checkResetButtons = document.getElementById('checkResetButtons');
   
   if (activePages.length === 0 && completedPages.length > 0) {
-  // No active tasks, but there are completed - show REPEAT ALL button
-    stealthBtn.innerHTML = '<span class="material-symbols-outlined">refresh</span>Repeat all';
-    stealthBtn.addEventListener('click', async () => {
-  // Restore all from Completed and start cycle (ready handler)
-      await chrome.runtime.sendMessage({ action: ACTIONS.RESTORE_ALL_AND_START });
-      window.close();
+    // No active tasks, but there are completed - hide START, show Check/Reset buttons
+    stealthBtn.style.display = 'none';
+    checkResetButtons.style.display = 'flex';
+    
+    // Check button - reset tasks within 24 hours and start cycle
+    document.getElementById('checkTasks').addEventListener('click', async () => {
+      const result = await chrome.runtime.sendMessage({ 
+        action: ACTIONS.RESET_TASKS_WITHIN_24H 
+      });
+      
+      if (result.success && result.count > 0) {
+        // Tasks were reset - start cycle
+        // Close sidepanel (if open)
+        chrome.runtime.sendMessage({ action: ACTIONS.CLOSE_SIDE_PANEL }).catch(() => {});
+        
+        // Small delay for panel closing
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // Start task cycle
+        chrome.runtime.sendMessage({ action: ACTIONS.OPEN_NEXT_PAGE });
+        window.close();
+      } else if (result.count === 0) {
+        // No tasks to reset
+        alert('No tasks will restore within 24 hours');
+      } else {
+        alert(`Error: ${result.error}`);
+      }
+    });
+    
+    // Reset button - restore all from Completed to Active (without starting cycle)
+    document.getElementById('resetTasks').addEventListener('click', async () => {
+      // Get all completed pages
+      const completedResponse = await chrome.runtime.sendMessage({ 
+        action: ACTIONS.GET_COMPLETED_PAGES 
+      });
+      const completedPages = completedResponse.pages || [];
+      
+      if (completedPages.length === 0) {
+        alert('No completed tasks to reset');
+        return;
+      }
+      
+      // Restore all completed tasks to active
+      for (const page of completedPages) {
+        await chrome.runtime.sendMessage({ 
+          action: ACTIONS.RESTORE_PAGE,
+          bookmarkId: page.id
+        });
+      }
+      
+      // Reload popup to show updated counts
+      window.location.reload();
     });
   } else if (activePages.length === 0 && completedPages.length === 0) {
-  // No active or completed tasks - disable button
+    // No active or completed tasks - disable START button
     stealthBtn.disabled = true;
     stealthBtn.style.opacity = BUTTON_STATES.DISABLED.opacity;
     stealthBtn.style.cursor = BUTTON_STATES.DISABLED.cursor;
   } else {
-  // There are active tasks - START button works
+    // There are active tasks - START button works
     stealthBtn.addEventListener('click', async () => {
-  // Close sidepanel (if open)
+      // Close sidepanel (if open)
       chrome.runtime.sendMessage({ action: ACTIONS.CLOSE_SIDE_PANEL }).catch(() => {});
       
-  // Small delay for panel closing
+      // Small delay for panel closing
       await new Promise(resolve => setTimeout(resolve, 100));
       
-  // Start task cycle
+      // Start task cycle
       chrome.runtime.sendMessage({ action: ACTIONS.OPEN_NEXT_PAGE });
       window.close();
     });

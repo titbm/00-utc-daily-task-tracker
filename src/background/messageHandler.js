@@ -1,7 +1,7 @@
 // Message handler module for popup, sidepanel, and content scripts
 import { getActivePages, getCompletedPages, addPageToActive, removePage } from './bookmarkOperations.js';
 import { getFolderIds } from './folderManager.js';
-import { movePageToCompleted, movePageToActive, startTasksCycle, openSinglePage, getTabStatus, registerIntervalDialog } from './cycle.js';
+import { movePageToCompleted, movePageToActive, startTasksCycle, openSinglePage, getTabStatus, registerIntervalDialog, resetTasksWithin24Hours } from './cycle.js';
 import { checkAndRestoreOldPages } from './scheduler.js';
 import { parseActiveBookmarkTitle, parseCompletedBookmarkTitle, getFaviconUrl } from '../shared/bookmarkParser.js';
 import { notifyPanelUpdate } from '../shared/notifications.js';
@@ -296,6 +296,15 @@ export function initMessageHandler() {
           sendResponse({ success: false, error: error.message });
         }
       })();
+      return true;
+    } else if (request.action === ACTIONS.RESET_TASKS_WITHIN_24H) {
+      // Reset tasks that will restore within 24 hours
+      resetTasksWithin24Hours().then((result) => {
+        sendResponse(result);
+      }).catch((error) => {
+        logError('resetTasksWithin24h', error);
+        sendResponse({ success: false, error: error.message, count: 0 });
+      });
       return true;
     }
   });

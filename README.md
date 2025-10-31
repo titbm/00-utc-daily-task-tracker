@@ -148,6 +148,29 @@ export async function myFunction() { ... }
 
 ## Changelog
 
+### Version 1.0.8 (2025-10-31)
+- ⚡ **Smart Task Reset** - New "Check tasks" feature for selective task restoration
+  - Automatically identifies tasks restoring within 24 hours
+  - Resets only near-expiring tasks (midnight tasks completed today + interval tasks < 24h)
+  - Immediately starts task cycle after reset
+  - New `resetTasksWithin24Hours()` function in `cycle.js`
+- 🎨 **Redesigned Popup Buttons** - Check/Reset split-button replaces "Repeat All"
+  - "Check tasks" (80% width) - Black button with checkmark icon, resets and starts cycle
+  - "Reset" (20% width) - White button with refresh icon, resets all tasks without cycle
+  - Buttons shown only when no active tasks exist
+  - Professional 80/20 width split matching Import/Export design
+- 💡 **Enhanced Tooltips** - Helpful descriptions on all popup buttons
+  - "Reset tasks restoring within 24h and start cycle"
+  - "Reset all completed tasks to active"
+  - "Start task cycle", "Add current page to active tasks"
+  - "Open side panel with all tasks"
+  - "Import/Export tasks from/to JSON file"
+- 🔧 **New Action Constant** - `RESET_TASKS_WITHIN_24H` added to constants.js
+- 📋 **Smart Algorithm** - Precise detection logic:
+  - Midnight tasks: Checks if `completedAt >= today's 00:00 UTC`
+  - Interval tasks: Checks if `restoreAt <= now + 24 hours`
+  - Automatically updates scheduler after reset
+
 ### Version 1.0.7 (2025-10-31)
 - 🎯 **Action Buttons in Notification Banner** - Two interactive buttons added to task notification
   - "Start tomorrow" button - Immediately moves task to Completed (restores at 00:00 UTC)

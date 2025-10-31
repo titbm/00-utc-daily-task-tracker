@@ -1,7 +1,7 @@
 // Common constants for the entire extension
 
 // Debug mode - set to true to enable console logging
-export const DEBUG = true;
+export const DEBUG = false;
 
 // Name of the bookmarks folder
 export const FOLDER_NAME = '00 UTC | Daily Task Tracker';
@@ -61,5 +61,6 @@ export const ACTIONS = {
   CLOSE_SIDE_PANEL: 'closeSidePanel',
   GET_TAB_STATUS: 'getMyTabStatus',
   CYCLE_ENDED: 'cycleEnded',
-  IMPORT_DATA: 'importData'
+  IMPORT_DATA: 'importData',
+  RESET_TASKS_WITHIN_24H: 'resetTasksWithin24h'
 };

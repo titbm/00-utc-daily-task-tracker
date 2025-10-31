@@ -598,3 +598,72 @@ export async function registerIntervalDialog(tabId, bookmarkId, dialogFromCycle)
   await saveCycleState();
   logInfo('registerIntervalDialog', `Registered interval dialog tab ${tabId} for bookmark ${bookmarkId}`);
 }
+
+// Reset tasks that will restore within 24 hours
+export async function resetTasksWithin24Hours() {
+  try {
+    const completedPages = await chrome.bookmarks.getChildren((await getFolderIds()).completed);
+    const now = Date.now();
+    const in24Hours = now + 24 * 60 * 60 * 1000; // 24 hours from now
+    
+    // Calculate today's midnight UTC and tomorrow's midnight UTC
+    const todayMidnight = new Date(Date.UTC(
+      new Date().getUTCFullYear(),
+      new Date().getUTCMonth(),
+      new Date().getUTCDate(),
+      0, 0, 0, 0
+    )).getTime();
+    const tomorrowMidnight = todayMidnight + 86400000;
+    
+    let resetCount = 0;
+    const tasksToReset = [];
+    
+    for (const bookmark of completedPages) {
+      if (!bookmark.url) continue;
+      
+      const parsed = parseCompletedBookmarkTitle(bookmark.title);
+      let shouldReset = false;
+      
+      if (parsed.resetType === RESET_TYPES.MIDNIGHT) {
+        // For midnight tasks: check if completed today (will restore tomorrow at 00:00 UTC)
+        // If completed today, time until restore = tomorrowMidnight - now
+        const completedAt = new Date(parsed.completedAt).getTime();
+        
+        // If completed today (after today's midnight), it will restore tomorrow
+        if (completedAt >= todayMidnight && completedAt < tomorrowMidnight) {
+          const timeUntilRestore = tomorrowMidnight - now;
+          if (timeUntilRestore > 0 && timeUntilRestore <= 24 * 60 * 60 * 1000) {
+            shouldReset = true;
+          }
+        }
+      } else if (parsed.resetType === RESET_TYPES.INTERVAL && parsed.restoreAt) {
+        // For interval tasks: check if restoreAt is within 24 hours
+        const restoreAt = new Date(parsed.restoreAt).getTime();
+        if (restoreAt <= in24Hours && restoreAt > now) {
+          shouldReset = true;
+        }
+      }
+      
+      if (shouldReset) {
+        tasksToReset.push(bookmark.id);
+      }
+    }
+    
+    // Reset all identified tasks
+    for (const bookmarkId of tasksToReset) {
+      await movePageToActive(bookmarkId);
+      resetCount++;
+    }
+    
+    logInfo('resetTasksWithin24Hours', `Reset ${resetCount} task(s)`);
+    
+    // Update scheduler after resetting tasks
+    await scheduleNextCheck();
+    
+    return { success: true, count: resetCount };
+  } catch (error) {
+    logError('resetTasksWithin24Hours', error);
+    return { success: false, error: error.message, count: 0 };
+  }
+}
+

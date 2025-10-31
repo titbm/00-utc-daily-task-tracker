@@ -20,25 +20,35 @@
     </div>
   </div>
   
-  <button id="stealthMode">
+  <div class="split-button" id="checkResetButtons" style="display: none;">
+    <button id="checkTasks" class="split-left check-reset-btn check-btn-80" title="Reset tasks restoring within 24h and start cycle">
+      <span class="material-symbols-outlined">check</span>
+      Check tasks
+    </button>
+    <button id="resetTasks" class="split-right reset-btn-20" title="Reset all completed tasks to active">
+      <span class="material-symbols-outlined">refresh</span>
+    </button>
+  </div>
+  
+  <button id="stealthMode" title="Start task cycle">
     <span class="material-symbols-outlined">play_arrow</span>
     Start
   </button>
-  <button id="addCurrentTab">
+  <button id="addCurrentTab" title="Add current page to active tasks">
     <span class="material-symbols-outlined">add</span>
     Add current tab
   </button>
-  <button id="openPanel">
+  <button id="openPanel" title="Open side panel with all tasks">
     <span class="material-symbols-outlined">view_sidebar</span>
     Sidepanel
   </button>
   
   <div class="split-button">
-    <button id="importData" class="split-left">
+    <button id="importData" class="split-left" title="Import tasks from JSON file">
       <span class="material-symbols-outlined">upload</span>
       Import
     </button>
-    <button id="exportData" class="split-right">
+    <button id="exportData" class="split-right" title="Export all tasks to JSON file">
       <span class="material-symbols-outlined">download</span>
       Export
     </button>
