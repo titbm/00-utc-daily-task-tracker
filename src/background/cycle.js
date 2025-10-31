@@ -63,10 +63,11 @@ async function saveCycleState() {
 
 // Start keep-alive to prevent SW from sleeping during cycle
 // Official Google recommendation: https://developer.chrome.com/docs/extensions/develop/migrate/to-service-workers
+// Timer resets after each completed task via resetKeepAlive()
 function startKeepAlive() {
   if (keepAliveInterval) return; // Already active
   
-  logInfo('keepAlive', 'Starting keep-alive for 30 minutes');
+  logInfo('keepAlive', 'Starting keep-alive for 30 minutes (resets after each task)');
   
   // Periodically call chrome API to reset SW idle timer
   keepAliveInterval = setInterval(() => {
@@ -98,7 +99,29 @@ function stopKeepAlive() {
     keepAliveTimeout = null;
   }
   
-  logInfo('keepAlive', 'Keep-alive stopped');
+  logInfo('keepAlive', 'Stopped keep-alive');
+}
+
+// Reset keep-alive timer (restart the 30-minute timeout)
+// Called after each task completion to keep SW alive during entire cycle
+function resetKeepAlive() {
+  if (!keepAliveInterval) {
+    // Keep-alive is not active, don't restart
+    return;
+  }
+  
+  // Clear existing timeout
+  if (keepAliveTimeout) {
+    clearTimeout(keepAliveTimeout);
+  }
+  
+  // Restart 30-minute timeout
+  keepAliveTimeout = setTimeout(() => {
+    logInfo('keepAlive', 'Keep-alive timeout - force stopping cycle');
+    forceStopCycle();
+  }, TIMINGS.KEEPALIVE_DURATION);
+  
+  logInfo('keepAlive', 'Reset keep-alive timer - restarted 30-minute timeout');
 }
 
 // Force stop cycle after timeout
@@ -434,6 +457,10 @@ export async function handleTabRemove(tabId, removeInfo) {
     if (tabInfo.dialogFromCycle && isCycleMode) {
       currentCycleIndex++;
       await saveCycleState();
+      
+      // Reset keep-alive timer to keep SW active during cycle
+      resetKeepAlive();
+      
       openNextInCycle();
     }
     return;
@@ -496,6 +523,10 @@ export async function handleTabRemove(tabId, removeInfo) {
           logInfo('handleTabRemove', `Continuing cycle: incrementing index from ${currentCycleIndex} to ${currentCycleIndex + 1}`);
           currentCycleIndex++;
           await saveCycleState();
+          
+          // Reset keep-alive timer to keep SW active during cycle
+          resetKeepAlive();
+          
           openNextInCycle();
         }
         return;
@@ -545,6 +576,10 @@ export async function handleTabRemove(tabId, removeInfo) {
         if (wasFromCycle && isCycleMode) {
           currentCycleIndex++;
           await saveCycleState();
+          
+          // Reset keep-alive timer to keep SW active during cycle
+          resetKeepAlive();
+          
           openNextInCycle();
         }
       }
