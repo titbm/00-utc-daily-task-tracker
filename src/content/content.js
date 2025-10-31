@@ -20,9 +20,7 @@ if (!document.getElementById('daily-panel-material-symbols')) {
   link.rel = 'stylesheet';
   link.href = 'https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined';
   document.head.appendChild(link);
-}
-
-// Load Outfit font for headers
+}// Load Outfit font for headers
 if (!document.getElementById('daily-panel-outfit-font')) {
   const link = document.createElement('link');
   link.id = 'daily-panel-outfit-font';
@@ -501,7 +499,7 @@ function showNotification(text, title, type) {
     transform: translate(-50%, -50%);
     background: #ffffff;
     color: #000000;
-    padding: 24px 20px 20px 20px;
+    padding: 24px 20px;
     border-radius: 16px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
     z-index: 1000000;
@@ -657,13 +655,146 @@ function showNotification(text, title, type) {
     }
   });
 
-  // Auto-hide after 3 seconds
-  setTimeout(() => {
-    notification.style.opacity = '0';
-    setTimeout(() => {
-      notification.remove();
-    }, 300);
-  }, 3000);
+  // Helper function to setup button styles and hover effects
+  function setupButton(btn) {
+    btn.addEventListener('mouseenter', () => {
+      btn.style.background = '#f5f5f5';
+      btn.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)';
+    });
+    
+    btn.addEventListener('mouseleave', () => {
+      btn.style.background = '#ffffff';
+      btn.style.boxShadow = 'none';
+    });
+    
+    btn.addEventListener('mousedown', () => {
+      btn.style.background = '#e8e8e8';
+      btn.style.transform = 'scale(0.98)';
+      btn.style.boxShadow = '0 1px 4px rgba(0,0,0,0.05)';
+    });
+    
+    btn.addEventListener('mouseup', () => {
+      btn.style.background = '#f5f5f5';
+      btn.style.transform = 'scale(1)';
+    });
+  }
+
+  // Add buttons for notification
+  if (type === 'success') {
+    const buttonsContainer = document.createElement('div');
+    buttonsContainer.style.cssText = `
+      display: flex;
+      gap: 8px;
+      margin-top: 16px;
+    `;
+
+    // Button style template
+    const buttonBaseStyle = `
+      flex: 1;
+      padding: 12px;
+      border: 1px solid #e5e5e5;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      background: #ffffff;
+      color: #000000;
+      transition: all 0.2s;
+      font-family: 'Inter', sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      margin: 0;
+    `;
+
+    // First button - "Restore at 00 UTC"
+    const btn1 = document.createElement('button');
+    btn1.style.cssText = buttonBaseStyle;
+    
+    const icon1 = document.createElement('img');
+    icon1.src = chrome.runtime.getURL('assets/icons/bedtime.svg');
+    icon1.style.cssText = 'width: 15px; height: 15px; flex-shrink: 0;';
+    
+    const text1 = document.createElement('span');
+    text1.textContent = 'Restore at 00 UTC';
+    
+    btn1.appendChild(icon1);
+    btn1.appendChild(text1);
+    setupButton(btn1);
+    
+    btn1.addEventListener('click', () => {
+      // Store metadata for "Restore at 00 UTC"
+      notification.style.opacity = '0';
+      setTimeout(() => {
+        notification.remove();
+      }, 300);
+    });
+
+    // Second button - "Restore after time"
+    const btn2 = document.createElement('button');
+    btn2.style.cssText = buttonBaseStyle;
+    
+    const icon2 = document.createElement('img');
+    icon2.src = chrome.runtime.getURL('assets/icons/schedule.svg');
+    icon2.style.cssText = 'width: 15px; height: 15px; flex-shrink: 0;';
+    
+    const text2 = document.createElement('span');
+    text2.textContent = 'Restore after time';
+    
+    btn2.appendChild(icon2);
+    btn2.appendChild(text2);
+    setupButton(btn2);
+
+    btn2.addEventListener('click', () => {
+      // Store metadata for "Restore after time"
+      notification.style.opacity = '0';
+      setTimeout(() => {
+        notification.remove();
+      }, 300);
+    });
+
+    buttonsContainer.appendChild(btn1);
+    buttonsContainer.appendChild(btn2);
+    notification.appendChild(buttonsContainer);
+  }
+
+  // Auto-hide after 3 seconds, but not while hovering (only for 'success' type with buttons)
+  let autoHideTimer = null;
+  
+  const startAutoHideTimer = () => {
+    autoHideTimer = setTimeout(() => {
+      if (notification && notification.parentNode) {
+        notification.style.opacity = '0';
+        setTimeout(() => {
+          if (notification && notification.parentNode) {
+            notification.remove();
+          }
+        }, 300);
+      }
+    }, 3000);
+  };
+  
+  const cancelAutoHideTimer = () => {
+    if (autoHideTimer) {
+      clearTimeout(autoHideTimer);
+      autoHideTimer = null;
+    }
+  };
+  
+  // Start the timer
+  startAutoHideTimer();
+  
+  // Pause timer on hover only for 'success' type (has buttons)
+  if (type === 'success') {
+    notification.addEventListener('mouseenter', () => {
+      cancelAutoHideTimer();
+    });
+    
+    notification.addEventListener('mouseleave', () => {
+      startAutoHideTimer();
+    });
+  }
 }
 
 // ============================================================================
