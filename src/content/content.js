@@ -133,7 +133,7 @@ function opsToPath(ops) {
 function createHighlightAnimation(element, options = {}) {
   const color = options.color || '#FFC107';
   const duration = options.animationDuration || 600;
-  const iterations = 2; // Количество линий
+  const iterations = 2; // Number of lines
   const padding = [5, 5, 5, 5]; // top, right, bottom, left
   
   // Get element dimensions
@@ -142,14 +142,14 @@ function createHighlightAnimation(element, options = {}) {
   // For highlight, use a special config with roughness: 3
   const config = {
     maxRandomnessOffset: 2,
-    roughness: 3, // Больше roughness для эффекта маркера
+    roughness: 3, // Higher roughness for marker effect
     bowing: 1,
     stroke: color,
-    strokeWidth: 0.95 * rect.height, // Толстая линия = 95% высоты
+    strokeWidth: 0.95 * rect.height, // Thick line = 95% of height
     seed: Math.floor(Math.random() * 2 ** 31)
   };
   
-  const strokeWidth = 0.95 * rect.height; // Толстая линия для заполнения фона
+  const strokeWidth = 0.95 * rect.height; // Thick line to fill background
   
   // Create SVG container
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -171,15 +171,15 @@ function createHighlightAnimation(element, options = {}) {
   // Highlight line position (middle of the element height)
   const svgRect = svg.getBoundingClientRect();
   const lineY = (rect.top || rect.y) + rect.height / 2 - (svgRect.top || svgRect.y);
-  const lineX1 = (rect.left || rect.x) - (svgRect.left || svgRect.x) - 4; // Немного левее
-  const lineX2 = lineX1 + rect.width + 16; // Добавляем 16px к ширине для полного покрытия
+  const lineX1 = (rect.left || rect.x) - (svgRect.left || svgRect.x) - 4; // Slightly to the left
+  const lineX2 = lineX1 + rect.width + 16; // Add 16px to width for full coverage
   
   // Generate several lines (iterations)
   const paths = [];
   for (let i = 0; i < iterations; i++) {
     const ops = i % 2 
-      ? drawRoughLine(lineX2, lineY, lineX1, lineY, config) // справа налево
-      : drawRoughLine(lineX1, lineY, lineX2, lineY, config); // слева направо
+      ? drawRoughLine(lineX2, lineY, lineX1, lineY, config) // right to left
+      : drawRoughLine(lineX1, lineY, lineX2, lineY, config); // left to right
     
     const pathString = opsToPath(ops);
     paths.push(pathString);
@@ -254,19 +254,19 @@ async function createBanner() {
   // Determine banner type
   let bannerType = 'normal'; // normal | cycle | panel
   let bannerText = 'Daily tasks are not completed';
-  let bannerIcon = 'sync'; // sync или bedtime
+  let bannerIcon = 'sync'; // sync or bedtime
   let bannerColor = '#000000';
   
   if (tabStatus.isTask && tabStatus.fromCycle) {
-    // Вкладка из цикла - черная луна на белом фоне
+    // Tab from cycle - black moon on white background
     bannerType = 'cycle';
     bannerIcon = 'bedtime';
-    bannerColor = '#000000'; // Черный цвет
+    bannerColor = '#000000'; // Black color
   } else if (tabStatus.isTask && !tabStatus.fromCycle) {
-    // Вкладка открыта вручную из панели - не показываем иконку
+    // Tab opened manually from panel - don't show icon
     return;
   }
-  // else - обычная страница, показываем normal баннер
+  // else - regular page, show normal banner
   
   // Check banner setting ONLY for normal banner
   if (bannerType === 'normal') {
@@ -529,7 +529,7 @@ function showNotification(text, title, type, bookmarkId = null) {
   `;
   
   if (type === 'success') {
-    highlightWrapper.id = 'notification-highlight'; // ID только на иконку + текст
+    highlightWrapper.id = 'notification-highlight'; // ID only on icon + text
   }
 
   // Schedule icon (no background)
@@ -837,7 +837,7 @@ function showNotification(text, title, type, bookmarkId = null) {
 let centralBanner = null;
 
 function createCentralBanner() {
-  if (centralBanner) return; // Уже создан
+  if (centralBanner) return; // Already created
   
   centralBanner = document.createElement('div');
   centralBanner.id = 'extension-central-banner';
@@ -876,7 +876,7 @@ function createCentralBanner() {
       }
     </style>
     
-    <!-- Иконка -->
+    <!-- Icon -->
     <div style="
       margin-bottom: 16px;
       animation: iconBounce 1s ease-in-out;
@@ -887,7 +887,7 @@ function createCentralBanner() {
       <img src="${chrome.runtime.getURL('assets/icons/local_fire_department-cropped.svg')}" width="80" height="80" style="filter: grayscale(1) brightness(0.6);">
     </div>
     
-    <!-- Заголовок с подсветкой -->
+    <!-- Title with highlight -->
     <div style="margin-bottom: 12px;">
       <div style="display: inline-block; position: relative;">
         <h1 id="central-banner-highlight" style="
@@ -902,14 +902,14 @@ function createCentralBanner() {
       </div>
     </div>
     
-    <!-- Текст -->
+    <!-- Text -->
     <p style="
       margin: 0 0 24px 0;
       font-size: 16px;
       color: #666666;
     ">Use Ctrl+W to close tabs quickly and complete your tasks faster.</p>
     
-    <!-- Кнопка закрытия -->
+    <!-- Close button -->
     <button id="extension-central-banner-close" style="
       background: #000000;
       color: #ffffff;
@@ -940,12 +940,12 @@ function createCentralBanner() {
   
   document.body.appendChild(centralBanner);
   
-  // Применяем highlight анимацию на заголовок (как в уведомлении "Task added")
+  // Apply highlight animation to title (like in "Task added" notification)
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
       const highlightElement = document.getElementById('central-banner-highlight');
       if (highlightElement) {
-        // Добавляем небольшой padding слева и справа для полного покрытия
+        // Add small padding on left and right for full coverage
         const rect = highlightElement.getBoundingClientRect();
         highlightElement.style.paddingLeft = '4px';
         highlightElement.style.paddingRight = '4px';
@@ -956,7 +956,7 @@ function createCentralBanner() {
           padding: 2
         });
         
-        // Увеличиваем задержку чтобы элемент успел полностью отрендериться
+        // Increase delay so element has time to fully render
         setTimeout(() => {
           annotation.show();
         }, 200);
@@ -964,7 +964,7 @@ function createCentralBanner() {
     });
   });
   
-  // Обработчик кнопки закрытия
+  // Close button handler
   const closeButton = centralBanner.querySelector('#extension-central-banner-close');
   closeButton.addEventListener('click', () => {
     centralBanner.style.opacity = '0';
@@ -975,7 +975,7 @@ function createCentralBanner() {
     }, 300);
   });
   
-  // Закрытие по Esc и Enter
+  // Close on Esc and Enter
   const handleKeyPress = (e) => {
     if ((e.key === 'Escape' || e.key === 'Enter') && centralBanner) {
       closeButton.click();
@@ -984,7 +984,7 @@ function createCentralBanner() {
   };
   document.addEventListener('keydown', handleKeyPress);
   
-  // Добавляем transition для плавного закрытия
+  // Add transition for smooth closing
   centralBanner.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
 }
 

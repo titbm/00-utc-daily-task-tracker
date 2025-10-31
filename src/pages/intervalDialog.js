@@ -1,7 +1,7 @@
-// Импорт констант
+// Import constants
 import { ACTIONS } from '../shared/constants.js';
 
-// Получаем параметры из URL
+// Get parameters from URL
 const urlParams = new URLSearchParams(window.location.search);
 const bookmarkId = urlParams.get('bookmarkId');
 const pageTitle = decodeURIComponent(urlParams.get('title') || 'Page');
@@ -9,10 +9,10 @@ const pageUrl = decodeURIComponent(urlParams.get('url') || '');
 const pageFavicon = decodeURIComponent(urlParams.get('favicon') || '');
 const defaultInterval = parseInt(urlParams.get('interval') || '24');
 
-// Проверяем открыт ли диалог из цикла и показываем индикатор
+// Check if dialog is opened from cycle and show indicator
 chrome.runtime.sendMessage({ action: ACTIONS.GET_TAB_STATUS }, (response) => {
   if (response && response.dialogFromCycle) {
-    // Показываем индикатор цикла
+    // Show cycle indicator
     const cycleIndicator = document.getElementById('cycle-indicator');
     if (cycleIndicator) {
       cycleIndicator.classList.add('visible');
@@ -20,11 +20,11 @@ chrome.runtime.sendMessage({ action: ACTIONS.GET_TAB_STATUS }, (response) => {
   }
 });
 
-// Отображаем информацию о странице
+// Display page information
 document.getElementById('pageTitle').textContent = pageTitle;
 document.getElementById('pageUrl').textContent = pageUrl;
 
-// Устанавливаем фавиконку
+// Set favicon
 const faviconEl = document.getElementById('pageFavicon');
 if (pageFavicon) {
   faviconEl.src = pageFavicon;
@@ -37,31 +37,31 @@ if (pageFavicon) {
 
 document.getElementById('hoursInput').value = defaultInterval;
 
-// Устанавливаем фокус на поле ввода часов
+// Set focus on hours input field
 document.getElementById('hoursInput').focus();
 document.getElementById('hoursInput').select();
 
-// Обработчик клика по ссылке - открываем страницу для просмотра в новой вкладке
+// Link click handler - open page for viewing in a new tab
 document.getElementById('pageInfoLink').addEventListener('click', (e) => {
   e.preventDefault();
   chrome.tabs.create({ url: pageUrl });
 });
 
-// Функция для сохранения интервала
+// Function to save interval
 function saveInterval() {
   const hours = parseInt(document.getElementById('hoursInput').value) || 0;
   const minutes = parseInt(document.getElementById('minutesInput').value) || 0;
   
-  // Проверка: хотя бы 1 минута
+  // Check: at least 1 minute
   if (hours === 0 && minutes === 0) {
-    // Если ничего не указано, используем значение по умолчанию
+    // If nothing specified, use default value
     return defaultInterval;
   }
   
   return hours + (minutes / 60);
 }
 
-// Быстрые кнопки
+// Quick buttons
 document.querySelectorAll('.quick-btn').forEach(btn => {
   btn.addEventListener('click', () => {
     const hours = parseInt(btn.dataset.hours);
@@ -71,29 +71,29 @@ document.querySelectorAll('.quick-btn').forEach(btn => {
   });
 });
 
-// Подтверждение
+// Confirmation
 document.getElementById('confirmBtn').addEventListener('click', () => {
   const hours = parseInt(document.getElementById('hoursInput').value) || 0;
   const minutes = parseInt(document.getElementById('minutesInput').value) || 0;
   
-  // Проверка: хотя бы 1 минута
+  // Check: at least 1 minute
   if (hours === 0 && minutes === 0) {
     alert('Please specify at least 1 minute');
     return;
   }
   
-  // Storage уже обновлён через updateCurrentInterval, просто закрываем окно
+  // Storage already updated via updateCurrentInterval, just close window
   window.close();
 });
 
-// Обработка Enter
+// Handle Enter
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') {
     document.getElementById('confirmBtn').click();
   }
 });
 
-// Кнопка "Reset at 00:00 UTC"
+// Button "Reset at 00:00 UTC"
 document.getElementById('switchToMidnightBtn').addEventListener('click', () => {
   const storageKey = `intervalDialog_${bookmarkId}`;
   
@@ -106,7 +106,7 @@ document.getElementById('switchToMidnightBtn').addEventListener('click', () => {
   });
 });
 
-// Сохраняем текущие значения в storage при любом изменении
+// Save current values to storage on any change
 function updateCurrentInterval() {
   const hours = parseInt(document.getElementById('hoursInput').value) || 0;
   const minutes = parseInt(document.getElementById('minutesInput').value) || 0;
@@ -120,10 +120,10 @@ function updateCurrentInterval() {
   });
 }
 
-// Обновляем при изменении
+// Update on change
 document.getElementById('hoursInput').addEventListener('input', updateCurrentInterval);
 document.getElementById('minutesInput').addEventListener('input', (e) => {
-  // Ограничиваем минуты от 0 до 59
+  // Limit minutes from 0 to 59
   let value = parseInt(e.target.value) || 0;
   if (value > 59) {
     e.target.value = 59;
@@ -138,10 +138,10 @@ document.querySelectorAll('.quick-btn').forEach(btn => {
   });
 });
 
-// Инициализация начального значения
+// Initialize initial value
 updateCurrentInterval();
 
-// RoughNotation эффект для заголовка
+// RoughNotation effect for title
 if (typeof RoughNotation !== 'undefined') {
   const highlightElement = document.getElementById('highlight');
   if (highlightElement) {

@@ -1,7 +1,7 @@
-// Импорт констант
+// Import constants
 import { ACTIONS } from './src/shared/constants.js';
 
-// Импорт модулей
+// Import modules
 import { initializeBookmarksFolder } from './src/background/folderManager.js';
 import { addPageToActive, getActivePages } from './src/background/bookmarkOperations.js';
 import { startTimeChecker, initAlarmListener } from './src/background/scheduler.js';
@@ -12,43 +12,43 @@ import { logError, logInfo } from './src/shared/errorHandler.js';
 chrome.runtime.onInstalled.addListener(async (details) => {
   logInfo('runtime', 'Extension installed/updated');
   
-  // Сбрасываем флаг показа центрального баннера при установке или включении
+  // Reset central banner flag on install or enable
   if (details.reason === 'install' || details.reason === 'update') {
     await chrome.storage.local.set({ centralBannerShown: false });
     logInfo('runtime', 'Central banner flag reset');
   }
   
-  // Создаем контекстное меню для добавления страниц в панель
+  // Create context menu for adding pages to panel
   chrome.contextMenus.create({
     id: "addToPanel",
     title: "Add to 00 UTC | Daily Task Tracker",
     contexts: ["page"]
   });
   
-  // Отключаем автоматическое открытие панели по клику (обрабатываем вручную)
+  // Disable automatic panel opening on click (handle manually)
   chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: false }).catch((error) => {
     logError('setPanelBehavior', error);
   });
   
-  // Создаём или находим папки в закладках
+  // Create or find folders in bookmarks
   await initializeBookmarksFolder();
   
-  // Запускаем периодическую проверку времени
+  // Start periodic time checks
   await startTimeChecker();
 });
 
-// Запускаем проверку времени при старте service worker
+// Start time checker when service worker starts
 chrome.runtime.onStartup.addListener(async () => {
   logInfo('runtime', 'Extension startup');
   await initializeBookmarksFolder();
   await startTimeChecker();
 });
 
-// ВАЖНО: В Manifest V3 глобальные переменные НЕ персистентны!
-// Service worker засыпает через 30 секунд → все let/const обнуляются
-// Используем chrome.storage.session для хранения данных между пробуждениями
+// IMPORTANT: In Manifest V3 global variables are NOT persistent!
+// Service worker sleeps after 30 seconds → all let/const are reset
+// Use chrome.storage.session to store data between wake-ups
 
-// Слушаем подключения от sidepanel (для отслеживания активных соединений)
+// Listen to connections from sidepanel (for tracking active connections)
 let sidePanelConnections = 0;
 
 chrome.runtime.onConnect.addListener((port) => {
@@ -64,38 +64,38 @@ chrome.runtime.onConnect.addListener((port) => {
   }
 });
 
-// Инициализация слушателя alarm
+// Initialize alarm listener
 initAlarmListener();
 
-// Асинхронная инициализация
+// Async initialization
 (async () => {
-  // Восстановление состояния цикла (может запустить keep-alive если цикл был активен)
+  // Restore cycle state (may start keep-alive if cycle was active)
   await restoreCycleState();
   
-  // Обработчик закрытия вкладок
+  // Tab close handler
   chrome.tabs.onRemoved.addListener(handleTabRemove);
   
-  // Инициализация обработчика сообщений
+  // Initialize message handler
   initMessageHandler();
 })();
 
-// Обработчик клика по контекстному меню
+// Context menu click handler
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   if (info.menuItemId === "addToPanel") {
     logInfo('contextMenuHandler', `Adding page via context menu: ${tab.title}`);
     try {
-      // Добавляем страницу и получаем результат
+      // Add page and get result
       const result = await addPageToActive(tab);
       
       if (result && result.exists) {
-        // Страница уже добавлена
+        // Page already added
         logInfo('contextMenuHandler', `Page already exists: ${tab.title}`);
         chrome.tabs.sendMessage(tab.id, { 
           action: ACTIONS.SHOW_ALREADY_ADDED_NOTIFICATION,
           title: tab.title 
         }).catch(() => {});
       } else if (result && result.added) {
-        // Страница успешно добавлена - bookmarkId уже в результате
+        // Page successfully added - bookmarkId is already in result
         logInfo('contextMenuHandler', `Page added successfully: ${tab.title}`);
         
         chrome.tabs.sendMessage(tab.id, { 
@@ -103,7 +103,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
           title: tab.title,
           bookmarkId: result.bookmarkId
         }).catch(() => {
-          // Игнорируем ошибки (страница может не поддерживать content scripts)
+          // Ignore errors (page may not support content scripts)
         });
       }
     } catch (error) {

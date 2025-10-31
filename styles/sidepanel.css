@@ -2,7 +2,7 @@
   box-sizing: border-box;
 }
 
-/* Отключаем изменение курсора при drag & drop */
+/* Disable cursor change on drag & drop */
 * {
   cursor: default !important;
 }
@@ -30,7 +30,7 @@ body {
   'opsz' 24
 }
 
-/* Шапка с табами */
+/* Header with tabs */
 .tabs-header {
   display: flex;
   align-items: center;
@@ -511,7 +511,7 @@ body {
   text-decoration: underline;
 }
 
-/* Скроллбар */
+/* Scrollbar */
 .content::-webkit-scrollbar {
   width: 8px;
 }
@@ -529,7 +529,7 @@ body {
   background: #a0aec0;
 }
 
-/* Диалоги */
+/* Dialogs */
 .dialog-overlay {
   display: none;
   position: fixed;
@@ -646,7 +646,7 @@ body {
   transform: scale(0.98);
 }
 
-/* Иконка типа обновления на элементе */
+/* Reset type icon on element */
 .page-reset-type-btn {
   background: transparent;
   border: none;

@@ -1,7 +1,7 @@
-// Импорт констант
+// Import constants
 import { ACTIONS } from '../shared/constants.js';
 
-// Анимация RoughNotation зачеркивания слова "not"
+// RoughNotation animation for striking through the word "not"
 if (typeof RoughNotation !== 'undefined') {
   const strikethroughElement = document.getElementById('strikethrough');
   if (strikethroughElement) {
@@ -13,7 +13,7 @@ if (typeof RoughNotation !== 'undefined') {
       strokeWidth: 2
     });
     
-    // Показываем анимацию с задержкой после bounce
+    // Show animation with delay after bounce
     setTimeout(() => {
       annotation.show();
     }, 1000);
@@ -21,21 +21,21 @@ if (typeof RoughNotation !== 'undefined') {
 }
 
 document.getElementById('openPanelBtn').addEventListener('click', async () => {
-  // Открываем панель и переключаем на Completed
+  // Open panel and switch to Completed
   const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
   if (tabs[0]) {
-    // Сохраняем флаг что нужно открыть на вкладке Completed
+    // Save flag that we need to open on Completed tab
     await chrome.storage.session.set({ openOnCompleted: true });
     
-    // Открываем панель (если уже открыта - просто активирует)
+    // Open panel (if already open - just activates)
     await chrome.sidePanel.open({ windowId: tabs[0].windowId });
     
-    // Отправляем сообщение ВСЕГДА (для открытой и закрытой панели)
-    // Для закрытой панели - она успеет загрузиться за 200ms
+    // Send message ALWAYS (for both open and closed panel)
+    // For closed panel - it will load within 200ms
     setTimeout(() => {
       chrome.runtime.sendMessage({ action: ACTIONS.PAGES_UPDATED }).catch(() => {});
       
-      // Закрываем вкладку после отправки сообщения
+      // Close tab after sending message
       setTimeout(() => {
         chrome.tabs.remove(tabs[0].id);
       }, 100);
@@ -43,12 +43,12 @@ document.getElementById('openPanelBtn').addEventListener('click', async () => {
   }
 });
 
-// Обработка Enter - нажатие Enter открывает панель, Esc - закрывает вкладку
+// Handle Enter - pressing Enter opens panel, Esc - closes tab
 document.addEventListener('keydown', async (e) => {
   if (e.key === 'Enter') {
     document.getElementById('openPanelBtn').click();
   } else if (e.key === 'Escape') {
-    // Закрываем текущую вкладку
+    // Close current tab
     const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
     if (tabs[0]) {
       chrome.tabs.remove(tabs[0].id);

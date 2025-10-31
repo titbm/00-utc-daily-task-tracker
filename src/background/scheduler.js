@@ -37,7 +37,7 @@ export async function scheduleNextCheck() {
       0, 0, 0, 0
     )).getTime();
     
-    let nextCheckMs = 60 * 60 * 1000; // default 1 час
+    let nextCheckMs = 60 * 60 * 1000; // default 1 hour
     
     for (const page of completedPages) {
       if (page.resetType === RESET_TYPES.INTERVAL && page.restoreAt) {
@@ -50,7 +50,7 @@ export async function scheduleNextCheck() {
         }
       } else if (page.resetType === RESET_TYPES.MIDNIGHT) {
   // Midnight tasks - check at midnight
-        const tomorrowStart = todayStart + 86400000; // следующая полночь
+        const tomorrowStart = todayStart + 86400000; // next midnight
         const timeUntilMidnight = tomorrowStart - now;
         
         if (timeUntilMidnight > 0 && timeUntilMidnight < nextCheckMs) {
