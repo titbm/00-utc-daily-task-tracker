@@ -148,9 +148,28 @@ export async function myFunction() { ... }
 
 ## Changelog
 
+### Version 1.0.7 (2025-10-31)
+- 🎯 **Action Buttons in Notification Banner** - Two interactive buttons added to task notification
+  - "Start tomorrow" button - Immediately moves task to Completed (restores at 00:00 UTC)
+  - "Start after time" button - Opens interval dialog to set custom restoration time
+  - Automatically changes task type from `midnight` to `interval` when needed
+  - Auto-hide timer (3 seconds) pauses on hover for better UX
+- 🔧 **New Message Handler** - Added `setupInterval` action for interval workflow
+  - Handles complete flow: type change → move to completed → open dialog
+  - Proper tab registration via `registerIntervalDialog()` function
+  - Ensures interval metadata is saved correctly on dialog close
+- 🎨 **New Icons** - Added `bedtime.svg` and `schedule.svg` for action buttons
+  - 15px icons matching popup.css button styles
+  - Declared in `web_accessible_resources` for content script access
+- 📝 **Branding Update** - Renamed "Daily Panel" to "Extension" throughout codebase
+  - Updated all IDs and classes with `extension-*` prefix
+  - Changed notification texts and console logs
+  - Updated context menu text to "Add to Extension"
+  - Export file renamed to `extension-tasks-YYYYMMDD.json`
+
 ### Version 1.0.6 (2025-10-28)
 - 💾 **Import/Export System** - Full backup and restore functionality
-  - Export all tasks to JSON file (`extension-tasks-YYYYMMDD.json`)
+  - Export all tasks to JSON file (`00-UTC-tasks-YYYYMMDD.json`)
   - Import tasks from JSON with validation
   - Smart duplicate detection across both Active and Completed folders
   - Prevents duplicates within same import file

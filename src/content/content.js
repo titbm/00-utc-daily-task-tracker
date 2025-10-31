@@ -709,7 +709,7 @@ function showNotification(text, title, type, bookmarkId = null) {
       margin: 0;
     `;
 
-    // First button - "Restore at 00 UTC"
+    // First button - "Start tomorrow (00 UTC)"
     const btn1 = document.createElement('button');
     btn1.style.cssText = buttonBaseStyle;
     
@@ -718,7 +718,7 @@ function showNotification(text, title, type, bookmarkId = null) {
     icon1.style.cssText = 'width: 15px; height: 15px; flex-shrink: 0;';
     
     const text1 = document.createElement('span');
-    text1.textContent = 'Restore at 00 UTC';
+    text1.textContent = 'Start tomorrow';
     
     btn1.appendChild(icon1);
     btn1.appendChild(text1);
@@ -728,17 +728,17 @@ function showNotification(text, title, type, bookmarkId = null) {
       // Move page to Completed (like closing tab for midnight task)
       if (bookmarkId) {
         try {
-          console.log('[Extension] Moving to completed, bookmarkId:', bookmarkId);
+          console.log('[00-UTC-content.js] Moving to completed, bookmarkId:', bookmarkId);
           const response = await chrome.runtime.sendMessage({
             action: ACTIONS.MOVE_TO_COMPLETED,
             bookmarkId: bookmarkId
           });
-          console.log('[Extension] Move response:', response);
+          console.log('[00-UTC-content.js] Move response:', response);
         } catch (error) {
-          console.error('[Extension] Error moving to completed:', error);
+          console.error('[00-UTC-content.js] Error moving to completed:', error);
         }
       } else {
-        console.error('[Extension] No bookmarkId provided');
+        console.error('[00-UTC-content.js] No bookmarkId provided');
       }
       
       notification.style.opacity = '0';
@@ -747,7 +747,7 @@ function showNotification(text, title, type, bookmarkId = null) {
       }, 300);
     });
 
-    // Second button - "Restore after time"
+    // Second button - "Start after time"
     const btn2 = document.createElement('button');
     btn2.style.cssText = buttonBaseStyle;
     
@@ -756,14 +756,31 @@ function showNotification(text, title, type, bookmarkId = null) {
     icon2.style.cssText = 'width: 15px; height: 15px; flex-shrink: 0;';
     
     const text2 = document.createElement('span');
-    text2.textContent = 'Restore after time';
+    text2.textContent = 'Start after time';
     
     btn2.appendChild(icon2);
     btn2.appendChild(text2);
     setupButton(btn2);
 
-    btn2.addEventListener('click', () => {
-      // Store metadata for "Restore after time"
+    btn2.addEventListener('click', async () => {
+      // Trigger interval dialog flow (change type, move to completed, open dialog)
+      if (bookmarkId) {
+        try {
+          console.log('[00-UTC-content.js] Triggering interval setup, bookmarkId:', bookmarkId);
+          
+          const response = await chrome.runtime.sendMessage({
+            action: 'setupInterval',
+            bookmarkId: bookmarkId
+          });
+          
+          console.log('[00-UTC-content.js] Setup interval response:', response);
+        } catch (error) {
+          console.error('[00-UTC-content.js] Error with interval setup:', error);
+        }
+      } else {
+        console.error('[00-UTC-content.js] No bookmarkId provided');
+      }
+      
       notification.style.opacity = '0';
       setTimeout(() => {
         notification.remove();

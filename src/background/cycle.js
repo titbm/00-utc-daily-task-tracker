@@ -586,3 +586,15 @@ export function getTabStatus(tabId) {
   }
   return { isTask: false, fromCycle: false, cycleIndex: -1 };
 }
+
+// Register interval dialog tab (used when opening dialog from banner or other sources)
+export async function registerIntervalDialog(tabId, bookmarkId, dialogFromCycle) {
+  openedTabs.set(tabId, {
+    bookmarkId,
+    fromCycle: false,
+    isIntervalDialog: true,
+    dialogFromCycle
+  });
+  await saveCycleState();
+  logInfo('registerIntervalDialog', `Registered interval dialog tab ${tabId} for bookmark ${bookmarkId}`);
+}

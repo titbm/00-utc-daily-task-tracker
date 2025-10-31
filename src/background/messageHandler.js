@@ -1,9 +1,9 @@
 // Message handler module for popup, sidepanel, and content scripts
 import { getActivePages, getCompletedPages, addPageToActive, removePage } from './bookmarkOperations.js';
 import { getFolderIds } from './folderManager.js';
-import { movePageToCompleted, movePageToActive, startTasksCycle, openSinglePage, getTabStatus } from './cycle.js';
+import { movePageToCompleted, movePageToActive, startTasksCycle, openSinglePage, getTabStatus, registerIntervalDialog } from './cycle.js';
 import { checkAndRestoreOldPages } from './scheduler.js';
-import { parseActiveBookmarkTitle, parseCompletedBookmarkTitle } from '../shared/bookmarkParser.js';
+import { parseActiveBookmarkTitle, parseCompletedBookmarkTitle, getFaviconUrl } from '../shared/bookmarkParser.js';
 import { notifyPanelUpdate } from '../shared/notifications.js';
 import { logError, logInfo } from '../shared/errorHandler.js';
 import { ACTIONS } from '../shared/constants.js';
@@ -98,6 +98,58 @@ export function initMessageHandler() {
         }
       })();
   return true; // Async response
+    } else if (request.action === 'setupInterval') {
+  // Setup interval: change resetType to interval, move to completed, open dialog
+      (async () => {
+        try {
+          const bookmarkId = request.bookmarkId;
+          
+          // Step 1: Get bookmark info BEFORE moving (while it's still in Active)
+          const bookmark = await chrome.bookmarks.get(bookmarkId);
+          if (!bookmark || !bookmark[0]) {
+            sendResponse({ success: false, error: 'Bookmark not found' });
+            return;
+          }
+          
+          const page = bookmark[0];
+          const parsed = parseActiveBookmarkTitle(page.title);
+          
+          // Step 2: Change resetType to 'interval' in Active
+          const newTitle = `${parsed.title} [interval]`;
+          await chrome.bookmarks.update(bookmarkId, { title: newTitle });
+          
+          // Step 3: Move to Completed
+          await movePageToCompleted(bookmarkId);
+          
+          // Step 4: Get favicon and open interval dialog
+          const faviconUrl = getFaviconUrl(page.url);
+          
+          const dialogUrl = chrome.runtime.getURL('src/pages/intervalDialog.html') + 
+            `?bookmarkId=${bookmarkId}` +
+            `&title=${encodeURIComponent(parsed.title)}` +
+            `&url=${encodeURIComponent(page.url)}` +
+            `&favicon=${encodeURIComponent(faviconUrl)}` +
+            `&interval=24`;
+          
+          logInfo('setupInterval', `Opening dialog: ${dialogUrl}`);
+          
+          chrome.tabs.create({ url: dialogUrl }, async (dialogTab) => {
+            if (dialogTab) {
+              logInfo('setupInterval', `Dialog tab created: ${dialogTab.id}`);
+              // Register the dialog tab so it's tracked by handleTabRemove
+              await registerIntervalDialog(dialogTab.id, bookmarkId, false);
+            } else {
+              logError('setupInterval', 'Failed to create dialog tab');
+            }
+          });
+          
+          sendResponse({ success: true });
+        } catch (error) {
+          logError('setupInterval', error);
+          sendResponse({ success: false, error: error.message });
+        }
+      })();
+      return true; // Async response
     } else if (request.action === ACTIONS.RESTORE_ALL_AND_START) {
   // Restore all from Completed to Active and start
       (async () => {
