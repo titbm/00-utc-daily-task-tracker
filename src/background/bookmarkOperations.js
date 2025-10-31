@@ -87,7 +87,7 @@ export async function addPageToActive(tab) {
     
     const titleWithMetadata = `${tab.title} [midnight]`;
     
-    await chrome.bookmarks.create({
+    const bookmark = await chrome.bookmarks.create({
       parentId: ids.active,
       title: titleWithMetadata,
       url: tab.url
@@ -95,7 +95,7 @@ export async function addPageToActive(tab) {
     
     logInfo('addPageToActive', `Added: ${tab.title}`);
     notifyPanelUpdate();
-    return { exists: false, added: true };
+    return { exists: false, added: true, bookmarkId: bookmark.id };
   } catch (error) {
     logError('addPageToActive', error);
     return { exists: false, added: false, error: error.message };

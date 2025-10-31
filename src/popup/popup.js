@@ -139,7 +139,8 @@ document.getElementById('addCurrentTab').addEventListener('click', async () => {
   // Page successfully added
       chrome.tabs.sendMessage(tab.id, { 
         action: ACTIONS.SHOW_ADDED_NOTIFICATION,
-        title: tab.title 
+        title: tab.title,
+        bookmarkId: response.bookmarkId
       }).catch(() => {});
     }
     

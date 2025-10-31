@@ -95,17 +95,13 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
           title: tab.title 
         }).catch(() => {});
       } else if (result && result.added) {
-        // Страница успешно добавлена - получаем bookmarkId
+        // Страница успешно добавлена - bookmarkId уже в результате
         logInfo('contextMenuHandler', `Page added successfully: ${tab.title}`);
-        
-        // Получаем bookmarkId только что добавленной страницы
-        const activePages = await getActivePages();
-        const addedPage = activePages.find(p => p.url === tab.url);
         
         chrome.tabs.sendMessage(tab.id, { 
           action: ACTIONS.SHOW_ADDED_NOTIFICATION,
           title: tab.title,
-          bookmarkId: addedPage ? addedPage.id : null
+          bookmarkId: result.bookmarkId
         }).catch(() => {
           // Игнорируем ошибки (страница может не поддерживать content scripts)
         });
