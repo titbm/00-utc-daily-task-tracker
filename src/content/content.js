@@ -728,12 +728,10 @@ function showNotification(text, title, type, bookmarkId = null) {
       // Move page to Completed (like closing tab for midnight task)
       if (bookmarkId) {
         try {
-          console.log('[00-UTC-content.js] Moving to completed, bookmarkId:', bookmarkId);
           const response = await chrome.runtime.sendMessage({
             action: ACTIONS.MOVE_TO_COMPLETED,
             bookmarkId: bookmarkId
           });
-          console.log('[00-UTC-content.js] Move response:', response);
         } catch (error) {
           console.error('[00-UTC-content.js] Error moving to completed:', error);
         }
@@ -766,14 +764,10 @@ function showNotification(text, title, type, bookmarkId = null) {
       // Trigger interval dialog flow (change type, move to completed, open dialog)
       if (bookmarkId) {
         try {
-          console.log('[00-UTC-content.js] Triggering interval setup, bookmarkId:', bookmarkId);
-          
           const response = await chrome.runtime.sendMessage({
             action: 'setupInterval',
             bookmarkId: bookmarkId
           });
-          
-          console.log('[00-UTC-content.js] Setup interval response:', response);
         } catch (error) {
           console.error('[00-UTC-content.js] Error with interval setup:', error);
         }

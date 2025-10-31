@@ -67,7 +67,7 @@ async function saveCycleState() {
 function startKeepAlive() {
   if (keepAliveInterval) return; // Already active
   
-  logInfo('keepAlive', 'Starting keep-alive for 30 minutes (resets after each task)');
+  logInfo('keepAlive', 'Starting keep-alive (resets after each task)');
   
   // Periodically call chrome API to reset SW idle timer
   keepAliveInterval = setInterval(() => {
@@ -76,7 +76,7 @@ function startKeepAlive() {
     });
   }, TIMINGS.KEEPALIVE_INTERVAL); // Every 25 seconds (less than 30s SW timeout)
   
-  // Auto-stop cycle after 30 minutes
+  // Auto-stop cycle after timeout
   if (keepAliveTimeout) {
     clearTimeout(keepAliveTimeout);
   }
@@ -102,7 +102,7 @@ function stopKeepAlive() {
   logInfo('keepAlive', 'Stopped keep-alive');
 }
 
-// Reset keep-alive timer (restart the 30-minute timeout)
+// Reset keep-alive timer
 // Called after each task completion to keep SW alive during entire cycle
 function resetKeepAlive() {
   if (!keepAliveInterval) {
@@ -115,13 +115,13 @@ function resetKeepAlive() {
     clearTimeout(keepAliveTimeout);
   }
   
-  // Restart 30-minute timeout
+  // Restart timeout
   keepAliveTimeout = setTimeout(() => {
     logInfo('keepAlive', 'Keep-alive timeout - force stopping cycle');
     forceStopCycle();
   }, TIMINGS.KEEPALIVE_DURATION);
   
-  logInfo('keepAlive', 'Reset keep-alive timer - restarted 30-minute timeout');
+  logInfo('keepAlive', 'Reset keep-alive timer - restarted timeout');
 }
 
 // Force stop cycle after timeout
