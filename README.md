@@ -103,6 +103,20 @@ A Chrome extension for tracking and managing your daily internet tasks with auto
 - ✅ **Code reusability** - shared utilities in `src/shared/`
 - ✅ **CSS organization** - external stylesheets for all UI components
 
+## Extension Permissions
+
+This extension uses **6 permissions** (reduced from 9 in v1.0.11):
+
+| Permission | Purpose |
+|-----------|---------|
+| `tabs` | Open/close tabs during task cycles and detect when you complete tasks |
+| `bookmarks` | Store and manage your daily tasks locally in Chrome bookmarks |
+| `storage` | Save extension settings and preferences (banner visibility, cycle state) |
+| `contextMenus` | Add "Add to 00 UTC" option in right-click menu |
+| `sidePanel` | Display side panel UI for task management |
+| `alarms` | Schedule automatic task restoration at midnight UTC or custom intervals |
+| `<all_urls>` | Show reminder banners and notifications on web pages |
+
 ## Privacy
 
 This extension:
@@ -110,6 +124,7 @@ This extension:
 - ❌ Does **NOT** send data to external servers
 - ✅ Stores everything locally in Chrome bookmarks and storage
 - ✅ Only loads fonts and favicons from Google CDN
+- 🔒 **33% fewer permissions** than v1.0.10
 
 See [PRIVACY_POLICY.md](PRIVACY_POLICY.md) for details.
 

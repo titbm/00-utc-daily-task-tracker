@@ -179,16 +179,17 @@ Used for hand-drawn UI annotations (underlines, brackets, strikethroughs):
 - `src/pages/intervalDialog.html/js`: Modal for setting custom restore intervals (hours/minutes), uses quick-select buttons (1h, 3h, 6h, 12h)
 - `src/pages/completed.html/js`: Success page shown after all tasks completed, offers "Go to Completed" panel view
 
-## Extension Permissions & APIs Used
+## Extension Permissions & APIs Used (v1.0.11)
 
+**Active permissions (6 total):**
+- `tabs`: Tab creation/closure detection, message passing, opening task cycles
+- `bookmarks`: Primary data storage (no external DB required)
+- `storage`: Settings persistence (`bannerEnabled`, cycle state)
+- `alarms`: Background time checks for task restoration without service worker timeout
+- `contextMenus`: Right-click "Add to 00 UTC" option
 - `sidePanel`: Custom side panel UI
-- `bookmarks`: Primary data storage (no external DB)
-- `alarms`: Background time checks without service worker timeout
-- `storage`: Settings persistence (`bannerEnabled`)
-- `tabs`: Tab creation/closure detection, message passing
-- `contextMenus`: Right-click "Add to 00 UTC | Daily Task Tracker" option
-- `downloads`: Export tasks to JSON file
-- `host_permissions: ["<all_urls>"]`: Required for content script injection
+- `host_permissions: ["<all_urls>"]`: Required for content script injection (banners)
+
 
 ## Import/Export System
 
@@ -220,7 +221,7 @@ Used for hand-drawn UI annotations (underlines, brackets, strikethroughs):
     ]
   }
   ```
-- **Implementation**: `popup.js` → `chrome.downloads.download()` with Blob
+- **Implementation**: `popup.js` → HTML5 `<a download>` element (no permissions required since v1.0.11)
 
 ### Import (Duplicate Detection)
 - **Trigger**: Click "Import" button in popup → file picker opens

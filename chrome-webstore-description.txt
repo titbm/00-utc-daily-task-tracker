@@ -26,16 +26,13 @@ Track and manage your daily internet tasks with automatic restoration at midnigh
 6. Completed tasks will automatically return to active at the time you selected, or you can restore them manually from the side panel at any time
 
 **Permissions:**
-- activeTab: detect when you open/close task tabs during cycles
-- bookmarks: store and manage your tasks
-- storage: save extension settings
-- tabs: open/close tabs for task cycle
-- contextMenus: add right-click menu
-- sidePanel: show side panel UI
-- alarms: schedule automatic restoration
-- management: detect extension enable/disable events
-- downloads: export tasks to JSON file for backup
-- host_permissions (<all_urls>): show reminder banner on all web pages when you have pending tasks
+- tabs: open/close tabs during task cycles and detect when you complete tasks
+- bookmarks: store and manage your daily tasks locally
+- storage: save extension settings and preferences
+- contextMenus: add "Add to 00 UTC" right-click menu option
+- sidePanel: display side panel UI for task management
+- alarms: schedule automatic task restoration at midnight UTC or custom intervals
+- host_permissions (<all_urls>): show reminder banner and notifications on web pages when you have pending tasks
 
 **Privacy:**
 - No personal data is collected or sent anywhere

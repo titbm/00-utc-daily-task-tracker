@@ -1,6 +1,6 @@
 # Privacy Policy for 00 UTC | Daily Task Tracker
 
-**Last Updated: October 28, 2025**
+**Last Updated: October 31, 2025**
 
 ## Overview
 00 UTC | Daily Task Tracker ("the Extension") is committed to protecting your privacy. This extension does not collect, store, or transmit any personal data to external servers.
@@ -19,14 +19,12 @@ All data is stored locally in your browser:
 
 The Extension requires the following permissions:
 
-- **bookmarks**: To create, read, update, and delete task bookmarks
-- **storage**: To save your extension settings locally
-- **alarms**: To schedule automatic task restoration at midnight UTC
-- **activeTab**: To get the current page's URL and title when you add a task
-- **tabs**: To open tasks in new tabs and detect when you close them
-- **contextMenus**: To add "Add to 00 UTC | Daily Task Tracker" option in right-click menu
-- **sidePanel**: To display the side panel interface
-- **downloads**: To export your tasks to a JSON file for backup purposes
+- **bookmarks**: To create, read, update, and delete task bookmarks in your local storage
+- **storage**: To save your extension settings and preferences locally in Chrome
+- **alarms**: To schedule automatic task restoration at midnight UTC or after custom intervals
+- **tabs**: To open tasks in new tabs during cycles and detect when you close them to mark as completed
+- **contextMenus**: To add "Add to 00 UTC" option in right-click menu for quick task addition
+- **sidePanel**: To display the side panel interface for managing your tasks
 
 ## Third-Party Services
 
