@@ -197,11 +197,32 @@ export class PageRenderer {
     // Calculate next restore time
     let restoreAtMs = null;
     if (page.restoreAt) {
+      // Interval tasks - use restoreAt timestamp
       restoreAtMs = Date.parse(page.restoreAt);
     } else if (page.completedAt && page.resetInterval) {
+      // Interval tasks without restoreAt - calculate from completedAt
       const completedMs = Date.parse(page.completedAt);
       if (!isNaN(completedMs)) {
         restoreAtMs = completedMs + Math.round((page.resetInterval || 0) * 3600 * 1000);
+      }
+    } else if (page.resetType === 'midnight' && page.completedAt) {
+      // Midnight tasks - calculate time until next 00:00 UTC
+      const now = new Date();
+      const completedAt = new Date(page.completedAt);
+      const todayMidnight = new Date(Date.UTC(
+        now.getUTCFullYear(),
+        now.getUTCMonth(),
+        now.getUTCDate(),
+        0, 0, 0, 0
+      ));
+      
+      // If completed today (after today's midnight), restore tomorrow at midnight
+      if (completedAt >= todayMidnight) {
+        const tomorrowMidnight = new Date(todayMidnight.getTime() + 86400000);
+        restoreAtMs = tomorrowMidnight.getTime();
+      } else {
+        // Completed before today - restore now (timer will trigger immediately)
+        restoreAtMs = todayMidnight.getTime();
       }
     }
 

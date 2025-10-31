@@ -148,6 +148,15 @@ export async function myFunction() { ... }
 
 ## Changelog
 
+### Version 1.0.9 (2025-10-31)
+- 🔧 **Fixed Midnight Task Timers in Side Panel** - Real-time countdown for midnight tasks
+  - Added timer calculation for `midnight` type tasks in `pageRenderer.js`
+  - Timers now show time until next 00:00 UTC for tasks completed today
+  - Tasks completed before today show immediate restoration
+  - Unified timer system: both `interval` and `midnight` tasks tracked in real-time
+  - Side panel now triggers restoration for midnight tasks exactly at 00:00 UTC
+  - No more reliance on background alarms for midnight tasks when panel is open
+
 ### Version 1.0.8 (2025-10-31)
 - ⚡ **Smart Task Reset** - New "Check tasks" feature for selective task restoration
   - Automatically identifies tasks restoring within 24 hours
