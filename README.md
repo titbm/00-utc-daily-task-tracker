@@ -4,6 +4,8 @@
 
 A Chrome extension for tracking and managing your daily internet tasks with automatic restoration at midnight UTC.
 
+[![Chrome Web Store](https://img.shields.io/badge/Chrome%20Web%20Store-Install-blue?style=for-the-badge&logo=googlechrome)](https://chromewebstore.google.com/detail/00-utc-daily-task-tracker/pegdmbjhgdinogomdbkngnefhljnkllm)
+
 ## Features
 
 ✅ **Bookmark-Based Storage** - All tasks stored in Chrome bookmarks, no external database  
@@ -17,6 +19,9 @@ A Chrome extension for tracking and managing your daily internet tasks with auto
 💾 **Import/Export** - Backup and restore tasks via JSON files with automatic duplicate detection
 
 ## Installation
+
+### From Chrome Web Store (Recommended)
+Install directly from the [Chrome Web Store](https://chromewebstore.google.com/detail/00-utc-daily-task-tracker/pegdmbjhgdinogomdbkngnefhljnkllm)
 
 ### Manual Installation (Developer Mode)
 1. Download or clone this repository
